@@ -14,7 +14,7 @@ except ImportError:
     pass
 
 try:
-    import google.generativeai as genai
+    from google import genai as google_genai
     GEMINI_AVAILABLE = True
 except ImportError:
     pass
@@ -48,7 +48,7 @@ class AIService:
                 return "Ошибка: Библиотека 'anthropic' не установлена на сервере. Обратитесь к администратору."
             
             if model_name.startswith('gemini-') and not GEMINI_AVAILABLE:
-                return "Ошибка: Библиотека 'google-generativeai' не установлена на сервере. Обратитесь к администратору."
+                return "Ошибка: Библиотека 'google-genai' не установлена на сервере. Обратитесь к администратору."
 
             # Получаем конфиг для активной модели
             config = AIModelConfig.objects.filter(model_code=model_name).first()
@@ -111,15 +111,16 @@ class AIService:
     @staticmethod
     def _call_gemini(model, api_key, prompt, settings):
         try:
-            genai.configure(api_key=api_key)
+            client = google_genai.Client(api_key=api_key)
             model_id = 'gemini-1.5-pro' if 'pro' in model else 'gemini-1.5-flash'
-            gemini_model = genai.GenerativeModel(model_id)
-            response = gemini_model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=settings.temperature,
-                    max_output_tokens=settings.max_tokens
-                )
+            
+            response = client.models.generate_content(
+                model=model_id,
+                contents=prompt,
+                config={
+                    'temperature': settings.temperature,
+                    'max_output_tokens': settings.max_tokens,
+                }
             )
             return response.text
         except Exception as e:

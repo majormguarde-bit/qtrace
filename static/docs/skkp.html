@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Trace: Система контроля качества и прослеживаемости</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #1E3A8A;
+            --secondary-blue: #3B82F6;
+            --accent-orange: #F97316;
+            --dark-bg: #0F172A;
+            --light-bg: #F8FAFC;
+            --text-light: #F1F5F9;
+            --text-dark: #1E293B;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Навигация */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .logo i {
+            color: var(--accent-orange);
+        }
+
+        .nav-dots {
+            display: flex;
+            gap: 10px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dot.active {
+            background-color: var(--accent-orange);
+            transform: scale(1.2);
+        }
+
+        /* Основной контейнер слайдов */
+        .slides-container {
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: var(--transition);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateY(0);
+            z-index: 10;
+        }
+
+        .slide-content {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-blue);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Заголовки слайдов */
+        .slide-title {
+            color: var(--accent-orange);
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--secondary-blue);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slide-title i {
+            font-size: 2rem;
+        }
+
+        /* Специфичные стили для каждого слайда */
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .problem-card {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 5px solid var(--accent-orange);
+            transition: var(--transition);
+        }
+
+        .problem-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .problem-card i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--secondary-blue);
+        }
+
+        .solution-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+        }
+
+        .role-card {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 12px;
+            width: 30%;
+            min-width: 250px;
+            transition: var(--transition);
+        }
+
+        .role-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-orange);
+        }
+
+        .role-card i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent-orange);
+        }
+
+        .market-graph {
+            height: 300px;
+            background: linear-gradient(to top, var(--primary-blue), var(--secondary-blue));
+            border-radius: 12px;
+            position: relative;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+
+        .graph-bar {
+            position: absolute;
+            bottom: 0;
+            background: var(--accent-orange);
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: height 1.5s ease;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background-color: var(--primary-blue);
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .comparison-table td {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+
+        .comparison-table .winner {
+            background-color: rgba(249, 115, 22, 0.2);
+            font-weight: bold;
+            color: var(--accent-orange);
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .team-member {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .team-member:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .team-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--secondary-blue), var(--accent-orange));
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+
+        .finance-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .finance-card {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .finance-card:hover {
+            transform: scale(1.05);
+        }
+
+        .finance-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-orange);
+            margin: 0.5rem 0;
+        }
+
+        .timeline {
+            position: relative;
+            margin: 3rem 0;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--secondary-blue);
+            border-radius: 2px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            padding-left: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.3rem;
+            top: 0.5rem;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            border: 3px solid var(--dark-bg);
+        }
+
+        /* Навигационные кнопки */
+        .nav-buttons {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-btn:hover {
+            background: var(--accent-orange);
+            transform: scale(1.1);
+        }
+
+        /* Футер */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(15, 23, 42, 0.9);
+            margin-top: 2rem;
+        }
+
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 992px) {
+            .problem-grid, .finance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .solution-diagram {
+                flex-direction: column;
+                gap: 2rem;
+            }
+            
+            .role-card {
+                width: 100%;
+            }
+            
+            .slide-title {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .slide-content {
+                padding: 1.5rem;
+            }
+            
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .nav-dots {
+                display: none;
+            }
+            
+            .finance-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .slide-title {
+                font-size: 1.5rem;
+            }
+            
+            .finance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-buttons {
+                bottom: 1rem;
+                right: 1rem;
+            }
+            
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Анимации */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.8s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-chart-line"></i>
+            <span>Q-Trace</span>
+        </div>
+        <div class="nav-dots" id="navDots">
+            <!-- Точки навигации будут добавлены через JS -->
+        </div>
+    </nav>
+
+    <!-- Контейнер слайдов -->
+    <div class="slides-container" id="slidesContainer">
+        <!-- Слайд 1: Титульный -->
+        <section class="slide active" id="slide1">
+            <div class="slide-content">
+                <div class="slide-number">1</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-industry"></i> Q-Trace
+                </h1>
+                <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: var(--secondary-blue);">
+                    Система контроля качества и операционной прослеживаемости
+                </h2>
+                <div style="font-size: 1.3rem; margin-bottom: 2rem;">
+                    <p><i class="fas fa-check-circle" style="color: var(--accent-orange);"></i> Каждая операция — под контролем</p>
+                    <p><i class="fas fa-check-circle" style="color: var(--accent-orange);"></i> Каждый дефект — на виду</p>
+                    <p><i class="fas fa-check-circle" style="color: var(--accent-orange);"></i> Каждый сотрудник — в системе</p>
+                </div>
+                <div style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid rgba(255,255,255,0.1);">
+                    <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">ИНВЕСТИЦИОННАЯ ПРЕЗЕНТАЦИЯ</h3>
+                    <p style="opacity: 0.9;">Все права защищены. 2026</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 2: Проблема -->
+        <section class="slide" id="slide2">
+            <div class="slide-content">
+                <div class="slide-number">2</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-exclamation-triangle"></i> ПРОБЛЕМА: «Чёрный ящик» на производстве
+                </h1>
+                <p style="font-size: 1.2rem; margin-bottom: 2rem;">
+                    Потери из-за отсутствия объективного контроля — <span style="color: var(--accent-orange); font-weight: bold;">до 15% себестоимости</span>
+                </p>
+                
+                <div class="problem-grid">
+                    <div class="problem-card animate-in" data-delay="0.1s">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>Бумажные чек-листы</h3>
+                        <p>Теряются, рвутся, мнутся. Нет фотофиксации результатов работы.</p>
+                    </div>
+                    <div class="problem-card animate-in" data-delay="0.3s">
+                        <i class="fas fa-question-circle"></i>
+                        <h3>Нет доказательств</h3>
+                        <p>«Кто виноват в браке? Когда именно произошел сбой?» — Нет данных для ответа.</p>
+                    </div>
+                    <div class="problem-card animate-in" data-delay="0.5s">
+                        <i class="fas fa-clock"></i>
+                        <h3>Сложный поиск данных</h3>
+                        <p>Аудит занимает дни вместо минут. Невозможно быстро найти корень проблемы.</p>
+                    </div>
+                    <div class="problem-card animate-in" data-delay="0.7s">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <h3>Финансовые потери</h3>
+                        <p>Высокие затраты на переделку, рекламации, потери клиентов и репутации.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(249, 115, 22, 0.1); border-radius: 10px; border-left: 5px solid var(--accent-orange);">
+                    <p><strong>Результат:</strong> Низкая дисциплина, неконтролируемые процессы, отсутствие прозрачности на всех этапах производства.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 3: Решение -->
+        <section class="slide" id="slide3">
+            <div class="slide-content">
+                <div class="slide-number">3</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-lightbulb"></i> РЕШЕНИЕ: Всё в одном приложении
+                </h1>
+                <p style="font-size: 1.2rem; margin-bottom: 2rem; text-align: center;">
+                    Цифровой «следователь» для каждого сотрудника и каждой операции
+                </p>
+                
+                <div class="solution-diagram">
+                    <div class="role-card">
+                        <i class="fas fa-user-hard-hat"></i>
+                        <h3>Для рабочего</h3>
+                        <p><strong>Задача → Фото → Готово</strong></p>
+                        <p>Просто, как WhatsApp. Получает задачу в смартфоне, фиксирует результат фото/видео, отправляет в облако.</p>
+                    </div>
+                    
+                    <div class="role-card">
+                        <i class="fas fa-user-tie"></i>
+                        <h3>Для мастера/ОТК</h3>
+                        <p><strong>Поиск → Просмотр → Анализ</strong></p>
+                        <p>Веб-панель с мгновенным поиском по всем операциям за любой период. Просмотр всех фото и метаданных.</p>
+                    </div>
+                    
+                    <div class="role-card">
+                        <i class="fas fa-user-cog"></i>
+                        <h3>Для руководителя</h3>
+                        <p><strong>Прозрачность → Контроль → Отчёт</strong></p>
+                        <p>Цифровой аудит всего производства в один клик. Полная видимость процессов в реальном времени.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; text-align: center; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 10px;">
+                    <p><strong>Ключевая фишка:</strong> Личный смартфон сотрудника становится инструментом контроля, а облако — единой базой истины.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 4: Рынок -->
+        <section class="slide" id="slide4">
+            <div class="slide-content">
+                <div class="slide-number">4</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-chart-line"></i> РЫНОК: Окно возможностей в растущем сегменте
+                </h1>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin: 2rem 0;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">Рынок MES и систем объективного контроля (СОК) в России:</h3>
+                        <div style="background: rgba(30, 58, 138, 0.3); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent-orange);">18 млрд ₽</div>
+                            <div style="font-size: 1.2rem;">Объем в 2025 году</div>
+                        </div>
+                        
+                        <div style="background: rgba(59, 130, 246, 0.3); padding: 1.5rem; border-radius: 10px;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent-orange);">>35%</div>
+                            <div style="font-size: 1.2rem;">Годовой рост сегмента СОК</div>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 300px;">
+                        <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">Прогноз на 2030 год:</h3>
+                        <div style="background: rgba(249, 115, 22, 0.1); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 5px solid var(--accent-orange);">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent-orange);">42+ млрд ₽</div>
+                            <div style="font-size: 1.2rem;">Объем рынка MES/СОК</div>
+                        </div>
+                        
+                        <div style="background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 10px;">
+                            <h4 style="color: var(--secondary-blue); margin-bottom: 0.5rem;">Ключевая возможность:</h4>
+                            <p><strong>Дефицит облачных решений.</strong> В России только 3 из 11 ключевых игроков предлагают облачные MES.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(30, 58, 138, 0.2); border-radius: 10px;">
+                    <h3 style="color: var(--secondary-blue); margin-bottom: 0.5rem;">Наша ниша:</h3>
+                    <p>«Легкие» облачные решения для контроля качества. Мы занимаем пустующую нишу между тяжелыми MES и бумажными чек-листами.</p>
+                    <p style="margin-top: 0.5rem;"><strong>Целевой сегмент:</strong> Средние производственные предприятия (50-500 чел.) — голодные до цифровизации, но с ограниченным бюджетом и IT-командой.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 5: Продукт -->
+        <section class="slide" id="slide5">
+            <div class="slide-content">
+                <div class="slide-number">5</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-cogs"></i> ТЕХНОЛОГИЯ И ПРОДУКТ
+                </h1>
+                <p style="font-size: 1.2rem; margin-bottom: 2rem; text-align: center;">
+                    Мультитенантное SaaS-решение «под ключ»
+                </p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 2rem 0;">
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 2rem; border-radius: 12px; border-top: 5px solid var(--secondary-blue);">
+                        <div style="font-size: 3rem; color: var(--accent-orange); margin-bottom: 1rem; text-align: center;">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3 style="text-align: center; color: var(--secondary-blue); margin-bottom: 1rem;">Мобильное приложение</h3>
+                        <ul style="list-style-type: none;">
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> iOS и Android</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Аутентификация по номеру/QR</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Получение задач в CSV</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Фото/видео фиксация</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Офлайн-работа</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 2rem; border-radius: 12px; border-top: 5px solid var(--accent-orange);">
+                        <div style="font-size: 3rem; color: var(--secondary-blue); margin-bottom: 1rem; text-align: center;">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <h3 style="text-align: center; color: var(--accent-orange); margin-bottom: 1rem;">Облачная платформа</h3>
+                        <ul style="list-style-type: none;">
+                            <li><i class="fas fa-check" style="color: var(--secondary-blue); margin-right: 10px;"></i> Node.js/Python бэкенд</li>
+                            <li><i class="fas fa-check" style="color: var(--secondary-blue); margin-right: 10px;"></i> PostgreSQL + изоляция данных</li>
+                            <li><i class="fas fa-check" style="color: var(--secondary-blue); margin-right: 10px;"></i> S3-совместимое хранилище</li>
+                            <li><i class="fas fa-check" style="color: var(--secondary-blue); margin-right: 10px;"></i> Масштабируемая архитектура</li>
+                            <li><i class="fas fa-check" style="color: var(--secondary-blue); margin-right: 10px;"></i> REST API для интеграции</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 2rem; border-radius: 12px; border-top: 5px solid var(--secondary-blue);">
+                        <div style="font-size: 3rem; color: var(--accent-orange); margin-bottom: 1rem; text-align: center;">
+                            <i class="fas fa-desktop"></i>
+                        </div>
+                        <h3 style="text-align: center; color: var(--secondary-blue); margin-bottom: 1rem;">Веб-интерфейсы</h3>
+                        <ul style="list-style-type: none;">
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Для администратора</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Для оператора/мастера</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Для руководителя</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Расширенный поиск</li>
+                            <li><i class="fas fa-check" style="color: var(--accent-orange); margin-right: 10px;"></i> Дашборды и аналитика</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; text-align: center; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 10px;">
+                    <p><strong>Стек технологий:</strong> React Native (мобильное приложение), React (веб-интерфейсы), Node.js/Python (бэкенд), PostgreSQL, облачное хранилище.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 6: Бизнес-модель -->
+        <section class="slide" id="slide6">
+            <div class="slide-content">
+                <div class="slide-number">6</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-money-bill-wave"></i> БИЗНЕС-МОДЕЛЬ: Предсказуемый доход по подписке
+                </h1>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                    <div style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.8), rgba(59, 130, 246, 0.8)); padding: 2rem; border-radius: 12px; text-align: center;">
+                        <h3 style="margin-bottom: 1rem;">Базовый</h3>
+                        <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem;">~60 т.р./мес</div>
+                        <ul style="list-style-type: none; text-align: left;">
+                            <li><i class="fas fa-user" style="margin-right: 10px;"></i> До 25 пользователей</li>
+                            <li><i class="fas fa-hdd" style="margin-right: 10px;"></i> 50 ГБ хранилища</li>
+                            <li><i class="fas fa-mobile-alt" style="margin-right: 10px;"></i> Мобильное приложение</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(30, 58, 138, 0.8)); padding: 2rem; border-radius: 12px; text-align: center;">
+                        <h3 style="margin-bottom: 1rem;">Профессиональный</h3>
+                        <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem;">~150 т.р./мес</div>
+                        <ul style="list-style-type: none; text-align: left;">
+                            <li><i class="fas fa-users" style="margin-right: 10px;"></i> До 100 пользователей</li>
+                            <li><i class="fas fa-hdd" style="margin-right: 10px;"></i> 200 ГБ хранилища</li>
+                            <li><i class="fas fa-mobile-alt" style="margin-right: 10px;"></i> Мобильное + Веб</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.8), rgba(30, 58, 138, 0.8)); padding: 2rem; border-radius: 12px; text-align: center;">
+                        <h3 style="margin-bottom: 1rem;">Предприятие</h3>
+                        <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem;">Договорная</div>
+                        <ul style="list-style-type: none; text-align: left;">
+                            <li><i class="fas fa-infinity" style="margin-right: 10px;"></i> Неограниченно пользователей</li>
+                            <li><i class="fas fa-database" style="margin-right: 10px;"></i> 1 ТБ+ хранилища</li>
+                            <li><i class="fas fa-star" style="margin-right: 10px;"></i> Все функции</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 2rem;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h3 style="color: var(--accent-orange); margin-bottom: 1rem;">Дополнительные источники выручки</h3>
+                        <ul style="list-style-type: none;">
+                            <li><i class="fas fa-tools" style="color: var(--secondary-blue); margin-right: 10px;"></i> Внедрение и настройка</li>
+                            <li><i class="fas fa-robot" style="color: var(--secondary-blue); margin-right: 10px;"></i> AI-аналитика изображений</li>
+                            <li><i class="fas fa-plug" style="color: var(--secondary-blue); margin-right: 10px;"></i> Интеграции с ERP/1C</li>
+                            <li><i class="fas fa-headset" style="color: var(--secondary-blue); margin-right: 10px;"></i> Техническая поддержка</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 300px;">
+                        <h3 style="color: var(--accent-orange); margin-bottom: 1rem;">Ключевые метрики</h3>
+                        <div style="background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 10px;">
+                            <p><strong>CAC</strong> (стоимость привлечения): 150-200 тыс. руб.</p>
+                            <p><strong>LTV</strong> (пожизненная ценность): 1,2-1,8 млн руб.</p>
+                            <p><strong>Churn Rate</strong> (отток): <5% в месяц</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 7: Конкурентное преимущество -->
+        <section class="slide" id="slide7">
+            <div class="slide-content">
+                <div class="slide-number">7</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-bolt"></i> КОНКУРЕНТНОЕ ПРЕИМУЩЕСТВО: Простота и скорость
+                </h1>
+                
+                <div style="overflow-x: auto; margin: 2rem 0;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Критерий</th>
+                                <th>Тяжёлые MES</th>
+                                <th>Бумажные чек-листы</th>
+                                <th class="winner">Q-Trace</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Внедрение</strong></td>
+                                <td>6-12 месяцев</td>
+                                <td>0</td>
+                                <td class="winner">2-4 недели</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Стоимость</strong></td>
+                                <td>Высокая (капзатраты)</td>
+                                <td>Низкая (бумага, час)</td>
+                                <td class="winner">Средняя (подписка)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Прослеживаемость</strong></td>
+                                <td>Сложная (данные)</td>
+                                <td>Отсутствует</td>
+                                <td class="winner">100%, фото/видео</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Мобильность</strong></td>
+                                <td>Ограниченная</td>
+                                <td>Нет</td>
+                                <td class="winner">Да, личный смартфон</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Эффект</strong></td>
+                                <td>Через 6+ месяцев</td>
+                                <td>Нет</td>
+                                <td class="winner">Сразу</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 2rem; padding: 2rem; background: rgba(249, 115, 22, 0.1); border-radius: 12px; border-left: 5px solid var(--accent-orange);">
+                    <h3 style="color: var(--accent-orange); margin-bottom: 1rem;">Наше уникальное торговое предложение (УТП):</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <div>
+                            <div style="font-size: 2.5rem; color: var(--accent-orange); margin-bottom: 0.5rem;">10-20x</div>
+                            <p>Быстрее внедрения, чем комплексные MES</p>
+                        </div>
+                        <div>
+                            <div style="font-size: 2.5rem; color: var(--accent-orange); margin-bottom: 0.5rem;">5-10x</div>
+                            <p>Дешевле на старте</p>
+                        </div>
+                        <div>
+                            <div style="font-size: 2.5rem; color: var(--accent-orange); margin-bottom: 0.5rem;">100%</div>
+                            <p>Визуальная прослеживаемость</p>
+                        </div>
+                    </div>
+                    <p style="margin-top: 1.5rem;"><strong>Использование BYOD (Bring Your Own Device)</strong> — сотрудники используют свои смартфоны, что снижает затраты на оборудование для предприятия.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 8: Команда -->
+        <section class="slide" id="slide8">
+            <div class="slide-content">
+                <div class="slide-number">8</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-users"></i> КОМАНДА, КОТОРАЯ ЭТО СДЕЛАЕТ
+                </h1>
+                
+                <div class="team-grid">
+                    <div class="team-member">
+                        <div class="team-avatar">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <h3>Михаил Майоров</h3>
+                        <p style="color: var(--accent-orange); font-weight: bold;">CEO</p>
+                        <p>30+ лет в B2B-продажах IT-решений для промышленности. Закрывал сделки с крупными заводами. Понимает «боль» клиента изнутри.</p>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="team-avatar">
+                            <i class="fas fa-laptop-code"></i>
+                        </div>
+                        <h3>Александр Майоров</h3>
+                        <p style="color: var(--accent-orange); font-weight: bold;">CTO</p>
+                        <p>Архитектор облачных систем. Бывший тимлид в крупном интеграторе. Опыт построения отказоустойчивых мультитенантных платформ.</p>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="team-avatar">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>Катерина Дудник</h3>
+                        <p style="color: var(--accent-orange); font-weight: bold;">Head of Sales</p>
+                        <p>Эксперт по продажам SaaS-решений в B2B-сегменте. Опыт масштабирования продаж в технологических стартапах.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">Команда разработки:</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+                        <div style="flex: 1; min-width: 200px; background: rgba(15, 23, 42, 0.7); padding: 1.5rem; border-radius: 10px;">
+                            <p><strong>Full-stack разработчики (2)</strong> — опыт создания коммерческих SaaS-продуктов</p>
+                        </div>
+                        <div style="flex: 1; min-width: 200px; background: rgba(15, 23, 42, 0.7); padding: 1.5rem; border-radius: 10px;">
+                            <p><strong>Mobile-разработчик</strong> (React Native) — опыт публикации в App Store/Google Play</p>
+                        </div>
+                        <div style="flex: 1; min-width: 200px; background: rgba(15, 23, 42, 0.7); padding: 1.5rem; border-radius: 10px;">
+                            <p><strong>UX/UI дизайнер</strong> — специализация на enterprise-интерфейсах</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 10px; text-align: center;">
+                    <p><strong>Наша сила:</strong> Сочетание глубокого отраслевого опыта и экспертизы в современных облачных технологиях.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 9: Финансы и инвестиции -->
+        <section class="slide" id="slide9">
+            <div class="slide-content">
+                <div class="slide-number">9</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-chart-bar"></i> ФИНАНСОВЫЕ ПРОГНОЗЫ И ЗАПРОС ИНВЕСТИЦИЙ
+                </h1>
+                
+                <div class="finance-grid">
+                    <div class="finance-card">
+                        <h3>Показатель</h3>
+                        <div style="font-size: 1.2rem; margin: 1rem 0; color: var(--secondary-blue);">Год 1 → Год 2 → Год 3</div>
+                    </div>
+                    <div class="finance-card">
+                        <h3>Клиенты</h3>
+                        <div class="finance-value">15 → 60 → 150</div>
+                        <p>Количество предприятий</p>
+                    </div>
+                    <div class="finance-card">
+                        <h3>ARPU</h3>
+                        <div class="finance-value">50 → 120 → 150</div>
+                        <p>тыс. руб./мес (средний чек)</p>
+                    </div>
+                    <div class="finance-card">
+                        <h3>Выручка (ARR)</h3>
+                        <div class="finance-value">9 → 86 → 270</div>
+                        <p>млн руб.</p>
+                    </div>
+                </div>
+                
+                <div style="margin: 2rem 0; padding: 1.5rem; background: rgba(249, 115, 22, 0.1); border-radius: 10px; border-left: 5px solid var(--accent-orange);">
+                    <h3 style="color: var(--accent-orange); margin-bottom: 0.5rem;">Выход на операционную прибыльность — конец 2-го года</h3>
+                    <p>EBITDA: <strong>-6 млн руб. → +36 млн руб. → +180 млн руб.</strong></p>
+                </div>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem;">
+                    <div style="flex: 1; min-width: 300px; background: rgba(30, 58, 138, 0.3); padding: 2rem; border-radius: 12px;">
+                        <h3 style="color: var(--accent-orange); margin-bottom: 1rem; text-align: center;">Запрос инвестиций: 25 млн руб.</h3>
+                        <div style="text-align: center; margin: 1.5rem 0;">
+                            <div style="font-size: 3rem; font-weight: bold; color: var(--accent-orange);">15%</div>
+                            <p>доли в компании</p>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 300px;">
+                        <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">Распределение инвестиций:</h3>
+                        <ul style="list-style-type: none;">
+                            <li style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Разработка продукта и команда</span>
+                                    <span style="color: var(--accent-orange); font-weight: bold;">60% (15 млн ₽)</span>
+                                </div>
+                                <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 5px;">
+                                    <div style="width: 60%; height: 100%; background: var(--accent-orange); border-radius: 4px;"></div>
+                                </div>
+                            </li>
+                            <li style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Маркетинг и продажи</span>
+                                    <span style="color: var(--secondary-blue); font-weight: bold;">25% (6,25 млн ₽)</span>
+                                </div>
+                                <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 5px;">
+                                    <div style="width: 25%; height: 100%; background: var(--secondary-blue); border-radius: 4px;"></div>
+                                </div>
+                            </li>
+                            <li>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Операционные расходы и инфраструктура</span>
+                                    <span style="color: var(--accent-orange); font-weight: bold;">15% (3,75 млн ₽)</span>
+                                </div>
+                                <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 5px;">
+                                    <div style="width: 15%; height: 100%; background: var(--accent-orange); border-radius: 4px;"></div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem; text-align: center; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 10px;">
+                    <p><strong>Цель раунда:</strong> Запуск продаж и выход на первые 50 платящих клиентов.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Слайд 10: Дорожная карта -->
+        <section class="slide" id="slide10">
+            <div class="slide-content">
+                <div class="slide-number">10</div>
+                <h1 class="slide-title">
+                    <i class="fas fa-road"></i> ДОРОЖНАЯ КАРТА И НАШЕ ВИДЕНИЕ
+                </h1>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h3 style="color: var(--accent-orange);">2024: MVP и пилоты</h3>
+                        <p><strong>Q2-Q3:</strong> Запуск MVP, привлечение 3-5 пилотных предприятий, сбор обратной связи.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3 style="color: var(--secondary-blue);">2024: Старт продаж</h3>
+                        <p><strong>Q4:</strong> Формирование sales-процессов, 15 клиентов, развитие партнёрской сети.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3 style="color: var(--accent-orange);">2025: Масштабирование</h3>
+                        <p>60 клиентов, выход на операционную прибыль, расширение функционала.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3 style="color: var(--secondary-blue);">2026: Лидерство в нише</h3>
+                        <p>150+ клиентов, ARR >250 млн ₽, доля рынка >1%, расширение на рынки СНГ.</p>
+                    </div>
+                </div>
+                
+                <div style="margin: 3rem 0; padding: 2rem; background: linear-gradient(135deg, rgba(30, 58, 138, 0.3), rgba(59, 130, 246, 0.3)); border-radius: 12px; text-align: center;">
+                    <h2 style="color: var(--accent-orange); margin-bottom: 1rem;">Видение</h2>
+                    <p style="font-size: 1.3rem; font-weight: bold;">Стать стандартом для цифрового контроля качества и операционной прослеживаемости в промышленности России и СНГ.</p>
+                </div>
+                
+                <div class="footer">
+                    <h3 style="color: var(--secondary-blue); margin-bottom: 1rem;">Контакты</h3>
+                    <div class="contact-info">
+                        <div>
+                            <i class="fas fa-phone" style="color: var(--accent-orange); margin-right: 10px;"></i>
+                            <span>+7 (969) 728-71-71</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-envelope" style="color: var(--accent-orange); margin-right: 10px;"></i>
+                            <span>majorm@ya.ru</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-globe" style="color: var(--accent-orange); margin-right: 10px;"></i>
+                            <span>www.qtrace.ru</span>
+                        </div>
+                        <div>
+                            <i class="fab fa-linkedin" style="color: var(--accent-orange); margin-right: 10px;"></i>
+                            <span>linkedin.com/guarde/qtrace</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <h2 style="color: var(--accent-orange);">ВОПРОСЫ?</h2>
+                        <p style="margin-top: 0.5rem;">Спасибо за внимание!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Навигационные кнопки -->
+    <div class="nav-buttons">
+        <button class="nav-btn" id="prevBtn">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="nav-btn" id="nextBtn">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+    </div>
+
+    <script>
+        // Инициализация переменных
+        let currentSlide = 1;
+        const totalSlides = 10;
+        
+        // Инициализация навигационных точек
+        const navDots = document.getElementById('navDots');
+        for (let i = 1; i <= totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${i === 1 ? 'active' : ''}`;
+            dot.dataset.slide = i;
+            dot.addEventListener('click', () => goToSlide(i));
+            navDots.appendChild(dot);
+        }
+        
+        // Навигация по слайдам
+        function goToSlide(slideNumber) {
+            // Скрыть текущий слайд
+            document.querySelector('.slide.active').classList.remove('active');
+            
+            // Показать новый слайд
+            document.getElementById(`slide${slideNumber}`).classList.add('active');
+            
+            // Обновить активную точку навигации
+            document.querySelector('.dot.active').classList.remove('active');
+            document.querySelector(`.dot[data-slide="${slideNumber}"]`).classList.add('active');
+            
+            // Обновить текущий слайд
+            currentSlide = slideNumber;
+            
+            // Запустить анимации на новом слайде
+            animateSlideElements();
+        }
+        
+        // Анимация элементов на слайде
+        function animateSlideElements() {
+            const currentSlideEl = document.querySelector('.slide.active');
+            const elements = currentSlideEl.querySelectorAll('.animate-in');
+            
+            elements.forEach((el, index) => {
+                // Сбросить анимацию
+                el.style.animation = 'none';
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                
+                // Запустить анимацию с задержкой
+                setTimeout(() => {
+                    el.style.animation = 'fadeInUp 0.8s ease forwards';
+                    const delay = el.dataset.delay ? parseFloat(el.dataset.delay) : index * 0.2;
+                    el.style.animationDelay = `${delay}s`;
+                }, 100);
+            });
+        }
+        
+        // Кнопки навигации
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentSlide > 1) {
+                goToSlide(currentSlide - 1);
+            }
+        });
+        
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentSlide < totalSlides) {
+                goToSlide(currentSlide + 1);
+            }
+        });
+        
+        // Навигация с клавиатуры
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                if (currentSlide > 1) {
+                    goToSlide(currentSlide - 1);
+                }
+            } else if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+                if (currentSlide < totalSlides) {
+                    goToSlide(currentSlide + 1);
+                }
+            }
+        });
+        
+        // Навигация с помощью колеса мыши
+        let isScrolling = false;
+        document.addEventListener('wheel', (e) => {
+            if (isScrolling) return;
+            
+            isScrolling = true;
+            
+            if (e.deltaY > 0) {
+                // Прокрутка вниз - следующий слайд
+                if (currentSlide < totalSlides) {
+                    goToSlide(currentSlide + 1);
+                }
+            } else {
+                // Прокрутка вверх - предыдущий слайд
+                if (currentSlide > 1) {
+                    goToSlide(currentSlide - 1);
+                }
+            }
+            
+            setTimeout(() => { isScrolling = false; }, 1000);
+        });
+        
+        // Инициализация анимаций на первом слайде
+        animateSlideElements();
+        
+        // Адаптация высоты для мобильных устройств
+        function adjustSlideHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        window.addEventListener('resize', adjustSlideHeight);
+        adjustSlideHeight();
+    </script>
+</body>
+</html>
