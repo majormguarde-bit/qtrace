@@ -394,7 +394,7 @@
                 const currentHost = window.location.host;
                 window.location.href = window.location.protocol + '//' + subdomain + '.' + currentHost + '/login/';
             } else {
-                window.location.href = '{% url "admin_login" %}';
+                window.location.href = '{% url "login" %}';
             }
         }
 

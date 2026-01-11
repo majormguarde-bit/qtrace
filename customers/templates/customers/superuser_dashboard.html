@@ -139,7 +139,7 @@ async function runAIAnalytics() {
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-4">
-                                    <a href="/admin/customers/client/{{ tenant.id }}/change/" class="btn btn-sm btn-outline-primary border-0">
+                                    <a href="{% url 'superuser_tenant_edit' tenant.id %}" class="btn btn-sm btn-outline-primary border-0">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                 </td>
