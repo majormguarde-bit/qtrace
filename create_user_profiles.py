@@ -6,9 +6,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth.models import User
-from customers.models import Client
-from django_tenants.utils import tenant_context
-from users_app.models import UserProfile
+from customers.models import Client, UserProfile
+from django_tenants.utils import schema_context
 
 # Получить всех клиентов
 clients = Client.objects.filter(schema_name__startswith='tenant_').order_by('id')
@@ -20,41 +19,43 @@ for idx, client in enumerate(clients, 1):
     print(f"Тенант {idx}: {client.name} (schema: {client.schema_name})")
     print(f"{'='*50}")
     
-    with tenant_context(client):
+    with schema_context(client.schema_name):
         # Создать профиль для админа
-        admin_user = User.objects.get(username=f'admin_{client.id}')
-        profile, created = UserProfile.objects.get_or_create(
-            user=admin_user,
-            defaults={'role': 'ADMIN'}
-        )
-        if created:
-            print(f'✓ Профиль админа создан: {admin_user.username} (ADMIN)')
-        else:
-            profile.role = 'ADMIN'
-            profile.save()
-            print(f'✓ Профиль админа обновлен: {admin_user.username} (ADMIN)')
+        try:
+            admin_user = User.objects.get(username=f'admin_{client.id}')
+            profile, created = UserProfile.objects.get_or_create(
+                user=admin_user,
+                defaults={'role': 'ADMIN', 'tenant': client}
+            )
+            if created:
+                print(f'✓ Профиль админа создан: {admin_user.username} (ADMIN)')
+            else:
+                profile.role = 'ADMIN'
+                profile.tenant = client
+                profile.save()
+                print(f'✓ Профиль админа обновлен: {admin_user.username} (ADMIN)')
+        except User.DoesNotExist:
+            print(f'✗ Пользователь admin_{client.id} не найден')
         
         # Создать профиль для работника
-        worker_user = User.objects.get(username=f'worker_{client.id}')
-        profile, created = UserProfile.objects.get_or_create(
-            user=worker_user,
-            defaults={'role': 'WORKER'}
-        )
-        if created:
-            print(f'✓ Профиль работника создан: {worker_user.username} (WORKER)')
-        else:
-            profile.role = 'WORKER'
-            profile.save()
-            print(f'✓ Профиль работника обновлен: {worker_user.username} (WORKER)')
+        try:
+            worker_user = User.objects.get(username=f'worker_{client.id}')
+            profile, created = UserProfile.objects.get_or_create(
+                user=worker_user,
+                defaults={'role': 'WORKER', 'tenant': client}
+            )
+            if created:
+                print(f'✓ Профиль работника создан: {worker_user.username} (WORKER)')
+            else:
+                profile.role = 'WORKER'
+                profile.tenant = client
+                profile.save()
+                print(f'✓ Профиль работника обновлен: {worker_user.username} (WORKER)')
+        except User.DoesNotExist:
+            print(f'✗ Пользователь worker_{client.id} не найден')
         
         print(f'\nПользователи в {client.name}:')
         for user in User.objects.all():
-            try:
-                role = user.profile.get_role_display()
-            except:
-                role = 'N/A'
-            print(f'  - {user.username} ({role})')
-        print()
-
-print(f"{'='*50}")
-print("✓ Создание профилей завершено")
+            role = user.profile.get_role_display() if hasattr(user, 'profile') else "Нет профиля"
+            print(f"- {user.username} (ID: {user.id}, Email: {user.email}, Роль: {role})")
+    print("\n")
