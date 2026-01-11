@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django_tenants.admin import TenantAdminMixin
-from .models import Client, Domain, MailSettings, ContactMessage, UserProfile
+from .models import Client, Domain, MailSettings, ContactMessage, UserProfile, SubscriptionPlan
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price_month', 'max_users', 'storage_gb', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
 
 @admin.register(MailSettings)
 class MailSettingsAdmin(admin.ModelAdmin):
@@ -25,7 +31,7 @@ class DomainInline(admin.TabularInline):
 
 @admin.register(Client)
 class ClientAdmin(TenantAdminMixin, admin.ModelAdmin):
-    list_display = ('name', 'schema_name', 'phone', 'telegram', 'email', 'subscription_end_date', 'is_active', 'created_on')
+    list_display = ('name', 'schema_name', 'subscription_plan', 'is_active', 'created_on')
     list_filter = ('is_active', 'created_on', 'subscription_end_date')
     search_fields = ('name', 'schema_name', 'phone', 'telegram', 'email', 'contact_person')
     readonly_fields = ('created_on',)
@@ -40,7 +46,7 @@ class ClientAdmin(TenantAdminMixin, admin.ModelAdmin):
             'fields': ('contact_person',)
         }),
         ('Подписка', {
-            'fields': ('subscription_end_date', 'created_on', 'can_admin_delete_media')
+            'fields': ('subscription_plan', 'subscription_end_date', 'created_on', 'can_admin_delete_media')
         }),
     )
     inlines = [DomainInline]
