@@ -486,6 +486,62 @@ def superuser_domains(request):
     return render(request, 'customers/superuser_domains.html', context)
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_domain_create(request):
+    """Создание нового домена"""
+    if request.method == 'POST':
+        domain_name = request.POST.get('domain')
+        is_primary = request.POST.get('is_primary') == 'on'
+        tenant_id = request.POST.get('tenant')
+        
+        if domain_name and tenant_id:
+            tenant = get_object_or_404(Client, id=tenant_id)
+            Domain.objects.create(
+                domain=domain_name,
+                is_primary=is_primary,
+                tenant=tenant
+            )
+            messages.success(request, f'Домен {domain_name} успешно создан.')
+            return redirect('superuser_domains')
+            
+    return render(request, 'customers/superuser_domain_form.html', {
+        'is_create': True,
+        'tenants': Client.objects.all()
+    })
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_domain_edit(request, domain_id):
+    """Редактирование домена"""
+    domain = get_object_or_404(Domain, id=domain_id)
+    
+    if request.method == 'POST':
+        domain_name = request.POST.get('domain')
+        is_primary = request.POST.get('is_primary') == 'on'
+        tenant_id = request.POST.get('tenant')
+        
+        if domain_name:
+            domain.domain = domain_name
+            domain.is_primary = is_primary
+            if tenant_id:
+                domain.tenant = get_object_or_404(Client, id=tenant_id)
+            domain.save()
+            messages.success(request, f'Домен {domain_name} успешно обновлен.')
+            return redirect('superuser_domains')
+            
+    return render(request, 'customers/superuser_domain_form.html', {
+        'domain': domain,
+        'tenants': Client.objects.all()
+    })
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_domain_delete(request, domain_id):
+    """Удаление домена"""
+    domain = get_object_or_404(Domain, id=domain_id)
+    domain_name = domain.domain
+    domain.delete()
+    messages.success(request, f'Домен {domain_name} успешно удален.')
+    return redirect('superuser_domains')
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_admins(request):
     """Список администраторов (Платформы и Тенантов)"""
     # 1. Администраторы платформы (из public схемы)

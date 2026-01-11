@@ -129,12 +129,12 @@
                 </a>
                 
                 <hr class="mx-3 opacity-25">
-                <div class="px-3 mb-2 small text-uppercase opacity-50">Управление базой</div>
+                <div class="px-3 mb-2 small text-uppercase opacity-50">Система</div>
                 <a href="{% url 'superuser_db_management' %}" class="sidebar-link {% if 'settings/db' in request.path %}active{% endif %}">
                     <i class="bi bi-database-fill-gear me-2"></i> Обслуживание БД
                 </a>
-                <a href="/admin/" class="sidebar-link text-info">
-                    <i class="bi bi-database-fill-gear me-2"></i> Вход в базу
+                <a href="{% url 'superuser_admins' %}" class="sidebar-link text-info small opacity-75">
+                    <i class="bi bi-people me-2"></i> Управление пользователями
                 </a>
                 
                 <hr class="mx-3 opacity-25">
@@ -173,27 +173,22 @@
                 <div class="d-flex align-items-center">
                     <h4 class="mb-0 fw-bold text-dark me-4">{% block header_title %}Обзор платформы{% endblock %}</h4>
                     <div class="d-none d-xl-flex gap-2">
-                        <a href="/admin/customers/client/add/" class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i> Добавить организацию
-                        </a>
-                        <a href="/admin/customers/domain/add/" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-globe me-1"></i> Добавить домен
-                        </a>
-                        <a href="{% url 'superuser_admin_create' %}" class="btn btn-sm btn-outline-secondary">
+                        <a href="{% url 'superuser_admin_create' %}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-person-plus me-1"></i> Добавить администратора
                         </a>
-                        <a href="/admin/" class="btn btn-sm btn-dark">
-                            <i class="bi bi-database-fill-gear me-1"></i> База данных
+                        <a href="{% url 'superuser_plan_create' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-card-checklist me-1"></i> Добавить тариф
                         </a>
                     </div>
                 </div>
-                <div class="d-flex align-items-center">
+                <!-- Profile Link -->
+                <a href="{% url 'superuser_admin_edit' user.id %}" class="d-flex align-items-center text-decoration-none text-dark me-2">
                     <div class="me-3 text-end d-none d-sm-block">
                         <div class="fw-bold">{{ user.username }}</div>
                         <small class="text-muted">Администратор</small>
                     </div>
                     <i class="bi bi-person-circle fs-2 text-primary"></i>
-                </div>
+                </a>
             </div>
 
             {% block content %}{% endblock %}

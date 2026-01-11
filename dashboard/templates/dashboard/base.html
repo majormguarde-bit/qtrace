@@ -184,8 +184,8 @@
                     {% if request.user.is_superuser %}
                     <hr>
                     <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
-                    <a href="/admin/" target="_blank" class="sidebar-link">
-                        <i class="bi bi-database-fill me-2"></i> Вход в базу
+                    <a href="{% url 'superuser_dashboard' %}" target="_blank" class="sidebar-link">
+                        <i class="bi bi-database-fill me-2"></i> Панель суперпользователя
                     </a>
                     {% endif %}
 
@@ -261,7 +261,7 @@
 
                 {% if request.user.is_superuser %}
                 <hr>
-                <a href="/admin/" class="nav-link text-white" target="_blank">Вход в базу</a>
+                <a href="{% url 'superuser_dashboard' %}" class="nav-link text-white" target="_blank">Панель суперпользователя</a>
                 {% endif %}
 
                 <a href="{% url 'dashboard:help' %}" class="nav-link text-white">Помощь</a>
