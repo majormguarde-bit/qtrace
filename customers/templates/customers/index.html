@@ -247,7 +247,7 @@
                                     <i class="bi bi-globe"></i>
                                 </span>
                                 <input type="text" class="form-control bg-transparent text-white border-start-0" 
-                                       name="login_subdomain" required placeholder="Введите ваш поддомен">
+                                       name="login_subdomain" placeholder="Введите ваш поддомен">
                                 <span class="input-group-text bg-transparent text-white-50">.{{ request.get_host }}</span>
                             </div>
                         </div>
@@ -257,8 +257,13 @@
                             </button>
                         </div>
                     </form>
-                    <div class="small text-white-50 mt-3">
-                        Введите название вашей организации, которое вы указывали при регистрации.
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="small text-white-50">
+                            Введите название вашей организации, которое вы указывали при регистрации.
+                        </div>
+                        <a href="{% url 'admin_login' %}" class="small text-decoration-none" style="color: var(--accent-cyan);">
+                            <i class="bi bi-shield-lock me-1"></i> Вход для администрации
+                        </a>
                     </div>
                 </div>
             </div>
@@ -389,7 +394,7 @@
                 const currentHost = window.location.host;
                 window.location.href = window.location.protocol + '//' + subdomain + '.' + currentHost + '/login/';
             } else {
-                alert('Пожалуйста, введите поддомен вашей организации.');
+                window.location.href = '{% url "admin_login" %}';
             }
         }
 

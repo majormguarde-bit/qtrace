@@ -29,8 +29,13 @@
             <a href="{{ base_url|default:'/' }}" class="btn btn-link p-0 text-decoration-none text-muted small mb-3">
                 <i class="bi bi-arrow-left me-1"></i> На главную сайта
             </a>
-            <div class="badge bg-danger mb-3 d-block">РЕЖИМ ПРЕДПРИЯТИЯ</div>
-            <h3 class="text-center mb-4">{{ request.tenant.name }}</h3>
+            {% if request.tenant.schema_name == 'public' %}
+                <div class="badge bg-primary mb-3 d-block">УПРАВЛЕНИЕ ПЛАТФОРМОЙ</div>
+                <h3 class="text-center mb-4">Q-TRACE</h3>
+            {% else %}
+                <div class="badge bg-danger mb-3 d-block">РЕЖИМ ПРЕДПРИЯТИЯ</div>
+                <h3 class="text-center mb-4">{{ request.tenant.name }}</h3>
+            {% endif %}
             <h5 class="text-center text-muted mb-4">Вход в систему</h5>
             
             {% if request.tenant and not request.tenant.is_active and request.tenant.schema_name != 'public' %}
