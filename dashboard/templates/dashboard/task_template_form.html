@@ -1,0 +1,178 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h4 class="fw-bold mb-0">{% if form.instance.pk %}Редактирование шаблона{% else %}Новый шаблон заказа{% endif %}</h4>
+                <p class="text-muted small">Настройте параметры процесса и этапы его выполнения.</p>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.code.label }}</label>
+                            {{ form.code }}
+                            {% if form.code.errors %}<div class="text-danger ultra-small">{{ form.code.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.title.label }}</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}<div class="text-danger ultra-small">{{ form.title.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.process_type.label }}</label>
+                            {{ form.process_type }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.category.label }}</label>
+                            {{ form.category }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.description.label }}</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.related_resource_name.label }}</label>
+                            {{ form.related_resource_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">{{ form.related_resource_url.label }}</label>
+                            {{ form.related_resource_url }}
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4 opacity-10">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Технологические этапы</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="add-stage">
+                            <i class="bi bi-plus-lg me-1"></i>Добавить этап
+                        </button>
+                    </div>
+
+                    {{ stages.management_form }}
+                    <div id="stages-container">
+                        {% for stage_form in stages %}
+                        <div class="stage-form mb-3 border p-3 rounded bg-light transition-300 position-relative">
+                            {{ stage_form.id }}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Название этапа</label>
+                                    {{ stage_form.name }}
+                                    {% if stage_form.name.errors %}<div class="text-danger ultra-small">{{ stage_form.name.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Роль исполнителя</label>
+                                    {{ stage_form.executor_role }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">SLA (мин)</label>
+                                    {{ stage_form.planned_duration }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Тип данных</label>
+                                    {{ stage_form.data_type }}
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">№</label>
+                                    {{ stage_form.order }}
+                                </div>
+                            </div>
+                            
+                            {% if stages.can_delete %}
+                            <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                <div class="form-check">
+                                    {{ stage_form.DELETE }}
+                                    <label class="form-check-label text-danger cursor-pointer" for="{{ stage_form.DELETE.id_for_label }}" title="Удалить этап">
+                                        <i class="bi bi-x-circle-fill fs-5"></i>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Шаблон для нового этапа -->
+                    <div id="empty-form" class="d-none">
+                        <div class="stage-form mb-3 border p-3 rounded bg-light transition-300 position-relative">
+                            {{ stages.empty_form.id }}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Название этапа</label>
+                                    {{ stages.empty_form.name }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Роль исполнителя</label>
+                                    {{ stages.empty_form.executor_role }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">SLA (мин)</label>
+                                    {{ stages.empty_form.planned_duration }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">Тип данных</label>
+                                    {{ stages.empty_form.data_type }}
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label ultra-small text-uppercase text-muted fw-bold">№</label>
+                                    {{ stages.empty_form.order }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{{ back_url }}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-light rounded-pill px-4">Отмена</a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                            <i class="bi bi-check2-circle me-1"></i>
+                            {% if form.instance.pk %}Сохранить изменения{% else %}Создать шаблон{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.transition-300 { transition: all 0.3s ease; }
+.ultra-small { font-size: 0.65rem; }
+.stage-form:hover { border-color: #0d6efd !important; background-color: #fff !important; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; }
+.cursor-pointer { cursor: pointer; }
+.form-check-input[name$="-DELETE"] { display: none; }
+.form-check-input[name$="-DELETE"]:checked + label { color: #adb5bd !important; }
+.stage-form:has(.form-check-input[name$="-DELETE"]:checked) { opacity: 0.5; background-color: #e9ecef !important; border-style: dashed !important; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addBtn = document.getElementById('add-stage');
+        const container = document.getElementById('stages-container');
+        const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
+        const emptyFormTemplate = document.getElementById('empty-form').innerHTML;
+
+        addBtn.addEventListener('click', function() {
+            const formNum = parseInt(totalForms.value);
+            const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formNum);
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newFormHtml;
+            const newForm = tempDiv.firstElementChild;
+            
+            // Set order
+            const orderInput = newForm.querySelector('input[name$="-order"]');
+            if (orderInput) {
+                orderInput.value = formNum + 1;
+            }
+            
+            container.appendChild(newForm);
+            totalForms.value = formNum + 1;
+        });
+    });
+</script>
+{% endblock %}

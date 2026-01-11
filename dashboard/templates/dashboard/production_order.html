@@ -1,0 +1,315 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Заказ на производство - {{ object.external_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}">Канбан</a></li>
+                <li class="breadcrumb-item active">Заказ {{ object.external_id }}</li>
+            </ol>
+        </nav>
+        <div>
+            <button type="submit" form="production-order-form" class="btn btn-primary shadow-sm">
+                <i class="bi bi-save me-2"></i>Сохранить изменения
+            </button>
+            <button type="button" class="btn btn-outline-secondary shadow-sm ms-2" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i>Печать
+            </button>
+        </div>
+    </div>
+
+    <form id="production-order-form" method="post">
+        {% csrf_token %}
+        
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title mb-0 fw-bold text-primary">
+                    <i class="bi bi-file-earmark-text me-2"></i>ЗАКАЗ НА ПРОИЗВОДСТВО
+                </h5>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- 1. Шапка документа -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">1. Шапка документа (Идентификация и Сроки)</h6>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Номер заказа</label>
+                        {{ form.external_id }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Дата выдачи</label>
+                        <input type="text" class="form-control-plaintext" value="{{ object.created_at|date:'d.m.Y' }}" readonly>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold text-danger">Приоритет</label>
+                        {{ form.priority }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Плановая дата выпуска</label>
+                        {{ form.deadline }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Статус заказа</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold">Заказчик (Клиент)</label>
+                        {{ form.client_name }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold">Ответственный менеджер</label>
+                        {{ form.manager }}
+                    </div>
+                </div>
+
+                <!-- 2. Информация об изделии -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">2. Информация об изделии (Спецификация продукта)</h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold">Наименование изделия</label>
+                        {{ form.product_name }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Артикул / Децимальный номер</label>
+                        {{ form.article_number }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small fw-bold">Ревизия PCB</label>
+                        {{ form.pcb_revision }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Количество к производству (шт.)</label>
+                        {{ form.quantity }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold">Вид панели</label>
+                        {{ form.panel_type }}
+                    </div>
+                </div>
+
+                <!-- 3. Техническая документация -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">3. Техническая документация (Ссылки на техпроцессы)</h6>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">ID Спецификации (BOM)</label>
+                        {{ form.bom_id }}
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label small fw-bold">Файлы проекта (URL)</label>
+                        {{ form.project_files_url }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small fw-bold">Версия прошивки</label>
+                        {{ form.firmware_version }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small fw-bold">ID Трафарета</label>
+                        {{ form.stencil_id }}
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label small fw-bold">Особые отметки</label>
+                        {{ form.description }}
+                    </div>
+                </div>
+
+                <!-- 4. Статус комплектации -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">4. Статус комплектации (Связь со складом)</h6>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Накладная на перемещение</label>
+                        {{ form.transfer_note_number }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Статус комплектации</label>
+                        {{ form.kit_status }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Дата получения комплектующих</label>
+                        {{ form.kit_received_date }}
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label small fw-bold">Список дефицита</label>
+                        {{ form.deficit_list }}
+                    </div>
+                </div>
+
+                <!-- 5. Производственное задание -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">5. Производственное задание (Маршрутная карта)</h6>
+                    </div>
+                    <div class="col-12">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr class="small text-center">
+                                        <th style="width: 200px;">Этап / Операция</th>
+                                        <th>Рабочее место</th>
+                                        <th>Исполнитель</th>
+                                        <th>Начало</th>
+                                        <th>Конец</th>
+                                        <th style="width: 100px;">Факт (мин)</th>
+                                        <th style="width: 100px;">Кол-во годных</th>
+                                        <th style="width: 150px;">Подпись исп. (Статус)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{ stages.management_form }}
+                                    {% for s_form in stages %}
+                                        <tr>
+                                            {{ s_form.id }}
+                                            <td>{{ s_form.name }}</td>
+                                            <td>{{ s_form.equipment }}</td>
+                                            <td>{{ s_form.assigned_executor }}</td>
+                                            <td>{{ s_form.start_timestamp }}</td>
+                                            <td>{{ s_form.end_timestamp }}</td>
+                                            <td>
+                                                {% if is_admin %}
+                                                    <input type="number" name="{{ s_form.actual_duration.html_name }}" id="{{ s_form.actual_duration.id_for_label }}" class="form-control form-control-sm" value="{{ s_form.actual_duration.value|default:0 }}" readonly>
+                                                {% else %}
+                                                    {{ s_form.actual_duration }}
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ s_form.quantity_good }}</td>
+                                            <td>{{ s_form.status }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Контроль качества (ОТК) -->
+                <div class="row mb-4">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">6. Контроль качества (ОТК)</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold">Выявленные дефекты</label>
+                        {{ form.quality_defects }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small fw-bold">На ремонт (шт)</label>
+                        {{ form.repair_quantity }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small fw-bold">Брак (Scrap) (шт)</label>
+                        {{ form.scrap_quantity }}
+                    </div>
+                </div>
+
+                <!-- 7. Итоговые данные -->
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-2">7. Итоговые данные (Закрытие заказа)</h6>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Фактически произведено (шт.)</label>
+                        {{ form.actual_produced_quantity }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold">Остатки компонентов</label>
+                        {{ form.leftover_components }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold">Дата сдачи на склад ГП</label>
+                        {{ form.finished_goods_date }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small fw-bold d-block">Подпись Начальника пр-ва</label>
+                        <div class="form-check form-switch mt-2">
+                            {{ form.production_manager_signed }}
+                            <label class="form-check-label small text-muted">
+                                {% if object.production_manager_signed_at %}
+                                    Подписано: {{ object.production_manager_signed_at|date:"d.m.Y H:i" }}
+                                {% else %}
+                                    Ожидает подписи
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Datalists for Production Order fields -->
+    <datalist id="stage-names-list">
+        {% for name in previous_stage_names %}
+        <option value="{{ name }}">
+        {% endfor %}
+    </datalist>
+    <datalist id="client-names-list">
+        {% for val in client_names %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="product-names-list">
+        {% for val in product_names %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="article-numbers-list">
+        {% for val in article_numbers %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="pcb-revisions-list">
+        {% for val in pcb_revisions %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="panel-types-list">
+        {% for val in panel_types %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="bom-ids-list">
+        {% for val in bom_ids %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="firmware-versions-list">
+        {% for val in firmware_versions %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="stencil-ids-list">
+        {% for val in stencil_ids %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+    <datalist id="transfer-note-numbers-list">
+        {% for val in transfer_note_numbers %}<option value="{{ val }}">{% endfor %}
+    </datalist>
+</div>
+
+<style>
+    @media print {
+        .btn, nav, .card-header { display: none !important; }
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; }
+        body { background: white !important; }
+        .container-fluid { padding: 0 !important; }
+        .form-control, .form-select { border: none !important; padding: 0 !important; }
+    }
+    .form-control-sm, .form-select-sm {
+        font-size: 0.8rem;
+    }
+</style>
+
+<script>
+    // Styling for inputs
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-control-plaintext') && el.type !== 'checkbox') {
+            el.classList.add('form-control');
+            if (el.tagName === 'SELECT') {
+                el.classList.remove('form-control');
+                el.classList.add('form-select');
+            }
+            if (el.type === 'date' || el.type === 'datetime-local') {
+                el.classList.add('form-control-sm');
+            }
+        }
+        if (el.type === 'checkbox') {
+            el.classList.add('form-check-input');
+        }
+    });
+</script>
+{% endblock %}

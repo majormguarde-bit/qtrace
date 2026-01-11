@@ -1,0 +1,83 @@
+{% extends 'customers/superuser_base.html' %}
+{% load humanize %}
+
+{% block title %}Тарифные планы - Панель управления{% endblock %}
+{% block header_title %}Управление тарифами{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Список тарифов</h5>
+                <a href="{% url 'superuser_plan_create' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Добавить тариф
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Название</th>
+                                <th>Цена (мес/год)</th>
+                                <th>Лимиты</th>
+                                <th>Моб. приложение</th>
+                                <th>Статус</th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in plans %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold">{{ plan.name }}</div>
+                                    <div class="small text-muted">Создан: {{ plan.created_at|date:"d.m.Y" }}</div>
+                                </td>
+                                <td>
+                                    <div>{{ plan.price_month|floatformat:0|intcomma }} ₽ / мес</div>
+                                    <div class="small text-muted">{{ plan.price_year|floatformat:0|intcomma }} ₽ / год</div>
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        <i class="bi bi-people me-1"></i> {{ plan.max_users }} пользователей<br>
+                                        <i class="bi bi-hdd me-1"></i> {{ plan.storage_gb }} ГБ<br>
+                                        <i class="bi bi-calendar-check me-1"></i> {{ plan.work_days_limit }} дней
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if plan.has_mobile_app %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">Да</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2">Нет</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if plan.is_active %}
+                                    <span class="badge bg-success rounded-pill">Активен</span>
+                                    {% else %}
+                                    <span class="badge bg-danger rounded-pill">Отключен</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'superuser_plan_edit' plan.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'superuser_plan_delete' plan.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить этот тариф?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">Тарифные планы не созданы</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

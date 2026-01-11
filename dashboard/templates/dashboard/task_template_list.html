@@ -1,0 +1,216 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-journal-bookmark me-2 text-primary"></i>Шаблоны заказов</h2>
+    {% if is_admin %}
+    <a href="{% url 'dashboard:task_template_create' %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-primary rounded-pill px-3 shadow-sm btn-hover-scale">
+        <i class="bi bi-plus-lg me-1"></i> Добавить шаблон
+    </a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Поиск по коду, названию..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-auto">
+                <select name="paginate_by" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="9" {% if paginate_by == '9' or paginate_by == 9 %}selected{% endif %}>9 на стр.</option>
+                    <option value="18" {% if paginate_by == '18' or paginate_by == 18 %}selected{% endif %}>18 на стр.</option>
+                    <option value="36" {% if paginate_by == '36' or paginate_by == 36 %}selected{% endif %}>36 на стр.</option>
+                </select>
+            </div>
+            {% if search_query %}
+            <div class="col-auto">
+                <a href="?" class="btn btn-sm btn-link text-decoration-none">Сбросить</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for template in templates %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 template-card transition-300">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span class="badge bg-primary-soft text-primary rounded-pill px-3 mb-2">{{ template.get_process_type_display }}</span>
+                    <span class="text-muted small fw-bold">{{ template.code }}</span>
+                </div>
+                <h5 class="card-title fw-bold text-dark mt-2">{{ template.title }}</h5>
+                <p class="text-muted small mb-2">{{ template.category }}</p>
+                
+                {% if template.related_resource_url %}
+                <div class="mb-3">
+                    <a href="{{ template.related_resource_url }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill py-0 px-2" style="font-size: 0.7rem;">
+                        <i class="bi bi-link-45deg me-1"></i>{{ template.related_resource_name|default:"Wiki / Ресурс" }}
+                    </a>
+                </div>
+                {% endif %}
+                
+                <p class="card-text text-muted small mb-4">
+                    {{ template.description|truncatewords:30 }}
+                </p>
+                
+                <h6 class="text-muted ultra-small text-uppercase fw-bold mb-3">Этапы процесса ({{ template.stages.count }})</h6>
+                <div class="template-stages mb-4">
+                    {% for stage in template.stages.all %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-shrink-0 bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                            <span class="ultra-small fw-bold">{{ forloop.counter }}</span>
+                        </div>
+                        <div class="ms-2 flex-grow-1">
+                            <div class="small fw-medium text-dark">{{ stage.name }}</div>
+                            <div class="ultra-small text-muted">{{ stage.get_executor_role_display }} • {{ stage.planned_duration }} мин</div>
+                        </div>
+                        {% if stage.data_type == 'CHECKBOX' %}
+                        <i class="bi bi-check2-square text-success small" title="Pass/Fail"></i>
+                        {% elif stage.data_type == 'NUMBER' %}
+                        <i class="bi bi-123 text-info small" title="Число"></i>
+                        {% elif stage.data_type == 'MEDIA' %}
+                        <i class="bi bi-camera text-warning small" title="Медиа"></i>
+                        {% elif stage.data_type == 'LIST' %}
+                        <i class="bi bi-list-task text-primary small" title="Список"></i>
+                        {% else %}
+                        <i class="bi bi-card-text text-muted small" title="Текст"></i>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary flex-grow-1 rounded-pill create-from-template" data-template-id="{{ template.id }}">
+                        <i class="bi bi-plus-circle me-1"></i> Создать задачу
+                    </button>
+                    {% if is_admin %}
+                    <a href="{% url 'dashboard:task_template_edit' template.id %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-outline-secondary rounded-pill" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'dashboard:task_template_delete' template.id %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-outline-danger rounded-pill" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-journal-x display-1 text-muted opacity-25"></i>
+            <h4 class="mt-3 text-muted">Шаблоны процессов не найдены</h4>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="mt-4">
+    <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if page_params %}&{{ page_params }}{% endif %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if page_params %}&{{ page_params }}{% endif %}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if page_params %}&{{ page_params }}{% endif %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Modal for processing -->
+<div class="modal fade" id="processingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="fw-bold mb-0">Создание задачи...</h5>
+                <p class="text-muted mt-2 mb-0">Пожалуйста, подождите, мы настраиваем процесс.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('.create-from-template');
+    const modal = new bootstrap.Modal(document.getElementById('processingModal'));
+
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            const templateId = this.dataset.templateId;
+            modal.show();
+
+            fetch(`/dashboard/templates/${templateId}/create-task/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = data.redirect_url;
+                } else {
+                    modal.hide();
+                    alert('Ошибка: ' + (data.message || 'Не удалось создать задачу'));
+                }
+            })
+            .catch(error => {
+                modal.hide();
+                console.error('Error:', error);
+                alert('Произошла системная ошибка при создании задачи');
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+}
+.ultra-small {
+    font-size: 0.65rem;
+}
+.bg-primary-soft {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+.transition-300 {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

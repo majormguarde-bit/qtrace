@@ -1,0 +1,355 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Инструкция пользователя{% endblock %}
+
+{% block extra_css %}
+<style>
+    .help-sidebar {
+        height: calc(100vh - 100px);
+        overflow-y: auto;
+        border-right: 1px solid #dee2e6;
+    }
+    .help-content-area {
+        height: calc(100vh - 100px);
+        overflow-y: auto;
+        padding-left: 2rem;
+    }
+    .help-nav-link {
+        display: block;
+        padding: 0.75rem 1rem;
+        color: #495057;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s;
+    }
+    .help-nav-link:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+    }
+    .help-nav-link.active {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    .help-section {
+        display: none;
+    }
+    .help-section.active {
+        display: block;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .tree-toggle {
+        cursor: pointer;
+        user-select: none;
+    }
+    .tree-toggle::before {
+        content: "\F285";
+        font-family: "bootstrap-icons";
+        display: inline-block;
+        margin-right: 0.5rem;
+        transition: transform 0.2s;
+    }
+    .tree-toggle.collapsed::before {
+        transform: rotate(-90deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Левая панель: Дерево вопросов -->
+        <div class="col-md-3 help-sidebar py-3">
+            <h5 class="fw-bold mb-4 px-2">Разделы справки</h5>
+            
+            <div class="help-tree">
+                <!-- Раздел: Начало работы -->
+                <div class="mb-3">
+                    <div class="tree-toggle fw-bold text-uppercase small text-muted px-2 mb-2" data-bs-toggle="collapse" data-bs-target="#group-start">
+                        Начало работы
+                    </div>
+                    <div class="collapse show" id="group-start">
+                        <a href="#welcome" class="help-nav-link active" data-section="welcome">
+                            <i class="bi bi-house-door me-2"></i> Что такое Q-TRACE?
+                        </a>
+                        <a href="#access" class="help-nav-link" data-section="access">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Вход и первые шаги
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Раздел: Производство -->
+                <div class="mb-3">
+                    <div class="tree-toggle fw-bold text-uppercase small text-muted px-2 mb-2" data-bs-toggle="collapse" data-bs-target="#group-production">
+                        Управление производством
+                    </div>
+                    <div class="collapse show" id="group-production">
+                        <a href="#production-orders" class="help-nav-link" data-section="production-orders">
+                            <i class="bi bi-factory me-2"></i> Заказы на производство
+                        </a>
+                        <a href="#templates" class="help-nav-link" data-section="templates">
+                            <i class="bi bi-journal-plus me-2"></i> Шаблоны процессов
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Раздел: Функционал -->
+                <div class="mb-3">
+                    <div class="tree-toggle fw-bold text-uppercase small text-muted px-2 mb-2" data-bs-toggle="collapse" data-bs-target="#group-features">
+                        Инструменты и функции
+                    </div>
+                    <div class="collapse show" id="group-features">
+                        <a href="#kanban" class="help-nav-link" data-section="kanban">
+                            <i class="bi bi-columns-gap me-2"></i> Канбан-доска
+                        </a>
+                        <a href="#tasks" class="help-nav-link" data-section="tasks">
+                            <i class="bi bi-list-check me-2"></i> Список всех задач
+                        </a>
+                        <a href="#media" class="help-nav-link" data-section="media">
+                            <i class="bi bi-camera-video me-2"></i> Фото и видео фиксация
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Раздел: Справочники -->
+                <div class="mb-3">
+                    <div class="tree-toggle fw-bold text-uppercase small text-muted px-2 mb-2" data-bs-toggle="collapse" data-bs-target="#group-refs">
+                        Справочники
+                    </div>
+                    <div class="collapse show" id="group-refs">
+                        <a href="#positions" class="help-nav-link" data-section="positions">
+                            <i class="bi bi-person-badge me-2"></i> Должности
+                        </a>
+                        <a href="#employees" class="help-nav-link" data-section="employees">
+                            <i class="bi bi-people me-2"></i> Сотрудники
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая панель: Контент -->
+        <div class="col-md-9 help-content-area py-3">
+            
+            <!-- Введение -->
+            <div id="welcome" class="help-section active">
+                <div class="card bg-primary text-white border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h1 class="display-5 fw-bold mb-2">Добро пожаловать в Q-TRACE!</h1>
+                        <p class="lead mb-0">Простыми словами о том, как работает система цифрового контроля.</p>
+                    </div>
+                </div>
+                
+                <h3 class="fw-bold mb-3">Что это за система?</h3>
+                <p>Представьте, что у вас есть «умный журнал», который сам записывает, кто из сотрудников, над каким изделием и сколько времени работал. <strong>Q-TRACE</strong> — это именно такой инструмент. Он помогает превратить обычное производство в прозрачный процесс, где каждый шаг подтвержден фактами.</p>
+                
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="bi bi-eye text-primary display-4 mb-2"></i>
+                            <h5 class="fw-bold">Прозрачность</h5>
+                            <p class="small text-muted">Вы всегда видите, на каком этапе находится любой заказ.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="bi bi-check-circle text-success display-4 mb-2"></i>
+                            <h5 class="fw-bold">Качество</h5>
+                            <p class="small text-muted">Видеофиксация гарантирует, что работа выполнена по стандарту.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3">
+                            <i class="bi bi-graph-up text-info display-4 mb-2"></i>
+                            <h5 class="fw-bold">Аналитика</h5>
+                            <p class="small text-muted">Система сама считает реальное время работы над каждым этапом.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вход и доступ -->
+            <div id="access" class="help-section">
+                <h2 class="fw-bold mb-4">Как начать работу?</h2>
+                
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold"><i class="bi bi-door-open me-2 text-primary"></i>Вход в систему</h5>
+                        <p>Для входа вам понадобятся логин и пароль, выданные администратором. Вы можете зайти в систему как с компьютера (для управления), так и с обычного смартфона (для работы в цеху).</p>
+                        
+                        <div class="alert alert-light border-start border-primary border-4">
+                            <strong>Совет:</strong> Если вы работаете на производстве, лучше всего открывать систему прямо в браузере телефона. Так вы сможете сразу снимать видео выполнения этапов.
+                        </div>
+
+                        <h5 class="mt-4 fw-bold"><i class="bi bi-house me-2 text-primary"></i>Главный экран</h5>
+                        <p>После входа вы попадете на <a href="{% url 'dashboard:home' %}" class="fw-bold text-decoration-none">Рабочую панель</a>. Там отображаются все текущие заказы в виде карточек.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Заказы на производство -->
+            <div id="production-orders" class="help-section">
+                <h2 class="fw-bold mb-4">Заказы на производство</h2>
+                <p class="lead">Это основной документ, в котором описывается, что нужно сделать.</p>
+                
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold text-primary mb-3">Как заполнять форму заказа:</h5>
+                        <div class="mb-4">
+                            <h6><strong>1. Информация о клиенте и изделии</strong></h6>
+                            <p>Поля «Заказчик», «Изделие», «Артикул» снабжены подсказками. Начните вводить название, и система предложит варианты, которые вы использовали раньше. Если названия нет в списке — просто впишите новое, и система его запомнит.</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6><strong>2. Планирование сроков</strong></h6>
+                            <p>В поле «Плановая дата выпуска» выберите день, когда заказ должен быть готов. Это поможет системе вовремя напомнить о сроках.</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6><strong>3. Назначение исполнителей</strong></h6>
+                            <p>Для каждого этапа (например, «Сварка» или «Покраска») теперь нужно выбрать конкретного сотрудника из списка. Это позволяет точно знать, кто отвечал за конкретную операцию.</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6><strong>4. Поле «Факт» (автоматический расчет)</strong></h6>
+                            <p>Вы заметите поле «Факт (мин)». <strong>Его нельзя заполнить вручную.</strong> Когда сотрудник нажимает кнопку «Записать видео» и начинает работу, система сама запускает таймер. Как только видео сохранено — время попадает в это поле.</p>
+                        </div>
+                    </div>
+                </div>
+                <p>Вы можете посмотреть текущие заказы или создать новый в разделе <a href="{% url 'dashboard:task_list' %}" class="btn btn-sm btn-outline-primary ms-2">Список всех задач</a>.</p>
+            </div>
+
+            <!-- Работа с шаблонами -->
+            <div id="templates" class="help-section">
+                <h2 class="fw-bold mb-4">Шаблоны процессов</h2>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <p>Чтобы не вписывать одни и те же этапы для каждого нового заказа, мы используем <strong>Шаблоны</strong>. Это заранее настроенные «цепочки» действий.</p>
+                        
+                        <h5 class="fw-bold mt-4">Как это работает?</h5>
+                        <ol>
+                            <li>Перейдите в <a href="{% url 'dashboard:task_template_list' %}" class="fw-bold text-decoration-none">Шаблоны заказов</a>.</li>
+                            <li>Выберите нужный тип (например, «Стандартная сборка»).</li>
+                            <li>Нажмите кнопку «Создать заказ по шаблону».</li>
+                            <li>Система сама создаст карточку со всеми этапами, вам останется только уточнить детали и нажать «Сохранить».</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Канбан-доска -->
+            <div id="kanban" class="help-section">
+                <h2 class="fw-bold mb-4">Канбан-доска (Рабочий стол)</h2>
+                <p>Это визуальная таблица всех ваших задач на <a href="{% url 'dashboard:home' %}" class="fw-bold text-decoration-none">главной странице</a>.</p>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Колонки:</h6>
+                        <ul>
+                            <li><strong>Открыта:</strong> Заказ только создан, работа еще не началась.</li>
+                            <li><strong>В работе:</strong> Прямо сейчас кто-то выполняет один из этапов.</li>
+                            <li><strong>Пауза:</strong> Работа временно остановлена (например, ждут материалы).</li>
+                            <li><strong>Закрыта:</strong> Всё готово, заказ можно отгружать.</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Как управлять?</h6>
+                        <p>Вы можете просто перетаскивать карточки мышкой из одной колонки в другую. Статус заказа при этом изменится автоматически.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Работа с задачами -->
+            <div id="tasks" class="help-section">
+                <h2 class="fw-bold mb-4">Список всех задач</h2>
+                <p>Если на Канбан-доске слишком много карточек, используйте <a href="{% url 'dashboard:task_list' %}" class="fw-bold text-decoration-none">Список всех задач</a>. Здесь удобно:</p>
+                <ul>
+                    <li>Искать конкретный заказ по номеру или клиенту.</li>
+                    <li>Видеть общую таблицу всех процессов.</li>
+                    <li>Быстро удалять или редактировать старые записи.</li>
+                </ul>
+            </div>
+
+            <!-- Медиатека -->
+            <div id="media" class="help-section">
+                <h2 class="fw-bold mb-4">Фото и видео фиксация</h2>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <p>Главная ценность системы — доказательства выполненной работы. В разделе <a href="{% url 'dashboard:media_list' %}" class="fw-bold text-decoration-none">Медиатека</a> хранятся все файлы, прикрепленные к заказам.</p>
+                        
+                        <div class="alert alert-warning">
+                            <strong>Важно для сотрудников:</strong> При выполнении этапа всегда записывайте видео через кнопку в приложении. Это автоматически подтверждает время вашей работы («Факт»).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Должности -->
+            <div id="positions" class="help-section">
+                <h2 class="fw-bold mb-4">Справочник должностей</h2>
+                <p>Здесь создаются названия ролей на вашем предприятии (например: Сварщик, Мастер цеха, Контролер ОТК).</p>
+                <p>Сначала нужно создать должность в разделе <a href="{% url 'dashboard:position_list' %}" class="fw-bold text-decoration-none">Должности</a>, а потом назначить её конкретному человеку в списке сотрудников.</p>
+            </div>
+
+            <!-- Сотрудники -->
+            <div id="employees" class="help-section">
+                <h2 class="fw-bold mb-4">Справочник сотрудников</h2>
+                <p>Это список всех людей, которые работают в системе. В разделе <a href="{% url 'dashboard:employee_list' %}" class="fw-bold text-decoration-none">Сотрудники</a> вы можете добавить нового коллегу, указать его отдел и должность.</p>
+            </div>
+
+        </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('.help-nav-link');
+    const sections = document.querySelectorAll('.help-section');
+    const toggles = document.querySelectorAll('.tree-toggle');
+
+    // Переключение разделов
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionId = this.dataset.section;
+
+            // Сброс активных классов
+            navLinks.forEach(l => l.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+
+            // Установка новых активных
+            this.classList.add('active');
+            document.getElementById(sectionId).classList.add('active');
+
+            // Прокрутка к началу контента на мобильных
+            if (window.innerWidth < 768) {
+                document.querySelector('.help-content-area').scrollTop = 0;
+            }
+        });
+    });
+
+    // Обработка сворачивания дерева
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            this.classList.toggle('collapsed');
+        });
+    });
+    
+    // Поддержка хеша в URL
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        const targetLink = document.querySelector(`.help-nav-link[data-section="${hash}"]`);
+        if (targetLink) targetLink.click();
+    }
+});
+</script>
+{% endblock %}

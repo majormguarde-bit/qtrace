@@ -1,0 +1,219 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Панель управления платформой{% endblock %} - Q-TRACE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --sidebar-bg: #0d1b2a;
+            --sidebar-hover: #1b263b;
+            --accent-color: #3498db;
+            --main-bg: #f4f7f6;
+        }
+        body {
+            background-color: var(--main-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar {
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+            width: inherit;
+            z-index: 1000;
+        }
+        .sidebar-link {
+            color: rgba(255, 255, 255, .8);
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+        .sidebar-link:hover {
+            color: white;
+            background-color: var(--sidebar-hover);
+            padding-left: 25px;
+        }
+        .sidebar-link.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-left: 4px solid #fff;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
+        }
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            color: white;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .card-table {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .navbar-top {
+            background: white;
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 sidebar">
+            <div class="text-center mb-5 px-3">
+                <h4 class="fw-bold mb-0"><i class="bi bi-intersect me-2 text-primary"></i>Q-TRACE</h4>
+                <div class="badge bg-primary mt-2">ADMIN</div>
+            </div>
+            
+            <nav>
+                <a href="{% url 'superuser_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'superuser_dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2 me-2"></i> Главная
+                </a>
+                <a href="{% url 'superuser_tenants' %}" class="sidebar-link {% if request.resolver_match.url_name == 'superuser_tenants' %}active{% endif %}">
+                    <i class="bi bi-building me-2"></i> Организации
+                </a>
+                <a href="{% url 'superuser_finance' %}" class="sidebar-link {% if 'finance' in request.path %}active{% endif %}">
+                    <i class="bi bi-wallet2 me-2"></i> Финансы
+                </a>
+                <a href="{% url 'superuser_domains' %}" class="sidebar-link {% if request.resolver_match.url_name == 'superuser_domains' %}active{% endif %}">
+                    <i class="bi bi-globe me-2"></i> Домены
+                </a>
+                <a href="{% url 'superuser_admins' %}" class="sidebar-link {% if request.resolver_match.url_name == 'superuser_admins' %}active{% endif %}">
+                    <i class="bi bi-people me-2"></i> Администраторы
+                </a>
+                <a href="{% url 'superuser_plans' %}" class="sidebar-link {% if 'superuser_plan' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-card-checklist me-2"></i> Тарифные планы
+                </a>
+                
+                <hr class="mx-3 opacity-25">
+                <div class="px-3 mb-2 small text-uppercase opacity-50">Настройки</div>
+                
+                <a href="{% url 'superuser_mail_settings' %}" class="sidebar-link {% if 'settings/mail' in request.path %}active{% endif %}">
+                    <i class="bi bi-envelope-gear me-2"></i> Почта
+                </a>
+                
+                <a href="{% url 'superuser_ai_settings' %}" class="sidebar-link {% if 'settings/ai' in request.path %}active{% endif %}">
+                    <i class="bi bi-robot me-2"></i> Настройки AI
+                </a>
+                
+                <a href="{% url 'superuser_mail_logs' %}" class="sidebar-link {% if 'mail-logs' in request.path %}active{% endif %}">
+                    <i class="bi bi-journal-text me-2"></i> Логи почты
+                </a>
+                
+                <hr class="mx-3 opacity-25">
+                <div class="px-3 mb-2 small text-uppercase opacity-50">Управление базой</div>
+                <a href="{% url 'superuser_db_management' %}" class="sidebar-link {% if 'settings/db' in request.path %}active{% endif %}">
+                    <i class="bi bi-database-fill-gear me-2"></i> Обслуживание БД
+                </a>
+                <a href="/admin/" class="sidebar-link text-info">
+                    <i class="bi bi-database-fill-gear me-2"></i> Вход в базу
+                </a>
+                
+                <hr class="mx-3 opacity-25">
+                <a href="{% url 'home' %}" class="sidebar-link">
+                    <i class="bi bi-house me-2"></i> На главную сайта
+                </a>
+                
+                <form action="/logout/" method="post" class="mt-4">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-link text-danger">
+                        <i class="bi bi-box-arrow-right me-2"></i> Выход
+                    </button>
+                </form>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10 main-content">
+            {% if messages %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                        {% if message.tags == 'success' %}<i class="bi bi-check-circle me-2"></i>{% endif %}
+                        {% if message.tags == 'error' %}<i class="bi bi-exclamation-triangle me-2"></i>{% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Top Navbar -->
+            <div class="navbar-top d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <h4 class="mb-0 fw-bold text-dark me-4">{% block header_title %}Обзор платформы{% endblock %}</h4>
+                    <div class="d-none d-xl-flex gap-2">
+                        <a href="/admin/customers/client/add/" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> Добавить организацию
+                        </a>
+                        <a href="/admin/customers/domain/add/" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-globe me-1"></i> Добавить домен
+                        </a>
+                        <a href="{% url 'superuser_admin_create' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-person-plus me-1"></i> Добавить администратора
+                        </a>
+                        <a href="/admin/" class="btn btn-sm btn-dark">
+                            <i class="bi bi-database-fill-gear me-1"></i> База данных
+                        </a>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-3 text-end d-none d-sm-block">
+                        <div class="fw-bold">{{ user.username }}</div>
+                        <small class="text-muted">Администратор</small>
+                    </div>
+                    <i class="bi bi-person-circle fs-2 text-primary"></i>
+                </div>
+            </div>
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Автоматическое скрытие уведомлений через 5 секунд
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        });
+    });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

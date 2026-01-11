@@ -1,0 +1,213 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Домены - Панель управления{% endblock %}
+{% block header_title %}Управление доменами{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" class="form-control border-start-0" placeholder="Поиск по домену, организации..." value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="per_page" class="form-select" onchange="this.form.submit()">
+                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10 строк</option>
+                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 строк</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 строк</option>
+                            <option value="all" {% if per_page == 'all' %}selected{% endif %}>Все</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Найти</button>
+                    </div>
+                    {% if search_query %}
+                    <div class="col-md-2">
+                        <a href="?" class="btn btn-outline-secondary w-100">Сбросить</a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-table shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-globe me-2 text-info"></i>Привязанные домены</h5>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-info btn-sm me-3" data-bs-toggle="modal" data-bs-target="#helpModal">
+                        <i class="bi bi-question-circle me-1"></i> Помощь
+                    </button>
+                    <span class="badge bg-light text-dark border">{{ page_obj.paginator.count }} доменов</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">
+                                    <a href="?sort={% if sort_by == 'domain' %}-domain{% else %}domain{% endif %}&search={{ search_query }}&per_page={{ per_page }}" class="text-dark text-decoration-none">
+                                        Домен {% if sort_by == 'domain' %}↑{% elif sort_by == '-domain' %}↓{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?sort={% if sort_by == 'tenant__name' %}-tenant__name{% else %}tenant__name{% endif %}&search={{ search_query }}&per_page={{ per_page }}" class="text-dark text-decoration-none">
+                                        Организация {% if sort_by == 'tenant__name' %}↑{% elif sort_by == '-tenant__name' %}↓{% endif %}
+                                    </a>
+                                </th>
+                                <th>Тип</th>
+                                <th>URL</th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for domain in page_obj %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-primary">{{ domain.domain }}</div>
+                                </td>
+                                <td>
+                                    <div class="fw-medium">{{ domain.tenant.name }}</div>
+                                    <div class="small text-muted"><code>{{ domain.tenant.schema_name }}</code></div>
+                                </td>
+                                <td>
+                                    {% if domain.is_primary %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3">Основной</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted border rounded-pill px-3">Дополнительный</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="http://{{ domain.domain }}:8000" target="_blank" class="btn btn-sm btn-link text-decoration-none p-0">
+                                        Перейти <i class="bi bi-box-arrow-up-right small"></i>
+                                    </a>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="/admin/customers/domain/{{ domain.id }}/change/" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">Домены не найдены</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="card-footer bg-white py-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">Назад</a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">Вперед</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Help -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="helpModalLabel">
+                    <i class="bi bi-info-circle text-info me-2"></i>Зачем нужна таблица доменов?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <p class="lead">Таблица привязанных доменов — это пульс управления всей мультиарендной (Multi-tenant) системой.</p>
+                    <p>В архитектуре проекта, где каждый клиент изолирован в своей схеме базы данных, домен является единственным ключом, по которому система понимает, в какую «комнату» завести пользователя.</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="h-100 p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold"><i class="bi bi-router me-2 text-primary"></i>Маршрутизация</h6>
+                            <p class="small mb-0">Привязка новых доменов (например, корпоративного домена клиента) и назначение основного (Primary) домена для генерации ссылок в уведомлениях.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="h-100 p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold"><i class="bi bi-shield-check me-2 text-success"></i>Безопасность и SSL</h6>
+                            <p class="small mb-0">Контроль SSL-сертификатов. Каждый домен в списке требует защиты и своевременного обновления сертификатов.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="h-100 p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold"><i class="bi bi-tools me-2 text-warning"></i>Диагностика</h6>
+                            <p class="small mb-0">Устранение сбоев доступа. Проверка правильности прописки домена в системе и отсутствие дубликатов привязок.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="h-100 p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold"><i class="bi bi-layers me-2 text-info"></i>Масштабирование</h6>
+                            <p class="small mb-0">Поддержка White Label. Возможность добавления множества доменов для одного клиента для входа через разные корпоративные адреса.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 border-start border-4 border-primary bg-primary-subtle rounded-end mb-4">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-lightning-charge me-2"></i>Как использовать прямо сейчас?</h6>
+                    <ul class="small mb-0 ps-3">
+                        <li><strong>Поиск:</strong> Мгновенно находите, какой организации принадлежит домен через строку поиска выше.</li>
+                        <li><strong>Инспекция:</strong> Все домены также видны в карточке организации (через <em>DomainInline</em>), что позволяет видеть все «точки входа» клиента в одном месте.</li>
+                    </ul>
+                </div>
+
+                <div class="mt-4 p-3 border-start border-4 border-info bg-info-subtle rounded-end">
+                    <h6 class="fw-bold mb-2">Пример использования:</h6>
+                    <p class="small mb-0"><strong>Сценарий:</strong> Клиент "ТехноПром" хочет сменить поддомен с <code>tech.localhost</code> на <code>tprom.localhost</code>.</p>
+                    <p class="small mb-0 mt-1"><strong>Действие:</strong> Зайти в таблицу доменов, найти <code>tech.localhost</code> и изменить на <code>tprom.localhost</code>. Маршрутизация переключится мгновенно.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Понятно</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>404 - Page Not Found</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; }
+        .debug-info { background: #f0f0f0; padding: 20px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>404 - Страница не найдена</h1>
+    <p>К сожалению, запрашиваемая страница не найдена.</p>
+    
+    <div class="debug-info">
+        <h3>Отладочная информация:</h3>
+        <p><strong>Host:</strong> {{ host }}</p>
+        <p><strong>Path:</strong> {{ path }}</p>
+        <p><strong>Tenant:</strong> {{ tenant }}</p>
+        <p><strong>Schema:</strong> {{ schema }}</p>
+    </div>
+    
+    <p><a href="/">Вернуться на главную</a></p>
+</body>
+</html>

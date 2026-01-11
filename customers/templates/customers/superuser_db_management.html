@@ -1,0 +1,160 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Управление БД - Панель управления{% endblock %}
+{% block header_title %}Обслуживание базы данных{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Основная статистика -->
+    <div class="col-md-6">
+        <div class="card card-table shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0"><i class="bi bi-database me-2"></i>Состояние базы данных</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <label class="text-muted small d-block">Текущий размер БД</label>
+                    <h3 class="fw-bold text-primary">{{ db_size }}</h3>
+                </div>
+                
+                <h6 class="fw-bold mb-3">Топ таблиц по количеству записей:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Таблица</th>
+                                <th class="text-end">Записей</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for table, count in top_tables %}
+                            <tr>
+                                <td><code>{{ table }}</code></td>
+                                <td class="text-end">{{ count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Операции -->
+    <div class="col-md-6">
+        <div class="card card-table shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Инструменты обслуживания</h5>
+            </div>
+            <div class="card-body">
+                <!-- Очистка схем -->
+                <div class="p-3 border rounded mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold">Очистка "мертвых" тенантов</h6>
+                        <span class="badge bg-warning text-dark">{{ dead_schemas|length }} найдено</span>
+                    </div>
+                    <p class="small text-muted mb-3">Удаляет схемы из PostgreSQL, для которых нет соответствующих записей в таблице Client.</p>
+                    <form action="{% url 'superuser_db_cleanup_tenants' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100" {% if not dead_schemas %}disabled{% endif %} onclick="return confirm('Вы уверены? Это действие необратимо удалит все данные в неиспользуемых схемах.')">
+                            <i class="bi bi-trash me-1"></i> Очистить мертвые схемы
+                        </button>
+                    </form>
+                    {% if dead_schemas %}
+                    <div class="mt-2 small">
+                        <span class="text-muted">Будут удалены:</span>
+                        {% for schema in dead_schemas %}
+                        <code class="ms-1">{{ schema }}</code>{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Vacuum -->
+                <div class="p-3 border rounded mb-3">
+                    <h6 class="mb-0 fw-bold mb-2">Оптимизация (VACUUM)</h6>
+                    <p class="small text-muted mb-3">Выполняет <code>VACUUM ANALYZE</code>. Освобождает неиспользуемое место и обновляет статистику планировщика запросов.</p>
+                    <form action="{% url 'superuser_db_vacuum' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="bi bi-lightning-charge me-1"></i> Запустить оптимизацию
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Backup -->
+                <div class="p-3 border rounded">
+                    <h6 class="mb-0 fw-bold mb-2">Резервное копирование</h6>
+                    <p class="small text-muted mb-3">Создает полный дамп базы данных (структура и данные) в папку <code>/backups/</code>.</p>
+                    <form action="{% url 'superuser_db_backup' %}" method="post" id="backupForm">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-sm w-100" id="backupBtn">
+                            <i class="bi bi-cloud-upload me-1"></i> <span id="backupBtnText">Создать новый бэкап</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список бэкапов -->
+    <div class="col-12 mt-4">
+        <div class="card card-table shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0"><i class="bi bi-archive me-2"></i>Доступные резервные копии</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Имя файла</th>
+                                <th>Дата создания</th>
+                                <th>Размер</th>
+                                <th class="text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td><i class="bi bi-file-earmark-code me-2"></i>{{ backup.name }}</td>
+                                <td>{{ backup.date|date:"d.m.Y H:i" }}</td>
+                                <td>{{ backup.size }}</td>
+                                <td class="text-end">
+                                    <form action="{% url 'superuser_db_restore' backup.name %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('ВНИМАНИЕ! Это действие заменит все текущие данные данными из бэкапа. Продолжить?')">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Восстановить
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Бэкапов пока нет</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('backupForm').addEventListener('submit', function() {
+        const btn = document.getElementById('backupBtn');
+        const text = document.getElementById('backupBtnText');
+        btn.disabled = true;
+        text.innerText = 'Создание бэкапа... подождите';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + text.innerText;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>500 - Server Error</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; }
+        .debug-info { background: #fdd; padding: 20px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>500 - Ошибка сервера</h1>
+    <p>Произошла внутренняя ошибка сервера.</p>
+    
+    <div class="debug-info">
+        <h3>Отладочная информация:</h3>
+        <p><strong>Host:</strong> {{ host }}</p>
+        <p><strong>Path:</strong> {{ path }}</p>
+        <p><strong>Tenant:</strong> {{ tenant }}</p>
+    </div>
+    
+    <p><a href="/">Вернуться на главную</a></p>
+</body>
+</html>

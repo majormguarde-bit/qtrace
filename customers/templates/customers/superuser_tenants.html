@@ -1,0 +1,288 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Организации - Панель управления{% endblock %}
+{% block header_title %}Все организации{% endblock %}
+
+{% block content %}
+<!-- Subscription Monitoring Dashboard -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-25 border-start border-success border-5">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-success-emphasis mb-0 fw-bold">Активные</h6>
+                    <span class="badge bg-success rounded-pill shadow-sm">{{ stats.active }}</span>
+                </div>
+                <div class="progress mb-2" style="height: 8px; background-color: rgba(25, 135, 84, 0.2);">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.active_pct }}%"></div>
+                </div>
+                <div class="small text-success-emphasis fw-medium">В штатном режиме</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-25 border-start border-warning border-5">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-warning-emphasis mb-0 fw-bold">Истекают (30д)</h6>
+                    <span class="badge bg-warning text-dark rounded-pill shadow-sm">{{ stats.expiring_30 }}</span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="h4 mb-0 fw-bold text-warning-emphasis">{{ stats.expiring_7 }}</span>
+                    <span class="small text-warning-emphasis fw-medium">через неделю</span>
+                </div>
+                <div class="mt-1 small text-warning-emphasis">Требуют внимания</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 bg-danger bg-opacity-25 border-start border-danger border-5">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-danger-emphasis mb-0 fw-bold">Просрочены</h6>
+                    <span class="badge bg-danger rounded-pill shadow-sm">{{ stats.expired }}</span>
+                </div>
+                <div class="progress mb-2" style="height: 8px; background-color: rgba(220, 53, 69, 0.2);">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ stats.expired_pct }}%"></div>
+                </div>
+                <div class="small text-danger-emphasis fw-medium">Доступ ограничен</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-25 border-start border-info border-5">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-info-emphasis mb-0 fw-bold">Всего клиентов</h6>
+                    <span class="badge bg-info text-white rounded-pill shadow-sm">{{ stats.total }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-people-fill text-info-emphasis"></i>
+                    <span class="small text-info-emphasis fw-medium">{{ stats.no_plan }} без тарифа</span>
+                </div>
+                <div class="progress" style="height: 4px; background-color: rgba(13, 110, 253, 0.2);">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" class="form-control border-start-0" placeholder="Поиск по названию, схеме, email..." value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="per_page" class="form-select" onchange="this.form.submit()">
+                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10 строк</option>
+                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 строк</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 строк</option>
+                            <option value="all" {% if per_page == 'all' %}selected{% endif %}>Все</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Найти</button>
+                    </div>
+                    {% if search_query %}
+                    <div class="col-md-2">
+                        <a href="?" class="btn btn-outline-secondary w-100">Сбросить</a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-table shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-building me-2 text-primary"></i>Список клиентов</h5>
+                <span class="badge bg-light text-dark border">{{ page_obj.paginator.count }} организаций</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">
+                                    <a href="?sort={% if sort_by == 'name' %}-name{% else %}name{% endif %}&search={{ search_query }}&per_page={{ per_page }}" class="text-dark text-decoration-none">
+                                        Название {% if sort_by == 'name' %}↑{% elif sort_by == '-name' %}↓{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?sort={% if sort_by == 'schema_name' %}-schema_name{% else %}schema_name{% endif %}&search={{ search_query }}&per_page={{ per_page }}" class="text-dark text-decoration-none">
+                                        Схема {% if sort_by == 'schema_name' %}↑{% elif sort_by == '-schema_name' %}↓{% endif %}
+                                    </a>
+                                </th>
+                                <th>Контакты</th>
+                                <th>Тариф</th>
+                                <th>Пользователи</th>
+                                <th>Статус</th>
+                                <th>Подписка</th>
+                                <th>
+                                    <a href="?sort={% if sort_by == 'created_on' %}-created_on{% else %}created_on{% endif %}&search={{ search_query }}&per_page={{ per_page }}" class="text-dark text-decoration-none">
+                                        Дата регистрации {% if sort_by == 'created_on' %}↑{% elif sort_by == '-created_on' %}↓{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tenant in page_obj %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-primary">{{ tenant.name }}</div>
+                                </td>
+                                <td><code>{{ tenant.schema_name }}</code></td>
+                                <td>
+                                    {% if tenant.phone %}<div class="small"><i class="bi bi-telephone me-1"></i> {{ tenant.phone }}</div>{% endif %}
+                                    {% if tenant.email %}<div class="small"><i class="bi bi-envelope me-1"></i> {{ tenant.email }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.subscription_plan %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3">
+                                            {{ tenant.subscription_plan.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted small">Не назначен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.subscription_plan %}
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="fw-bold {% if tenant.user_count >= tenant.user_limit and tenant.user_limit > 0 %}text-danger{% endif %}">
+                                                {{ tenant.user_count }}
+                                            </span>
+                                            <span class="text-muted">/</span>
+                                            <span class="text-muted small">{{ tenant.user_limit }}</span>
+                                        </div>
+                                        <div class="progress mt-1" style="height: 4px; width: 60px;">
+                                             <div class="progress-bar {% if tenant.user_count >= tenant.user_limit %}bg-danger{% else %}bg-success{% endif %}" 
+                                                  role="progressbar" 
+                                                  style="width: {{ tenant.user_percent }}%">
+                                             </div>
+                                         </div>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.is_active %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">Активен</span>
+                                    {% else %}
+                                        {% if tenant.subscription_plan %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3">Заблокирован</span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3">Ожидает активации</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.subscription_plan %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if not tenant.subscription_end_date %}
+                                                <span class="badge bg-success rounded-pill px-3">Бессрочно</span>
+                                            {% elif tenant.subscription_end_date >= today %}
+                                                <span class="d-inline-flex justify-content-center align-items-center bg-success text-white rounded-circle fw-bold" style="width: 24px; height: 24px; font-size: 0.75rem;" title="Активна">А</span>
+                                                <span class="small text-muted">{{ tenant.subscription_end_date|date:"d.m.Y" }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger rounded-pill px-3">Истекла</span>
+                                                <span class="small text-danger ms-1">{{ tenant.subscription_end_date|date:"d.m.Y" }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3">Нет тарифа</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="small text-muted">{{ tenant.created_on|date:"d.m.Y" }}</span></td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <a href="{% url 'superuser_tenant_edit' tenant.id %}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <span class="visually-hidden">Меню</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{% url 'superuser_tenant_toggle_status' tenant.id %}">
+                                                    {% if tenant.is_active %}
+                                                        <i class="bi bi-lock me-2 text-warning"></i> Заблокировать
+                                                    {% else %}
+                                                        {% if tenant.subscription_plan %}
+                                                            <i class="bi bi-unlock me-2 text-success"></i> Разблокировать
+                                                        {% else %}
+                                                            <i class="bi bi-unlock me-2 text-success"></i> Активировать
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider opacity-25"></li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-danger" href="{% url 'superuser_tenant_delete' tenant.id %}">
+                                                    <i class="bi bi-trash me-2"></i> Удалить
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7" class="text-center py-5 text-muted">Организации не найдены</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="card-footer bg-white py-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">Назад</a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}">Вперед</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&sort={{ sort_by }}&search={{ search_query }}&per_page={{ per_page }}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

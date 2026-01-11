@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+.kiro/
+.cargopath.ru/
+*.swp
+*.swo
+*~
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+/media/
+/static/
+/tenant_media/
+/backups/
+/tmp/
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific / Temporary files
+setup_tenants.py
+fix_tenants.py
+create_test_users.py
+create_users_simple.py
+cleanup_*.py
+check_*.py
+test_*.py
+FINAL_*.py
+FINAL_*.md
+SOLUTION_*.md
+IMPLEMENTATION_*.md
+STATUS.md
+TENANT_*.md
+AUTH_API.md
+DEPLOY.md
+ENTRY_POINTS.md
+*.zip
+*.sh
+nginx_example.conf
+passenger_wsgi.py
+readme.txt
+create_tenant_users.py
+debug_template.py
+cargopath.ru.zip
+deploy.zip
+deploy_remote.sh

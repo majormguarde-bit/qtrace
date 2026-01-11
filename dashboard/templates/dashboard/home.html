@@ -1,0 +1,686 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Панель управления</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'dashboard:task_template_list' %}" class="btn btn-primary rounded-pill px-3 shadow-sm btn-hover-scale">
+                    <i class="bi bi-journal-plus me-1"></i> Новый заказ по шаблону
+                </a>
+                <a href="{% url 'dashboard:task_list' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-list-ul me-1"></i> Список задач
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Stats Cards -->
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:task_list' %}" class="text-decoration-none">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">{% if user_role == 'ADMIN' %}Задачи предприятия{% else %}Мои задачи{% endif %}</h6>
+                            <h2 class="display-5 mb-0">{{ tasks_count }}</h2>
+                        </div>
+                        <i class="bi bi-list-check fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small opacity-75">
+                            <span>Подписка активна</span>
+                            <span>{% if subscription_end_date %}{{ subscription_end_date|date:"d.m.Y" }}{% else %}Бессрочно{% endif %}</span>
+                        </div>
+                        {% if days_left is not none %}
+                        <div class="small mt-1 {% if days_left < 7 %}text-warning fw-bold{% endif %}">
+                            Осталось дней: {{ days_left }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:media_list' %}" class="text-decoration-none">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">{% if user_role == 'ADMIN' %}Медиатека предприятия{% else %}Мои файлы{% endif %}</h6>
+                            <h2 class="display-5 mb-0">{{ media_count }}</h2>
+                        </div>
+                        <i class="bi bi-folder fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Хранилище</span>
+                            <span>{{ storage_used_mb }} МБ / {{ storage_limit_gb }} ГБ</span>
+                        </div>
+                        <div class="progress" style="height: 5px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ storage_percent }}%" aria-valuenow="{{ storage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+
+    {% if user_role == 'ADMIN' %}
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:employee_list' %}" class="text-decoration-none">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">Сотрудники</h6>
+                            <h2 class="display-5 mb-0">{{ employees_count }}</h2>
+                        </div>
+                        <i class="bi bi-people fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Лимит аккаунтов</span>
+                            <span>{{ employees_count }} / {{ users_limit }}</span>
+                        </div>
+                        <div class="progress" style="height: 5px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ users_percent }}%" aria-valuenow="{{ users_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Kanban Board -->
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'dashboard:task_create' %}" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3 text-decoration-none shadow-sm btn-hover-scale" style="width: 42px; height: 42px;">
+                    <i class="bi bi-plus-lg fs-5"></i>
+                </a>
+                <div>
+                    <h3 class="fw-bold mb-0">Управление задачами</h3>
+                    <p class="text-muted small mb-0">Отслеживание прогресса и контроль выполнения</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <form id="kanbanFilters" method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center bg-white p-3 rounded-4 shadow-sm border border-light">
+            <div class="flex-grow-1 d-flex flex-wrap gap-2">
+                <div class="dropdown">
+                    <select name="assigned_to" class="form-select form-select-sm border rounded-pill px-3 bg-light-subtle" onchange="this.form.submit()">
+                        <option value="">Все исполнители</option>
+                        {% for user in all_users %}
+                            <option value="{{ user.id }}" {% if request.GET.assigned_to == user.id|stringformat:"i" %}selected{% endif %}>
+                                {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="dropdown">
+                    <select name="priority" class="form-select form-select-sm border rounded-pill px-3 bg-light-subtle" onchange="this.form.submit()">
+                        <option value="">Все приоритеты</option>
+                        {% for p_val, p_label in priority_choices %}
+                            <option value="{{ p_val }}" {% if request.GET.priority == p_val|stringformat:"i" %}selected{% endif %}>
+                                {{ p_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3 ms-2">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input filter-switch" type="checkbox" name="overdue" id="overdueSwitch" {% if request.GET.overdue == 'on' %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label small text-muted" for="overdueSwitch">Просрочено</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input filter-switch" type="checkbox" name="important" id="importantSwitch" {% if request.GET.important == 'on' %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label small text-muted" for="importantSwitch">Важно</label>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="{% url 'dashboard:home' %}" class="btn btn-link btn-sm text-decoration-none text-muted small"><i class="bi bi-arrow-counterclockwise me-1"></i> Сбросить</a>
+        </form>
+        
+        <div class="kanban-container pb-4" style="overflow-x: auto;">
+            <div class="kanban-board d-flex gap-3" style="min-width: 1300px;">
+                <!-- OPEN / TO DO -->
+                <div class="kanban-column rounded-4 p-0 flex-grow-1 border shadow-sm bg-white" style="min-width: 260px;">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-circle me-2 text-secondary"></i>
+                            <h6 class="fw-bold mb-0 small text-dark uppercase">Очередь</h6>
+                            <span class="badge bg-white text-dark border ms-2 rounded-pill ultra-small shadow-xs">{{ kanban_tasks.OPEN.count }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-tasks-list p-2 d-flex flex-column gap-2" id="tasks-todo" data-status="OPEN">
+                        {% for task in kanban_tasks.OPEN %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="text-center py-4 text-muted opacity-50 small">Нет задач в очереди</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- CONTINUE / IN PROGRESS -->
+                <div class="kanban-column rounded-4 p-0 flex-grow-1 border shadow-sm bg-white" style="min-width: 260px;">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-play-circle me-2 text-primary"></i>
+                            <h6 class="fw-bold mb-0 small text-dark uppercase">В работе</h6>
+                            <span class="badge bg-white text-dark border ms-2 rounded-pill ultra-small shadow-xs">{{ kanban_tasks.CONTINUE.count }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-tasks-list p-2 d-flex flex-column gap-2" id="tasks-inprogress" data-status="CONTINUE">
+                        {% for task in kanban_tasks.CONTINUE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="text-center py-4 text-muted opacity-50 small">Нет задач в работе</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- IMPORTANT / REVIEW -->
+                <div class="kanban-column rounded-4 p-0 flex-grow-1 border shadow-sm bg-white" style="min-width: 260px;">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-circle me-2 text-danger"></i>
+                            <h6 class="fw-bold mb-0 small text-dark uppercase">Приоритетные</h6>
+                            <span class="badge bg-white text-dark border ms-2 rounded-pill ultra-small shadow-xs">{{ kanban_tasks.IMPORTANT.count }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-tasks-list p-2 d-flex flex-column gap-2" id="tasks-important" data-status="IMPORTANT">
+                        {% for task in kanban_tasks.IMPORTANT %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="text-center py-4 text-muted opacity-50 small">Нет важных задач</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PAUSE / ON HOLD -->
+                <div class="kanban-column rounded-4 p-0 flex-grow-1 border shadow-sm bg-white" style="min-width: 260px;">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-pause-circle me-2 text-warning"></i>
+                            <h6 class="fw-bold mb-0 small text-dark uppercase">Пауза</h6>
+                            <span class="badge bg-white text-dark border ms-2 rounded-pill ultra-small shadow-xs">{{ kanban_tasks.PAUSE.count }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-tasks-list p-2 d-flex flex-column gap-2" id="tasks-onhold" data-status="PAUSE">
+                        {% for task in kanban_tasks.PAUSE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="text-center py-4 text-muted opacity-50 small">Нет задач на паузе</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- CLOSE / DONE -->
+                <div class="kanban-column rounded-4 p-0 flex-grow-1 border shadow-sm bg-white" style="min-width: 260px;">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle me-2 text-success"></i>
+                            <h6 class="fw-bold mb-0 small text-dark uppercase">Завершено</h6>
+                            <span class="badge bg-white text-dark border ms-2 rounded-pill ultra-small shadow-xs">{{ kanban_tasks.CLOSE.count }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-tasks-list p-2 d-flex flex-column gap-2" id="tasks-done" data-status="CLOSE">
+                        {% for task in kanban_tasks.CLOSE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="text-center py-4 text-muted opacity-50 small">Нет завершенных задач</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">Текущие задачи</h5>
+                <a href="{% url 'dashboard:task_list' %}" class="btn btn-sm btn-outline-primary">Все задачи</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4" style="width: 40px;"></th>
+                                <th>Задача</th>
+                                <th>Статус</th>
+                                <th>KPI</th>
+                                <th class="pe-4 text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for task in recent_tasks %}
+                            <!-- Main Row -->
+                            <tr class="task-row cursor-pointer" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
+                                <td class="ps-4">
+                                    <i class="bi bi-chevron-right chevron-icon transition-300"></i>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ task.title }}</div>
+                                    <div class="text-muted small text-truncate" style="max-width: 250px;">
+                                        <span class="badge bg-light text-muted border ultra-small me-1">{{ task.external_id|default:"---" }}</span>
+                                        {{ task.description|truncatechars:30 }}
+                                    </div>
+                                </td>
+                                <td class="task-status-badge">
+                                    {% if task.status == 'OPEN' %}
+                                    <span class="badge bg-primary-soft text-primary border border-primary-subtle px-3 rounded-pill">Открыта</span>
+                                    {% elif task.status == 'PAUSE' %}
+                                    <span class="badge bg-warning-soft text-warning-emphasis border border-warning-subtle px-3 rounded-pill">Пауза</span>
+                                    {% elif task.status == 'CONTINUE' %}
+                                    <span class="badge bg-info-soft text-info-emphasis border border-info-subtle px-3 rounded-pill">В работе</span>
+                                    {% elif task.status == 'IMPORTANT' %}
+                                    <span class="badge bg-danger-soft text-danger border border-danger-subtle px-3 rounded-pill">Важно</span>
+                                    {% elif task.status == 'CLOSE' %}
+                                    <span class="badge bg-success-soft text-success border border-success-subtle px-3 rounded-pill">Закрыта</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="ultra-small text-muted text-uppercase">Lead Time</span>
+                                        <span class="small fw-bold {% if task.lead_time %}text-primary{% else %}text-muted{% endif %}">
+                                            {{ task.lead_time|default:"---" }} <small>мин</small>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="pe-4 text-end">
+                                    <span class="text-muted small">{{ task.created_at|date:"d.m" }}</span>
+                                </td>
+                            </tr>
+                            
+                            <!-- Details Row (Accordion) -->
+                            <tr class="collapse-row">
+                                <td colspan="4" class="p-0 border-0">
+                                    <div class="collapse" id="task-details-{{ task.id }}">
+                                        <div class="p-4 bg-light-subtle border-bottom">
+                                            <div class="row">
+                                                <div class="col-lg-7">
+                                                    <!-- KPI Analytics Row -->
+                                                    <div class="row g-2 mb-4">
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-white text-center">
+                                                                <div class="ultra-small text-muted text-uppercase mb-1">Lead Time</div>
+                                                                <div class="small fw-bold text-primary">{{ task.lead_time|default:"---" }} <small>м</small></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-white text-center">
+                                                                <div class="ultra-small text-muted text-uppercase mb-1">Cycle Time</div>
+                                                                <div class="small fw-bold text-success">{{ task.cycle_time|default:"0" }} <small>м</small></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-white text-center">
+                                                                <div class="ultra-small text-muted text-uppercase mb-1">Wait Time</div>
+                                                                <div class="small fw-bold text-warning">{{ task.wait_time|default:"0" }} <small>м</small></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3">
+                                                            <div class="p-2 border rounded bg-white text-center">
+                                                                <div class="ultra-small text-muted text-uppercase mb-1">Efficiency</div>
+                                                                <div class="small fw-bold text-info">{{ task.efficiency_score|default:"0" }}%</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-sm-3 d-none d-sm-block">
+                                                            <div class="p-2 border rounded bg-white text-center">
+                                                                <div class="ultra-small text-muted text-uppercase mb-1">Quality</div>
+                                                                <div class="small fw-bold text-success">{{ task.quality_score|default:"100" }}%</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-2">Описание</h6>
+                                                    <div class="text-dark mb-4 small">{{ task.description|linebreaks|default:"Нет описания" }}</div>
+                                                    
+                                                    <!-- Task Control Buttons -->
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-2">Управление</h6>
+                                                    <div class="task-controls d-flex flex-wrap gap-2">
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="PAUSE">
+                                                            <i class="bi bi-pause-fill text-warning"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="CONTINUE">
+                                                            <i class="bi bi-play-fill text-info"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="IMPORTANT">
+                                                            <i class="bi bi-exclamation-triangle text-danger"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="CLOSE">
+                                                            <i class="bi bi-check-lg text-success"></i>
+                                                        </button>
+                                                        <a href="{% url 'dashboard:task_edit' task.id %}" class="btn btn-white btn-sm border shadow-sm px-2 py-1">
+                                                            <i class="bi bi-pencil text-primary"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-lg-5 border-start">
+                                                    {% if task.stages.all %}
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-3">Этапы и хронометраж</h6>
+                                                    <div class="task-stages">
+                                                        {% for stage in task.stages.all %}
+                                                        <div class="stage-item p-2 mb-2 rounded border bg-white shadow-sm" 
+                                                             id="stage-{{ stage.id }}">
+                                                            <div class="d-flex align-items-center mb-1" onclick="toggleStage({{ stage.id }})" style="cursor: pointer;">
+                                                                <div class="stage-checkbox me-2">
+                                                                    {% if stage.is_completed %}
+                                                                    <i class="bi bi-check-circle-fill text-success small"></i>
+                                                                    {% else %}
+                                                                    <i class="bi bi-circle text-muted small"></i>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div class="stage-info flex-grow-1">
+                                                                    <div class="{% if stage.is_completed %}text-decoration-line-through text-muted{% endif %} ultra-small fw-bold">
+                                                                        {{ stage.name }}
+                                                                    </div>
+                                                                </div>
+                                                                <div class="stage-fixation-actions d-flex gap-1 ms-1">
+                                                                    <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1" 
+                                                                            onclick="event.stopPropagation(); triggerMediaUpload({{ stage.id }}, 'image/*')" 
+                                                                            title="Фотофиксация">
+                                                                        <i class="bi bi-camera text-primary ultra-small"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1" 
+                                                                            onclick="event.stopPropagation(); triggerMediaUpload({{ stage.id }}, 'video/*')" 
+                                                                            title="Видеофиксация">
+                                                                        <i class="bi bi-video text-danger ultra-small"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between align-items-center mt-1 pt-1 border-top border-light">
+                                                                <div class="ultra-small text-muted">
+                                                                    <i class="bi bi-clock me-1"></i>
+                                                                    {{ stage.planned_duration }}м / 
+                                                                    <span class="{% if stage.actual_duration > stage.planned_duration %}text-danger{% else %}text-success{% endif %}">
+                                                                        {{ stage.actual_duration }}м
+                                                                    </span>
+                                                                </div>
+                                                                {% if stage.reason_code != 'NONE' %}
+                                                                <span class="badge bg-warning-soft text-warning-emphasis ultra-small" style="font-size: 0.6rem;">
+                                                                    {{ stage.get_reason_code_display }}
+                                                                </span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-clipboard-x display-4 d-block mb-3"></i>
+                    Нет активных задач
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .cursor-grab { cursor: grab; }
+    .cursor-grabbing { cursor: grabbing; }
+    .transition-300 { transition: all 0.3s ease; }
+    
+    .task-row[aria-expanded="true"] .chevron-icon {
+        transform: rotate(90deg);
+        color: var(--bs-primary);
+    }
+    .task-row:hover { background-color: rgba(var(--bs-primary-rgb), 0.02) !important; }
+    
+    .kanban-container {
+        overflow-x: auto;
+        padding-bottom: 1.5rem;
+        scrollbar-width: thin;
+        scrollbar-color: #dee2e6 transparent;
+    }
+    
+    .kanban-container::-webkit-scrollbar {
+        height: 8px;
+    }
+    
+    .kanban-container::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .kanban-container::-webkit-scrollbar-thumb {
+        background-color: #dee2e6;
+        border-radius: 20px;
+        border: 2px solid transparent;
+    }
+
+    .kanban-board {
+        min-height: 700px;
+    }
+
+    .kanban-column {
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 220px);
+        background-color: #f8f9fa !important;
+        border: 1px solid #e9ecef !important;
+    }
+    
+    .kanban-column:hover {
+        border-color: #dee2e6 !important;
+        box-shadow: 0 .25rem .75rem rgba(0,0,0,.05) !important;
+    }
+
+    .kanban-tasks-list {
+        min-height: 200px;
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 12px !important;
+        scrollbar-width: none; /* Hide scrollbar for Firefox */
+    }
+    
+    .kanban-tasks-list::-webkit-scrollbar {
+        display: none; /* Hide scrollbar for Chrome, Safari and Opera */
+    }
+
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #e9ecef !important;
+        border: 2px dashed #adb5bd !important;
+    }
+
+    .sortable-drag {
+        opacity: 0.9;
+        transform: rotate(2deg);
+        cursor: grabbing !important;
+    }
+
+    .ultra-small {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+    }
+    
+    .shadow-xs {
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    
+    .btn-hover-scale {
+        transition: transform 0.2s;
+    }
+    
+    .btn-hover-scale:hover {
+        transform: scale(1.1);
+    }
+    
+    .uppercase {
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem !important;
+    }
+
+    /* Custom scrollbar for tasks list when hovered */
+    .kanban-column:hover .kanban-tasks-list {
+        scrollbar-width: thin;
+        scrollbar-color: #dee2e6 transparent;
+    }
+    
+    .kanban-column:hover .kanban-tasks-list::-webkit-scrollbar {
+        display: block;
+        width: 4px;
+    }
+    
+    .kanban-column:hover .kanban-tasks-list::-webkit-scrollbar-thumb {
+        background-color: #dee2e6;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const columns = document.querySelectorAll('.kanban-tasks-list');
+    
+    // Double click to edit
+    document.addEventListener('dblclick', function(e) {
+        const card = e.target.closest('.kanban-card');
+        if (card) {
+            const editUrl = card.getAttribute('data-edit-url');
+            if (editUrl) {
+                window.location.href = editUrl;
+            }
+        }
+    });
+
+    columns.forEach(column => {
+        new Sortable(column, {
+            group: 'kanban',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            onStart: function() {
+                document.body.classList.add('cursor-grabbing');
+            },
+            onEnd: function(evt) {
+                document.body.classList.remove('cursor-grabbing');
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.dataset.status;
+                const oldStatus = evt.from.dataset.status;
+                
+                if (newStatus !== oldStatus) {
+                    updateTaskStatus(taskId, newStatus, evt.item);
+                }
+            }
+        });
+    });
+
+    function updateTaskStatus(taskId, status, item) {
+        const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
+        const formData = new FormData();
+        formData.append('status', status);
+        
+        item.style.opacity = '0.5';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            item.style.opacity = '1';
+            if (data.status === 'success') {
+                // Update border color on status change if needed
+                const statusColors = {
+                    'OPEN': '#6c757d',
+                    'PAUSE': '#ffc107',
+                    'CONTINUE': '#0dcaf0',
+                    'IMPORTANT': '#dc3545',
+                    'CLOSE': '#198754'
+                };
+                item.style.borderTopColor = statusColors[status];
+                updateColumnCounters();
+            } else {
+                alert('Ошибка: ' + (data.errors ? JSON.stringify(data.errors) : 'Не удалось обновить статус'));
+                location.reload();
+            }
+        })
+        .catch(error => {
+            item.style.opacity = '1';
+            console.error('Error:', error);
+            location.reload();
+        });
+    }
+
+    function updateColumnCounters() {
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            const count = column.querySelectorAll('.kanban-card').length;
+            const badge = column.querySelector('.badge.bg-white');
+            if (badge) {
+                badge.innerText = count;
+            }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

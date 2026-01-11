@@ -1,0 +1,96 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Должности{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-briefcase me-2"></i>Должности</h2>
+    <a href="{% url 'dashboard:position_create' %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-plus-lg me-1"></i> Добавить должность
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Поиск..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-auto">
+                <select name="paginate_by" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="10" {% if paginate_by == '10' or paginate_by == 10 %}selected{% endif %}>10 на стр.</option>
+                    <option value="25" {% if paginate_by == '25' or paginate_by == 25 %}selected{% endif %}>25 на стр.</option>
+                    <option value="50" {% if paginate_by == '50' or paginate_by == 50 %}selected{% endif %}>50 на стр.</option>
+                </select>
+            </div>
+            {% if search_query %}
+            <div class="col-auto">
+                <a href="?" class="btn btn-sm btn-link text-decoration-none">Сбросить</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="px-4 py-3">Название</th>
+                        <th class="py-3">Описание</th>
+                        <th class="py-3">Сотрудников</th>
+                        <th class="px-4 py-3 text-end">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pos in positions %}
+                    <tr>
+                        <td class="px-4 py-3 fw-bold">{{ pos.name }}</td>
+                        <td class="py-3 text-muted small">{{ pos.description|default:"—"|truncatechars:100 }}</td>
+                        <td class="py-3">
+                            <span class="badge bg-light text-dark border">{{ pos.users.count }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-end">
+                            <div class="btn-group shadow-sm rounded-pill bg-white border p-1">
+                                <a href="{% url 'dashboard:position_edit' pos.pk %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Редактировать">
+                                    <i class="bi bi-pencil-square text-primary"></i>
+                                </a>
+                                <a href="{% url 'dashboard:position_delete' pos.pk %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Удалить">
+                                    <i class="bi bi-trash text-danger"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="bi bi-briefcase display-1 opacity-10 d-block mb-3"></i>
+                            Должностей пока нет
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if page_params %}&{{ page_params }}{% endif %}">Назад</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if page_params %}&{{ page_params }}{% endif %}">Вперед</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

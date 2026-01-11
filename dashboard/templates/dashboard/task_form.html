@@ -1,0 +1,288 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">{% if form.instance.pk %}Редактирование задачи{% else %}Новая задача{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% for field in form %}
+                    <div class="mb-3 position-relative">
+                        <label class="form-label d-flex justify-content-between">
+                            {{ field.label }}
+                            {% if field.name == 'description' %}
+                            <button type="button" class="btn btn-sm btn-outline-info border-0 p-0" onclick="improveDescription()" title="Улучшить описание с помощью AI">
+                                <i class="bi bi-magic me-1"></i>AI Помощник
+                            </button>
+                            {% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.name == 'description' %}
+                        <div id="ai-task-loading" class="position-absolute top-50 start-50 translate-middle d-none">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                        {% endif %}
+                        {% if field.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ field.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    <hr>
+                    <h5 class="mb-3">Этапы выполнения</h5>
+                    {{ stages.management_form }}
+                    <div id="stages-container">
+                        {% for stage_form in stages %}
+                        <div class="stage-form mb-3 border p-3 rounded bg-light">
+                            {{ stage_form.id }}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Название этапа</label>
+                                    {{ stage_form.name }}
+                                    {% if stage_form.name.errors %}
+                                    <div class="text-danger small">{{ stage_form.name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Исполнитель</label>
+                                    {{ stage_form.assigned_executor }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">План (мин)</label>
+                                    {{ stage_form.planned_duration }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Факт (мин)</label>
+                                    <div class="actual-duration-wrapper">
+                                        {% if is_admin %}
+                                            <input type="number" name="{{ stage_form.actual_duration.html_name }}" id="{{ stage_form.actual_duration.id_for_label }}" class="form-control" value="{{ stage_form.actual_duration.value|default:0 }}" readonly>
+                                        {% else %}
+                                            {{ stage_form.actual_duration }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label small text-muted">№</label>
+                                    {{ stage_form.order }}
+                                </div>
+                                <div class="col-md-1 d-flex align-items-end justify-content-center">
+                                    {% if stages.can_delete %}
+                                    <div class="form-check mb-2">
+                                        {{ stage_form.DELETE }}
+                                        <label class="form-check-label text-danger" for="{{ stage_form.DELETE.id_for_label }}">
+                                            <i class="bi bi-trash"></i>
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Статус</label>
+                                    {{ stage_form.status }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Код отклонения</label>
+                                    {{ stage_form.reason_code }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Критичность</label>
+                                    {{ stage_form.defect_criticality }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Ущерб</label>
+                                    {{ stage_form.damage_amount }}
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <div class="p-2 border rounded bg-white">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-4">
+                                                <label class="form-label small text-muted mb-0">Тип данных (аналитика)</label>
+                                                {{ stage_form.data_type }}
+                                            </div>
+                                            <div class="col-md-8">
+                                                <label class="form-label small text-muted mb-0">Результат / Значение</label>
+                                                <div class="data-value-wrapper">
+                                                    {{ stage_form.data_value }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-stage">
+                        <i class="bi bi-plus-lg me-1"></i>Добавить этап
+                    </button>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'dashboard:task_list' %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Сохранить{% else %}Создать{% endif %}</button>
+                    </div>
+
+                    <datalist id="stage-names-list">
+                        {% for name in previous_stage_names %}
+                        <option value="{{ name }}">
+                        {% endfor %}
+                    </datalist>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to update data_value field based on data_type
+        function updateDataValueField(stageRow) {
+            const dataTypeSelect = stageRow.querySelector('select[name$="-data_type"]');
+            const dataValueWrapper = stageRow.querySelector('.data-value-wrapper');
+            const dataValueTextarea = dataValueWrapper.querySelector('textarea');
+            
+            if (!dataTypeSelect || !dataValueTextarea) return;
+
+            const dataType = dataTypeSelect.value;
+            const currentValue = dataValueTextarea.value;
+            const fieldName = dataValueTextarea.name;
+            const fieldId = dataValueTextarea.id;
+
+            if (dataType === 'CHECKBOX') {
+                if (dataValueWrapper.querySelector('input[type="checkbox"]')) return;
+                
+                const isChecked = currentValue === 'true' || currentValue === '1' || currentValue === 'on';
+                dataValueWrapper.innerHTML = `
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" id="${fieldId}_cb" ${isChecked ? 'checked' : ''} onchange="this.nextElementSibling.value = this.checked ? 'true' : 'false'">
+                        <input type="hidden" name="${fieldName}" id="${fieldId}" value="${isChecked ? 'true' : 'false'}">
+                        <label class="form-check-label small" for="${fieldId}_cb">Pass / Fail (Вкл - Успех)</label>
+                    </div>
+                `;
+            } else if (dataType === 'NUMBER') {
+                if (dataValueWrapper.querySelector('input[type="number"]')) return;
+                dataValueWrapper.innerHTML = `
+                    <input type="number" name="${fieldName}" id="${fieldId}" class="form-control" value="${currentValue}" step="any">
+                `;
+            } else if (dataType === 'TEXT' || dataType === 'LIST') {
+                if (dataValueWrapper.querySelector('textarea')) return;
+                dataValueWrapper.innerHTML = `
+                    <textarea name="${fieldName}" id="${fieldId}" class="form-control" rows="1">${currentValue}</textarea>
+                `;
+            } else if (dataType === 'MEDIA') {
+                if (dataValueWrapper.querySelector('.media-info')) return;
+                dataValueWrapper.innerHTML = `
+                    <div class="media-info d-flex align-items-center">
+                        <input type="hidden" name="${fieldName}" id="${fieldId}" value="${currentValue}">
+                        <span class="small text-muted me-2"><i class="bi bi-camera me-1"></i> Медиа будет загружено через мобильное приложение</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize existing rows
+        document.querySelectorAll('.stage-form').forEach(row => {
+            updateDataValueField(row);
+            
+            const select = row.querySelector('select[name$="-data_type"]');
+            if (select) {
+                select.addEventListener('change', () => updateDataValueField(row));
+            }
+        });
+
+        // Handle adding new stages
+        const addBtn = document.getElementById('add-stage');
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                setTimeout(() => {
+                    const rows = document.querySelectorAll('.stage-form');
+                    const lastRow = rows[rows.length - 1];
+                    updateDataValueField(lastRow);
+                    const select = lastRow.querySelector('select[name$="-data_type"]');
+                    if (select) {
+                        select.addEventListener('change', () => updateDataValueField(lastRow));
+                    }
+                }, 100);
+            });
+        }
+    });
+
+    async function improveDescription() {
+        const descField = document.querySelector('textarea[name="description"]');
+        const loading = document.getElementById('ai-task-loading');
+        const currentText = descField.value.trim();
+
+        if (!currentText) {
+            alert('Пожалуйста, введите краткое описание, чтобы AI мог его развернуть.');
+            return;
+        }
+
+        loading.classList.remove('d-none');
+        descField.style.opacity = '0.5';
+
+        try {
+            const response = await fetch('/ai/api/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    prompt: currentText, 
+                    context: "task_expansion" 
+                })
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                descField.value = data.response;
+            }
+        } catch (error) {
+            alert('Ошибка при работе с AI.');
+        } finally {
+            loading.classList.add('d-none');
+            descField.style.opacity = '1';
+        }
+    }
+
+    document.getElementById('add-stage').addEventListener('click', function() {
+        const container = document.getElementById('stages-container');
+        const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
+        const formNum = parseInt(totalForms.value);
+        const firstForm = container.querySelector('.stage-form');
+        const newForm = firstForm.cloneNode(true);
+        
+        newForm.querySelectorAll('input, select, textarea').forEach(input => {
+            const name = input.getAttribute('name');
+            if (name) {
+                input.setAttribute('name', name.replace(/stages-\d+-/, `stages-${formNum}-`));
+                input.setAttribute('id', input.getAttribute('id').replace(/stages-\d+-/, `stages-${formNum}-`));
+                
+                if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                } else if (input.type !== 'hidden' && input.type !== 'checkbox') {
+                    input.value = '';
+                } else if (input.type === 'checkbox') {
+                    input.checked = false;
+                }
+            }
+        });
+        
+        newForm.querySelectorAll('label').forEach(label => {
+            const forAttr = label.getAttribute('for');
+            if (forAttr) {
+                label.setAttribute('for', forAttr.replace(/stages-\d+-/, `stages-${formNum}-`));
+            }
+        });
+
+        const orderInput = newForm.querySelector('input[name$="-order"]');
+        if (orderInput) {
+            orderInput.value = formNum;
+        }
+
+        container.appendChild(newForm);
+        totalForms.value = formNum + 1;
+    });
+</script>
+{% endblock %}
