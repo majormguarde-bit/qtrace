@@ -2,40 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
-from django.http import HttpResponseRedirect, HttpResponseForbidden
-from django.urls import reverse
 from django.contrib import messages
-from django_tenants.utils import get_tenant_model
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from .models import TenantUser, Department
 from customers.models import UserProfile
-
-
-class TenantAwareAdminSite(admin.AdminSite):
-    """Кастомный админ-сайт, осведомленный о тенантах"""
-    
-    def has_permission(self, request):
-        """Проверить, есть ли у пользователя доступ к админ-панели"""
-        # Если это TenantUser, проверяем, что это админ
-        if isinstance(request.user, TenantUser):
-            return request.user.role == 'ADMIN' and request.user.is_active
-        
-        # Для Django User используем стандартную проверку
-        return super().has_permission(request)
-    
-    def catch_all_view(self, request, url):
-        """Переопределить catch_all_view для обработки TenantUser"""
-        # Если это не публичная схема и это TenantUser, запретить доступ к разделам auth
-        if hasattr(request, 'tenant') and request.tenant.schema_name != 'public':
-            if isinstance(request.user, TenantUser):
-                if url and url.startswith('auth/'):
-                    from django.core.exceptions import PermissionDenied
-                    raise PermissionDenied
-        
-        return super().catch_all_view(request, url)
-
-
-# Создать кастомный админ-сайт
-tenant_aware_admin_site = TenantAwareAdminSite(name='admin')
 
 
 @admin.register(Department)
@@ -131,14 +102,8 @@ class CustomUserAdmin(BaseUserAdmin):
         return super().has_view_permission(request, obj)
 
 
-# Зарегистрировать в кастомном админ-сайте
-tenant_aware_admin_site.register(TenantUser, TenantUserAdmin)
-tenant_aware_admin_site.register(UserProfile, UserProfileAdmin)
-tenant_aware_admin_site.register(User, CustomUserAdmin)
-
-# Также зарегистрировать в стандартном админ-сайте для public schema
+# Зарегистрировать в стандартном админ-сайте
 if admin.site.is_registered(User):
     admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(TenantUser, TenantUserAdmin)
-# admin.site.register(UserProfile, UserProfileAdmin)
