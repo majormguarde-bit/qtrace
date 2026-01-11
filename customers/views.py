@@ -985,9 +985,15 @@ def landing_page(request):
     if login_subdomain:
         subdomain = login_subdomain.strip().lower()
         if subdomain:
+            protocol = 'https' if request.is_secure() else 'http'
             port = request.get_port()
-            port_str = f":{port}" if port not in (80, 443) else ""
-            target_url = f"http://{subdomain}.{base_domain}{port_str}/"
+            # Убираем порт, если он стандартный для протокола
+            if (protocol == 'https' and port == 443) or (protocol == 'http' and port == 80):
+                port_str = ""
+            else:
+                port_str = f":{port}"
+                
+            target_url = f"{protocol}://{subdomain}.{base_domain}{port_str}/"
             return redirect(target_url)
             
     # Получаем тарифы для формы регистрации
@@ -1056,7 +1062,12 @@ class TenantRegistrationViewSet(viewsets.ViewSet):
                     # Определяем протокол и порт для ссылки
                     protocol = 'https' if request.is_secure() else 'http'
                     port = request.get_port()
-                    port_str = f":{port}" if port not in (80, 443) else ""
+                    
+                    # Убираем порт, если он стандартный для протокола или если мы в https и порт 80 (ошибка прокси)
+                    if (protocol == 'https' and (port == 443 or port == 80)) or (protocol == 'http' and port == 80):
+                        port_str = ""
+                    else:
+                        port_str = f":{port}"
                     
                     return Response({
                         'message': 'Заявка на регистрацию принята. Организация будет активирована после проверки администратором.',
