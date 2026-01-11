@@ -22,12 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r9yxrys@9fc57$fu99@^rl!$i$wyi$e_5w#5@ddc@-$0@bfbwc'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-r9yxrys@9fc57$fu99@^rl!$i$wyi$e_5w#5@ddc@-$0@bfbwc')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['*', 'qtrace.ru', '.qtrace.ru', 'localhost', '127.0.0.1', '192.168.1.220', 'lvh.me', '.lvh.me', '.localhost']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django_tenants.middleware.main.TenantMainMiddleware',
     'customers.middleware.TenantStatusMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -157,13 +158,22 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise storage for static files
+STORAGES = {
+    "default": {
+        "BACKEND": "django_tenants.storage.TenantFileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR
 
 # Django-tenants media settings
 MULTITENANT_RELATIVE_MEDIA_ROOT = "" # Files will be stored in MEDIA_ROOT/tenant_schema/
-DEFAULT_FILE_STORAGE = 'django_tenants.storage.TenantFileSystemStorage'
 
 # Login settings
 LOGIN_URL = '/login/'
