@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import AdminSite
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
@@ -7,6 +8,21 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .models import TenantUser, Department
 from customers.models import UserProfile
+
+
+class TenantAdminSite(AdminSite):
+    """Кастомная админ-панель для тенанта"""
+    site_header = "Панель управления предприятием"
+    site_title = "Q-TRACE"
+    index_title = "Администрирование"
+    
+    def logout(self, request, extra_context=None):
+        """Перенаправление на логин предприятия после выхода из админки"""
+        from django.contrib.auth import logout as auth_logout
+        auth_logout(request)
+        return HttpResponseRedirect(reverse('login'))
+
+tenant_aware_admin_site = TenantAdminSite(name='tenant_admin')
 
 
 @admin.register(Department)

@@ -9,7 +9,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.contrib import messages
 
-from django.db.models import Sum, Max, Q
+from django.db.models import Sum, Max, Q, Prefetch
 from tasks.models import (
     Task, TaskStage, TaskTemplate, TaskTemplateStage, TaskStagePause,
     Product, Specification, TransferNote, Operation, ClientOrder
@@ -134,10 +134,25 @@ def home(request):
     if user_role == 'ADMIN':
         tasks_qs = Task.objects.all().prefetch_related('stages', 'assigned_to')
     elif hasattr(user, 'role'):
-        # Worker sees tasks assigned to them OR where they are assigned to a stage
-        tasks_qs = Task.objects.filter(
-            (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
-        ).distinct().prefetch_related('stages', 'assigned_to')
+            # Worker sees tasks assigned to them OR where they are assigned to a stage
+            if user.role == 'WORKER':
+                # Для воркера предзагружаем только его этапы
+                stages_prefetch = Prefetch(
+                    'stages',
+                    queryset=TaskStage.objects.filter(assigned_executor=user),
+                    to_attr='visible_stages'
+                )
+                tasks_qs = Task.objects.filter(
+                    (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
+                ).distinct().prefetch_related(stages_prefetch, 'assigned_to')
+            else:
+                # Для остальных ролей (не WORKER) показываем все этапы
+                tasks_qs = Task.objects.filter(
+                    (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
+                ).distinct().prefetch_related('stages', 'assigned_to')
+                # Добавляем атрибут visible_stages для консистентности
+                for task in tasks_qs:
+                    task.visible_stages = task.stages.all()
 
     context['tasks_count'] = tasks_qs.count()
     context['media_count'] = Media.objects.count() if user_role == 'ADMIN' else Media.objects.filter(uploaded_by=user).count()
@@ -229,7 +244,14 @@ class TenantLoginView(auth_views.LoginView):
         return '/'
 
 class TenantLogoutView(auth_views.LogoutView):
-    next_page = '/login/'
+    next_page = reverse_lazy('login')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            from django.contrib.auth import logout
+            logout(request)
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
 
 # --- Tasks ---
 
@@ -524,17 +546,6 @@ class TaskUpdateView(LoginRequiredMixin, PreserveQueryParamsMixin, UpdateView):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         return kwargs
-
-    def form_valid(self, form):
-        context = self.get_context_data()
-        stages = context['stages']
-        if stages.is_valid():
-            self.object = form.save()
-            stages.instance = self.object
-            stages.save()
-            return redirect(self.success_url)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
 
     def get_queryset(self):
         user = self.request.user
@@ -1299,37 +1310,6 @@ class MediaVideoRecordView(LoginRequiredMixin, TemplateView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_POST, name='dispatch')
-class TaskStageMediaUploadAjaxView(LoginRequiredMixin, View):
-    def post(self, request, pk):
-        try:
-            stage = TaskStage.objects.get(pk=pk)
-            if 'file' not in request.FILES:
-                return JsonResponse({'status': 'error', 'message': 'No file uploaded'}, status=400)
-            
-            file = request.FILES['file']
-            
-            # Create Media object
-            media = Media.objects.create(
-                file=file,
-                stage=stage,
-                task=stage.task,
-                uploaded_by=request.user
-            )
-            
-            return JsonResponse({
-                'status': 'success',
-                'media_id': media.id,
-                'media_url': media.file.url,
-                'media_title': media.title,
-                'uploaded_at': media.uploaded_at.strftime("%d.%m.%Y %H:%M")
-            })
-            
-        except TaskStage.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
 class HelpView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/help.html'
 
