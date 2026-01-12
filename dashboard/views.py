@@ -1746,6 +1746,10 @@ def generate_qr_code(request, pk):
                     break
             
             if better_domain:
+                # Сохраняем порт, если он есть
+                if ':' in host:
+                    port = host.split(':')[1]
+                    better_domain = f"{better_domain}:{port}"
                 login_url = login_url.replace(host, better_domain)
         except Exception:
             pass
