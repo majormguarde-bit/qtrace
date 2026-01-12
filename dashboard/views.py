@@ -1733,6 +1733,23 @@ def generate_qr_code(request, pk):
     # Формируем ссылку
     login_url = request.build_absolute_uri(reverse('dashboard:quick_login', args=[token]))
     
+    # Если мы на localhost, пытаемся найти более подходящий домен (например, nip.io) для мобильных устройств
+    host = request.get_host()
+    if 'localhost' in host or '127.0.0.1' in host:
+        try:
+            # Ищем домен с nip.io
+            better_domain = None
+            # request.tenant.domains доступен благодаря related_name='domains' в DomainMixin
+            for domain in request.tenant.domains.all():
+                if 'nip.io' in domain.domain:
+                    better_domain = domain.domain
+                    break
+            
+            if better_domain:
+                login_url = login_url.replace(host, better_domain)
+        except Exception:
+            pass
+    
     # Генерируем QR-код
     qr = qrcode.QRCode(
         version=1,
