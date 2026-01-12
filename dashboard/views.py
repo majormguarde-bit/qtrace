@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 import os
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django import forms
@@ -1296,6 +1296,39 @@ class MediaDeleteView(LoginRequiredMixin, DeleteView):
 
 class MediaVideoRecordView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/video_record.html'
+
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(require_POST, name='dispatch')
+class TaskStageMediaUploadAjaxView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        try:
+            stage = TaskStage.objects.get(pk=pk)
+            if 'file' not in request.FILES:
+                return JsonResponse({'status': 'error', 'message': 'No file uploaded'}, status=400)
+            
+            file = request.FILES['file']
+            
+            # Create Media object
+            media = Media.objects.create(
+                file=file,
+                stage=stage,
+                task=stage.task,
+                uploaded_by=request.user
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'media_id': media.id,
+                'media_url': media.file.url,
+                'media_title': media.title,
+                'uploaded_at': media.uploaded_at.strftime("%d.%m.%Y %H:%M")
+            })
+            
+        except TaskStage.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 class HelpView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/help.html'
