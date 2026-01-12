@@ -41,7 +41,7 @@
                 <thead class="bg-light">
                     <tr>
                         {% for field in fields %}
-                        <th class="px-3 py-2 small text-uppercase text-muted fw-bold">{{ field_labels|get_item:field|default:field }}</th>
+                        <th class="px-3 py-2 small text-uppercase text-muted fw-bold">{{ field_labels|dict_item:field|default:field }}</th>
                         {% endfor %}
                         <th class="px-3 py-2 small text-uppercase text-muted fw-bold text-end">Действия</th>
                     </tr>

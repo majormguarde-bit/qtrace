@@ -23,3 +23,14 @@ def filter_stages(task, user):
         return task.stages.all()
     
     return task.stages.filter(assigned_executor=user)
+
+@register.filter(name='get_attr')
+def get_attr(obj, attr_name):
+    """
+    Позволяет получать значение атрибута объекта по имени в шаблоне.
+    Использование: {{ my_obj|get_attr:attr_name }}
+    """
+    try:
+        return getattr(obj, attr_name)
+    except AttributeError:
+        return None
