@@ -1,35 +1,43 @@
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.core import signing
+from django.core.signing import BadSignature, SignatureExpired
 from .models import TenantUser
 from django.contrib.auth import get_user_model
 
 def generate_quick_login_token(user):
     """
-    Генерирует подписанный токен для быстрого входа.
+    Генерирует подписанный URL-safe токен для быстрого входа.
     Токен содержит ID пользователя и хеш пароля (для инвалидации при смене пароля).
     """
-    signer = TimestampSigner(salt='quick_login')
-    # Если это TenantUser
     if isinstance(user, TenantUser):
-        value = f"tenant:{user.id}:{user.password_hash}"
+        data = {
+            'type': 'tenant',
+            'id': user.id,
+            'hash': user.password_hash
+        }
     else:
-        # Если это системный User
-        value = f"system:{user.id}:{user.password}"
+        data = {
+            'type': 'system',
+            'id': user.id,
+            'hash': user.password
+        }
         
-    return signer.sign(value)
+    # Используем signing.dumps для создания URL-safe строки (base64url)
+    return signing.dumps(data, salt='quick_login')
 
 def validate_quick_login_token(token, max_age=31536000): # 1 год по умолчанию
     """
     Проверяет токен и возвращает пользователя.
     """
-    signer = TimestampSigner(salt='quick_login')
     try:
-        value = signer.unsign(token, max_age=max_age)
-        parts = value.split(':', 2)
+        # Декодируем и проверяем подпись
+        data = signing.loads(token, salt='quick_login', max_age=max_age)
         
-        if len(parts) != 3:
+        user_type = data.get('type')
+        user_id = data.get('id')
+        password_hash = data.get('hash')
+        
+        if not all([user_type, user_id, password_hash]):
             return None
-            
-        user_type, user_id, password_hash = parts
         
         if user_type == 'tenant':
             try:
@@ -51,5 +59,5 @@ def validate_quick_login_token(token, max_age=31536000): # 1 год по умо�
                 
         return None
         
-    except (BadSignature, SignatureExpired):
+    except (BadSignature, SignatureExpired, ValueError, TypeError):
         return None
