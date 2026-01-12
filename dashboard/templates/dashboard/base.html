@@ -91,7 +91,7 @@
                             </div>
                             
                             <div class="badge bg-secondary text-white border border-light border-opacity-25 rounded-pill fw-normal px-2 py-1">
-                                {% if request.user.is_superuser %}
+                                {% if request.user.is_superuser and request.user.date_joined %}
                                     {% if request.user.profile %}
                                         {{ request.user.profile.get_role_display }}
                                     {% else %}
@@ -183,7 +183,7 @@
                     </div>
                     {% endif %}
 
-                    {% if request.user.is_superuser %}
+                    {% if request.user.is_superuser and request.user.date_joined %}
                     <hr>
                     <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
                     <a href="{% url 'superuser_dashboard' %}" target="_blank" class="sidebar-link">
