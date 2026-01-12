@@ -514,18 +514,26 @@ class TaskUpdateView(LoginRequiredMixin, PreserveQueryParamsMixin, UpdateView):
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
         data['back_url'] = reverse_lazy('dashboard:task_list')
-        if self.request.POST:
-            data['stages'] = TaskStageFormSet(self.request.POST, instance=self.object)
-        else:
-            data['stages'] = TaskStageFormSet(instance=self.object)
-        
-        # Unique stage names for datalist
-        data['previous_stage_names'] = TaskStage.objects.values_list('name', flat=True).distinct().order_by('name')
         
         # Admin check for readonly "Fact" field
         user = self.request.user
         is_admin = (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)
         data['is_admin'] = is_admin
+        
+        # Filter stages if user is not admin
+        if is_admin:
+            stage_qs = TaskStage.objects.filter(task=self.object)
+        else:
+            stage_qs = TaskStage.objects.filter(task=self.object, assigned_executor=user)
+        
+        # Create custom formset with filtered queryset
+        if self.request.POST:
+            data['stages'] = TaskStageFormSet(self.request.POST, instance=self.object, queryset=stage_qs)
+        else:
+            data['stages'] = TaskStageFormSet(instance=self.object, queryset=stage_qs)
+        
+        # Unique stage names for datalist
+        data['previous_stage_names'] = TaskStage.objects.values_list('name', flat=True).distinct().order_by('name')
         
         return data
 
