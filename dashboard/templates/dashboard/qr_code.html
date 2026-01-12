@@ -1,0 +1,71 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card bg-dark text-white border-0 shadow-lg" style="background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(10px);">
+                <div class="card-header border-0 bg-transparent text-center pt-4">
+                    <h4 class="mb-0">QR-код для входа</h4>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="mb-4">
+                        <div class="avatar-circle mx-auto mb-3 bg-primary d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border-radius: 50%; font-size: 2rem;">
+                            {{ target_user.get_short_name|first|upper }}
+                        </div>
+                        <h5 class="mb-1">{{ target_user.get_full_name }}</h5>
+                        <p class="text-muted small">{{ target_user.position|default:"Сотрудник" }}</p>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-3 d-inline-block mb-4">
+                        <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid" style="width: 200px; height: 200px;">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="small text-muted mb-2">Ссылка для входа</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-dark border-secondary text-white" value="{{ login_url }}" readonly id="loginUrl">
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyUrl()" title="Копировать">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {% if target_user.email %}
+                        <a href="mailto:{{ target_user.email }}?subject=Доступ%20в%20систему&body=Ссылка%20для%20входа:%20{{ login_url }}" class="btn btn-outline-light">
+                            <i class="bi bi-envelope me-2"></i> Отправить на Email
+                        </a>
+                        {% endif %}
+                        
+                        {% if target_user.phone %}
+                        <a href="https://wa.me/{{ target_user.phone|cut:'+'|cut:' ' }}?text=Ссылка%20для%20входа:%20{{ login_url }}" target="_blank" class="btn btn-success">
+                            <i class="bi bi-whatsapp me-2"></i> Отправить в WhatsApp
+                        </a>
+                        {% endif %}
+                        
+                        <a href="https://t.me/share/url?url={{ login_url }}&text=Ссылка%20для%20входа%20в%20систему" target="_blank" class="btn btn-primary" style="background-color: #0088cc; border-color: #0088cc;">
+                            <i class="bi bi-telegram me-2"></i> Отправить в Telegram
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer border-0 bg-transparent text-center pb-4">
+                    <a href="{% url 'dashboard:employee_list' %}" class="text-muted text-decoration-none small">
+                        <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyUrl() {
+    var copyText = document.getElementById("loginUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); 
+    navigator.clipboard.writeText(copyText.value);
+}
+</script>
+{% endblock %}

@@ -1,10 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 import os
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django import forms
 from django.forms import inlineformset_factory
 from django.contrib import messages
@@ -16,6 +16,11 @@ from tasks.models import (
 )
 from media_app.models import Media
 from users_app.models import TenantUser, Department, Position
+from users_app.utils import generate_quick_login_token, validate_quick_login_token
+from django.contrib.auth import login
+import qrcode
+from io import BytesIO
+import base64
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.http import JsonResponse
@@ -1706,8 +1711,75 @@ class TaskStageMediaUploadAjaxView(LoginRequiredMixin, TemplateView):
             
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+# --- Quick Login & QR Code Views ---
+
+@login_required
+def generate_qr_code(request, pk):
+    """
+    Генерация QR-кода для быстрого входа сотрудника.
+    Доступно только администраторам.
+    """
+    user = request.user
+    if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and user.role == 'ADMIN')):
+        messages.error(request, "Доступ разрешен только администраторам.")
+        return redirect('dashboard:home')
+    
+    target_user = get_object_or_404(TenantUser, pk=pk)
+    
+    # Генерируем токен
+    token = generate_quick_login_token(target_user)
+    
+    # Формируем ссылку
+    login_url = request.build_absolute_uri(reverse('dashboard:quick_login', args=[token]))
+    
+    # Генерируем QR-код
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(login_url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    
+    context = {
+        'target_user': target_user,
+        'qr_image': img_str,
+        'login_url': login_url,
+    }
+    return render(request, 'dashboard/qr_code.html', context)
+
+def quick_login(request, token):
+    """
+    Вход по токе (QR-коду).
+    Доступен анонимным пользователям.
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard:home')
+        
+    user = validate_quick_login_token(token)
+    if user:
+        if not user.is_active:
+             messages.error(request, "Аккаунт заблокирован.")
+             return redirect('dashboard:login')
+        
+        # Указываем бэкенд аутентификации
+        if isinstance(user, TenantUser):
+            user.backend = 'users_app.backends.TenantUserBackend'
+        else:
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+            
+        login(request, user)
+        return redirect('dashboard:home')
+    else:
+        messages.error(request, "Недействительная или устаревшая ссылка для входа.")
+        return redirect('dashboard:login')
 
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_POST, name='dispatch')

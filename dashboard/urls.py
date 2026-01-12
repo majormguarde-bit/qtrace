@@ -6,6 +6,7 @@ app_name = 'dashboard'
 urlpatterns = [
     path('', views.home, name='home'),
     path('login/', views.TenantLoginView.as_view(), name='login'),
+    path('quick-login/<str:token>/', views.quick_login, name='quick_login'),
     path('logout/', views.TenantLogoutView.as_view(), name='logout'),
     path('help/', views.HelpView.as_view(), name='help'),
     
@@ -26,6 +27,7 @@ urlpatterns = [
     path('employees/', views.EmployeeListView.as_view(), name='employee_list'),
     path('employees/create/', views.EmployeeCreateView.as_view(), name='employee_create'),
     path('employees/<int:pk>/edit/', views.EmployeeUpdateView.as_view(), name='employee_edit'),
+    path('employees/<int:pk>/qr/', views.generate_qr_code, name='employee_qr'),
     path('employees/<int:pk>/delete/', views.EmployeeDeleteView.as_view(), name='employee_delete'),
 
     # Departments

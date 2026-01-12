@@ -124,6 +124,9 @@
                         </td>
                         <td class="text-end pe-4">
                             <div class="btn-group">
+                                <a href="{% url 'dashboard:employee_qr' employee.pk %}" class="btn btn-sm btn-outline-dark rounded-pill px-3 me-2" title="QR-код для входа">
+                                    <i class="bi bi-qr-code"></i>
+                                </a>
                                 <a href="{% url 'dashboard:employee_edit' employee.pk %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-2">
                                     <i class="bi bi-pencil me-1"></i> Правка
                                 </a>
