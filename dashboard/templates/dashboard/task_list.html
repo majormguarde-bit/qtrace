@@ -1,4 +1,5 @@
 {% extends 'dashboard/base.html' %}
+{% load dashboard_extras %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -207,7 +208,7 @@
                                                 </div>
 
                                                 <div class="task-stages" id="task-stages-list-{{ task.id }}">
-                                                    {% for stage in task.stages.all %}
+                                                    {% for stage in task|filter_stages:request.user %}
                                                     <div class="stage-container mb-2">
                                                         <div class="stage-item d-flex align-items-center p-2 rounded border bg-white shadow-sm {% if stage.is_worker_added %}border-info-subtle{% endif %}" 
                                                              id="stage-{{ stage.id }}" 
@@ -227,6 +228,11 @@
                                                                     {% if stage.is_worker_added %}
                                                                     <span class="badge bg-info-soft text-info ultra-small ms-1">Сотрудник</span>
                                                                     {% endif %}
+                                                                    {% if stage.assigned_executor %}
+                                                                    <span class="badge bg-primary-soft text-primary ultra-small ms-1">
+                                                                        {{ stage.assigned_executor.get_full_name|default:stage.assigned_executor.username }}
+                                                                    </span>
+                                                                    {% endif %}
                                                                 </div>
                                                                 <div class="text-muted ultra-small d-flex align-items-center gap-2 flex-wrap mt-1">
                                                                     <span><i class="bi bi-clock me-1"></i>План: {{ stage.planned_duration }} мин.</span>
@@ -237,6 +243,11 @@
                                                                     {% if stage.reason_code != 'NONE' %}
                                                                     <span class="badge bg-danger-soft text-danger px-2">
                                                                         <i class="bi bi-exclamation-octagon me-1"></i>{{ stage.get_reason_code_display }}
+                                                                    </span>
+                                                                    {% endif %}
+                                                                    {% if stage.media.all %}
+                                                                    <span class="badge bg-info text-white px-2">
+                                                                        <i class="bi bi-paperclip me-1"></i>{{ stage.media.count }}
                                                                     </span>
                                                                     {% endif %}
                                                                 </div>

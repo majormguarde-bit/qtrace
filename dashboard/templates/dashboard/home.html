@@ -393,7 +393,7 @@
                                                 </div>
                                                 
                                                 <div class="col-lg-5 border-start">
-                                                    {% if task.stages.all %}
+                                                    {% if task|filter_stages:request.user %}
                                                     <h6 class="text-muted ultra-small text-uppercase fw-bold mb-3">Этапы и хронометраж</h6>
                                                     <div class="task-stages">
                                                         {% for stage in task.visible_stages %}

@@ -134,25 +134,15 @@ def home(request):
     if user_role == 'ADMIN':
         tasks_qs = Task.objects.all().prefetch_related('stages', 'assigned_to')
     elif hasattr(user, 'role'):
-            # Worker sees tasks assigned to them OR where they are assigned to a stage
-            if user.role == 'WORKER':
-                # Для воркера предзагружаем только его этапы
-                stages_prefetch = Prefetch(
-                    'stages',
-                    queryset=TaskStage.objects.filter(assigned_executor=user),
-                    to_attr='visible_stages'
-                )
-                tasks_qs = Task.objects.filter(
-                    (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
-                ).distinct().prefetch_related(stages_prefetch, 'assigned_to')
-            else:
-                # Для остальных ролей (не WORKER) показываем все этапы
-                tasks_qs = Task.objects.filter(
-                    (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
-                ).distinct().prefetch_related('stages', 'assigned_to')
-                # Добавляем атрибут visible_stages для консистентности
-                for task in tasks_qs:
-                    task.visible_stages = task.stages.all()
+        # Для всех не-администраторов фильтруем этапы по назначенному исполнителю
+        stages_prefetch = Prefetch(
+            'stages',
+            queryset=TaskStage.objects.filter(assigned_executor=user),
+            to_attr='visible_stages'
+        )
+        tasks_qs = Task.objects.filter(
+            (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
+        ).distinct().prefetch_related(stages_prefetch, 'assigned_to')
 
     context['tasks_count'] = tasks_qs.count()
     context['media_count'] = Media.objects.count() if user_role == 'ADMIN' else Media.objects.filter(uploaded_by=user).count()
@@ -604,6 +594,9 @@ class ProductionOrderDetailView(LoginRequiredMixin, UpdateView):
             stage_qs = TaskStage.objects.filter(task=self.object)
         else:
             stage_qs = TaskStage.objects.filter(task=self.object, assigned_executor=user)
+        
+        # Отладочная информация
+        print(f"DEBUG: User {user.username} (is_admin={is_admin}) sees {stage_qs.count()} stages out of {TaskStage.objects.filter(task=self.object).count()} total stages")
 
         StageFormSet = inlineformset_factory(
             Task, TaskStage,
@@ -1558,6 +1551,17 @@ class EmployeeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Делаем поле username доступным только для чтения для обычных админов,
+        # но доступным для редактирования для суперпользователей
+        if self.instance and self.instance.pk:
+            # Это редактирование существующего пользователя
+            current_user = getattr(self, 'current_user', None)
+            if current_user and not getattr(current_user, 'is_superuser', False):
+                # Обычный админ не может изменять username
+                self.fields['username'].widget.attrs['readonly'] = True
+
     def save(self, commit=True):
         user = super().save(commit=False)
         password = self.cleaned_data.get("password")
@@ -1611,6 +1615,11 @@ class EmployeeCreateView(LoginRequiredMixin, PreserveQueryParamsMixin, CreateVie
         context['back_url'] = reverse_lazy('dashboard:employee_list')
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+
     def dispatch(self, request, *args, **kwargs):
         user = request.user
         if not ((hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)):
@@ -1646,6 +1655,11 @@ class EmployeeUpdateView(LoginRequiredMixin, PreserveQueryParamsMixin, UpdateVie
         context = super().get_context_data(**kwargs)
         context['back_url'] = reverse_lazy('dashboard:employee_list')
         return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
 
     def dispatch(self, request, *args, **kwargs):
         user = request.user

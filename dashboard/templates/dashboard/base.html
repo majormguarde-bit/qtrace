@@ -183,7 +183,7 @@
                     </div>
                     {% endif %}
 
-                    {% if request.user.is_superuser and request.user.date_joined %}
+                    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                     <hr>
                     <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
                     <a href="{% url 'superuser_dashboard' %}" target="_blank" class="sidebar-link">
@@ -261,7 +261,7 @@
                 <a href="{% url 'dashboard:position_list' %}" class="nav-link text-white ps-4 py-1 small">Должности</a>
                 {% endif %}
 
-                {% if request.user.is_superuser %}
+                {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                 <hr>
                 <a href="{% url 'superuser_dashboard' %}" class="nav-link text-white" target="_blank">Панель суперпользователя</a>
                 {% endif %}
