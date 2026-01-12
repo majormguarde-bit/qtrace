@@ -6,7 +6,7 @@ app_name = 'dashboard'
 urlpatterns = [
     path('', views.home, name='home'),
     path('login/', views.TenantLoginView.as_view(), name='login'),
-    path('quick-login/<str:token>/', views.quick_login, name='quick_login'),
+    path('quick-login/<path:token>/', views.quick_login, name='quick_login'),
     path('logout/', views.TenantLogoutView.as_view(), name='logout'),
     path('help/', views.HelpView.as_view(), name='help'),
     
