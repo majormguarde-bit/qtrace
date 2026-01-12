@@ -162,6 +162,7 @@
                                         <th>Конец</th>
                                         <th style="width: 100px;">Факт (мин)</th>
                                         <th style="width: 100px;">Кол-во годных</th>
+                                        <th style="width: 120px;">Медиа</th>
                                         <th style="width: 150px;">Подпись исп. (Статус)</th>
                                     </tr>
                                 </thead>
@@ -183,6 +184,26 @@
                                                 {% endif %}
                                             </td>
                                             <td>{{ s_form.quantity_good }}</td>
+                                            <td>
+                                                {% if s_form.instance.pk %}
+                                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                                        {% for media in s_form.instance.media.all %}
+                                                            <a href="{{ media.file.url }}" target="_blank" class="text-decoration-none" title="{{ media.title }}">
+                                                                <div class="bg-light border rounded d-flex align-items-center justify-content-center position-relative" style="width: 32px; height: 32px;">
+                                                                    <i class="bi bi-file-earmark-text text-secondary"></i>
+                                                                    {% if media.file.name|lower|slice:"-4:" == '.jpg' or media.file.name|lower|slice:"-5:" == '.jpeg' or media.file.name|lower|slice:"-4:" == '.png' %}
+                                                                        <img src="{{ media.file.url }}" class="position-absolute w-100 h-100 rounded" style="object-fit: cover;">
+                                                                    {% elif media.file.name|lower|slice:"-4:" == '.mp4' or media.file.name|lower|slice:"-4:" == '.mov' %}
+                                                                        <i class="bi bi-play-circle-fill text-dark position-absolute fs-6"></i>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </a>
+                                                        {% empty %}
+                                                            <span class="text-muted ultra-small">-</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
                                             <td>{{ s_form.status }}</td>
                                         </tr>
                                     {% endfor %}
