@@ -10,18 +10,18 @@ def generate_quick_login_token(user):
     """
     if isinstance(user, TenantUser):
         data = {
-            'type': 'tenant',
-            'id': user.id,
-            'hash': user.password_hash
+            't': 't',
+            'i': user.id,
+            'h': user.password_hash
         }
     else:
         data = {
-            'type': 'system',
-            'id': user.id,
-            'hash': user.password
+            't': 's',
+            'i': user.id,
+            'h': user.password
         }
         
-    # Используем signing.dumps для создания URL-safe строки (base64url)
+    # Используем signing.dumps для создания URL-safe строки
     return signing.dumps(data, salt='quick_login')
 
 def validate_quick_login_token(token, max_age=31536000): # 1 год по умолчанию
@@ -32,14 +32,14 @@ def validate_quick_login_token(token, max_age=31536000): # 1 год по умо�
         # Декодируем и проверяем подпись
         data = signing.loads(token, salt='quick_login', max_age=max_age)
         
-        user_type = data.get('type')
-        user_id = data.get('id')
-        password_hash = data.get('hash')
+        user_type = data.get('t')
+        user_id = data.get('i')
+        password_hash = data.get('h')
         
         if not all([user_type, user_id, password_hash]):
             return None
         
-        if user_type == 'tenant':
+        if user_type == 't':
             try:
                 user = TenantUser.objects.get(pk=user_id)
                 if user.password_hash != password_hash:
@@ -47,7 +47,7 @@ def validate_quick_login_token(token, max_age=31536000): # 1 год по умо�
                 return user
             except TenantUser.DoesNotExist:
                 return None
-        elif user_type == 'system':
+        elif user_type == 's':
             User = get_user_model()
             try:
                 user = User.objects.get(pk=user_id)
