@@ -128,6 +128,7 @@
                     </a>
 
                     <!-- Шаблоны -->
+                    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                     <div class="mt-2 mb-1">
                         <button class="sidebar-link d-flex justify-content-between align-items-center w-100" type="button" data-bs-toggle="collapse" data-bs-target="#templatesCollapse" aria-expanded="{% if 'task_template' in request.resolver_match.view_name or 'operation' in request.resolver_match.view_name %}true{% else %}false{% endif %}">
                             <span><i class="bi bi-journal-bookmark me-2"></i> Шаблоны</span>
@@ -142,8 +143,10 @@
                             </a>
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- Справочники -->
+                    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                     <div class="mt-2 mb-1">
                         <button class="sidebar-link d-flex justify-content-between align-items-center w-100" type="button" data-bs-toggle="collapse" data-bs-target="#referencesCollapse" aria-expanded="{% if 'product' in request.resolver_match.view_name or 'specification' in request.resolver_match.view_name or 'transfer_note' in request.resolver_match.view_name or 'client_order' in request.resolver_match.view_name or 'employee' in request.resolver_match.view_name or 'department' in request.resolver_match.view_name or 'position' in request.resolver_match.view_name %}true{% else %}false{% endif %}">
                             <span><i class="bi bi-book me-2"></i> Справочники</span>
@@ -166,7 +169,6 @@
                             </a>
 
                             <!-- Группа: Персонал -->
-                            {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                             <div class="text-uppercase ultra-small text-muted ps-4 mt-2 mb-1">Персонал</div>
                             <a href="{% url 'dashboard:employee_list' %}" class="sidebar-link ps-4 py-1 small {% if 'employee' in request.resolver_match.view_name %}active{% endif %}">
                                 <i class="bi bi-people me-2"></i> Сотрудники
@@ -177,9 +179,9 @@
                             <a href="{% url 'dashboard:position_list' %}" class="sidebar-link ps-4 py-1 small {% if 'position' in request.resolver_match.view_name %}active{% endif %}">
                                 <i class="bi bi-briefcase me-2"></i> Должности
                             </a>
-                            {% endif %}
                         </div>
                     </div>
+                    {% endif %}
 
                     {% if request.user.is_superuser %}
                     <hr>

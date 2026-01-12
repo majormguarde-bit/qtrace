@@ -82,6 +82,16 @@ def home(request):
     user = request.user
     tenant = getattr(request, 'tenant', None)
     
+    # Цвета для карточек канбана
+    status_colors = {
+        'OPEN': {'border': '#B0BEC5', 'bg': '#F8F9FA'},
+        'PAUSE': {'border': '#BA68C8', 'bg': '#F3E5F5'},
+        'CONTINUE': {'border': '#64B5F6', 'bg': '#E3F2FD'},
+        'IMPORTANT': {'border': '#E57373', 'bg': '#FFEBEE'},
+        'CLOSE': {'border': '#81C784', 'bg': '#E8F5E9'},
+        'DEFAULT': {'border': '#B0BEC5', 'bg': '#F8F9FA'}
+    }
+
     # Context data
     context = {
         'tasks_count': 0,
@@ -97,6 +107,7 @@ def home(request):
         'users_percent': 0,
         'subscription_end_date': None,
         'days_left': None,
+        'status_colors': status_colors,
     }
     
     # Role-based data fetching
@@ -118,8 +129,10 @@ def home(request):
     if user_role == 'ADMIN':
         tasks_qs = Task.objects.all().prefetch_related('stages', 'assigned_to')
     elif hasattr(user, 'role'):
-        # Worker sees only their own data
-        tasks_qs = Task.objects.filter(assigned_to=user).prefetch_related('stages', 'assigned_to')
+        # Worker sees tasks assigned to them OR where they are assigned to a stage
+        tasks_qs = Task.objects.filter(
+            (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
+        ).distinct().prefetch_related('stages', 'assigned_to')
 
     context['tasks_count'] = tasks_qs.count()
     context['media_count'] = Media.objects.count() if user_role == 'ADMIN' else Media.objects.filter(uploaded_by=user).count()
@@ -288,6 +301,56 @@ TaskStageFormSet = inlineformset_factory(
     }
 )
 
+class ProductionOrderWorkerForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = [
+            'external_id', 'deadline', 'client_name', 'manager', 'product_name', 'article_number',
+            'pcb_revision', 'quantity', 'panel_type', 'bom_id', 'project_files_url',
+            'firmware_version', 'stencil_id', 'description', 'transfer_note_number',
+            'kit_status', 'deficit_list', 'kit_received_date', 'finished_goods_date', 'status', 'priority',
+            'quality_defects', 'repair_quantity', 'scrap_quantity', 
+            'actual_produced_quantity', 'leftover_components'
+        ]
+        widgets = {
+            'quality_defects': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'repair_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'scrap_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'actual_produced_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'leftover_components': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            
+            # Read-only widgets
+            'external_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'deadline': forms.DateInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'type': 'date'}),
+            'client_name': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'manager': forms.Select(attrs={'class': 'form-select', 'disabled': 'disabled'}),
+            'product_name': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'article_number': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'pcb_revision': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'panel_type': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'bom_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'project_files_url': forms.URLInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'firmware_version': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'stencil_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'readonly': 'readonly', 'rows': 2}),
+            'transfer_note_number': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'kit_status': forms.Select(attrs={'class': 'form-select', 'disabled': 'disabled'}),
+            'deficit_list': forms.Textarea(attrs={'class': 'form-control', 'readonly': 'readonly', 'rows': 2}),
+            'kit_received_date': forms.DateInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'type': 'date'}),
+            'finished_goods_date': forms.DateInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'type': 'date'}),
+            'status': forms.Select(attrs={'class': 'form-select', 'disabled': 'disabled'}),
+            'priority': forms.Select(attrs={'class': 'form-select', 'disabled': 'disabled'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Disable fields that are not editable by worker
+        editable_fields = ['quality_defects', 'repair_quantity', 'scrap_quantity', 'actual_produced_quantity', 'leftover_components']
+        for name, field in self.fields.items():
+            if name not in editable_fields:
+                field.disabled = True
+
 class ProductionOrderForm(forms.ModelForm):
     class Meta:
         model = Task
@@ -353,7 +416,9 @@ class TaskListView(LoginRequiredMixin, SearchableListViewMixin, ListView):
             if user.role == 'ADMIN':
                 qs = Task.objects.all()
             else:
-                qs = Task.objects.filter(assigned_to=user)
+                qs = Task.objects.filter(
+                    (Q(assigned_to=user) | Q(stages__assigned_executor=user)) & Q(production_manager_signed=True)
+                ).distinct()
         elif getattr(user, 'is_superuser', False):
             qs = Task.objects.all()
         else:
@@ -479,8 +544,14 @@ class TaskUpdateView(LoginRequiredMixin, PreserveQueryParamsMixin, UpdateView):
 class ProductionOrderDetailView(LoginRequiredMixin, UpdateView):
     """Рабочее место сотрудника: ЗАКАЗ НА ПРОИЗВОДСТВО"""
     model = Task
-    form_class = ProductionOrderForm
     template_name = 'dashboard/production_order.html'
+
+    def get_form_class(self):
+        user = self.request.user
+        is_admin = (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)
+        if is_admin:
+            return ProductionOrderForm
+        return ProductionOrderWorkerForm
     
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
@@ -504,40 +575,33 @@ class ProductionOrderDetailView(LoginRequiredMixin, UpdateView):
         is_admin = (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)
         data['is_admin'] = is_admin
 
-        if self.request.POST:
-            data['stages'] = inlineformset_factory(
-                Task, TaskStage,
-                fields=['name', 'equipment', 'assigned_executor', 'start_timestamp', 'end_timestamp', 'actual_duration', 'quantity_good', 'status'],
-                extra=0,
-                can_delete=False,
-                widgets={
-                    'name': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'stage-names-list'}),
-                    'equipment': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
-                    'assigned_executor': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-                    'start_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-                    'end_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-                    'actual_duration': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-                    'quantity_good': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-                    'status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-                }
-            )(self.request.POST, instance=self.object)
+        # Filter stages if user is not admin or task assignee
+        if is_admin or self.object.assigned_to == user:
+            stage_qs = TaskStage.objects.filter(task=self.object)
         else:
-            data['stages'] = inlineformset_factory(
-                Task, TaskStage,
-                fields=['name', 'equipment', 'assigned_executor', 'start_timestamp', 'end_timestamp', 'actual_duration', 'quantity_good', 'status'],
-                extra=0,
-                can_delete=False,
-                widgets={
-                    'name': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'stage-names-list'}),
-                    'equipment': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
-                    'assigned_executor': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-                    'start_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-                    'end_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-                    'actual_duration': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-                    'quantity_good': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-                    'status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-                }
-            )(instance=self.object)
+            stage_qs = TaskStage.objects.filter(task=self.object, assigned_executor=user)
+
+        StageFormSet = inlineformset_factory(
+            Task, TaskStage,
+            fields=['name', 'equipment', 'assigned_executor', 'start_timestamp', 'end_timestamp', 'actual_duration', 'quantity_good', 'status'],
+            extra=0,
+            can_delete=False,
+            widgets={
+                'name': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'list': 'stage-names-list'}),
+                'equipment': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+                'assigned_executor': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+                'start_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
+                'end_timestamp': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
+                'actual_duration': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+                'quantity_good': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+                'status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            }
+        )
+
+        if self.request.POST:
+            data['stages'] = StageFormSet(self.request.POST, instance=self.object, queryset=stage_qs)
+        else:
+            data['stages'] = StageFormSet(instance=self.object, queryset=stage_qs)
         return data
 
     def form_valid(self, form):
@@ -627,7 +691,7 @@ TaskTemplateStageFormSet = inlineformset_factory(
     }
 )
 
-class TaskTemplateListView(LoginRequiredMixin, SearchableListViewMixin, ListView):
+class TaskTemplateListView(LoginRequiredMixin, AdminRequiredMixin, SearchableListViewMixin, ListView):
     model = TaskTemplate
     template_name = 'dashboard/task_template_list.html'
     context_object_name = 'templates'
@@ -1618,7 +1682,7 @@ class TaskStageMediaUploadAjaxView(LoginRequiredMixin, TemplateView):
             user = request.user
             
             # Проверка прав (админ или исполнитель)
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
+            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user or stage.assigned_executor == user))):
                 return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
             
             file = request.FILES.get('file')
@@ -1690,7 +1754,7 @@ class TaskStageStatusUpdateAjaxView(LoginRequiredMixin, TemplateView):
             stage = TaskStage.objects.get(pk=stage_id)
             user = request.user
             
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
+            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user or stage.assigned_executor == user))):
                 return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
             
             status = request.POST.get('status')
@@ -1735,7 +1799,7 @@ class TaskStageToggleAjaxView(LoginRequiredMixin, TemplateView):
             stage = TaskStage.objects.get(pk=stage_id)
             # Проверяем права: либо админ, либо исполнитель задачи
             user = request.user
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
+            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user or stage.assigned_executor == user))):
                 return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
             
             stage.is_completed = not stage.is_completed

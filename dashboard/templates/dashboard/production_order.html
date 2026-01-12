@@ -228,6 +228,7 @@
                         <label class="form-label small fw-bold">Дата сдачи на склад ГП</label>
                         {{ form.finished_goods_date }}
                     </div>
+                    {% if is_admin %}
                     <div class="col-md-3 mb-3">
                         <label class="form-label small fw-bold d-block">Подпись Начальника пр-ва</label>
                         <div class="form-check form-switch mt-2">
@@ -241,6 +242,7 @@
                             </label>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

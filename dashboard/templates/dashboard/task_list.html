@@ -7,9 +7,11 @@
         <a href="{% url 'dashboard:task_template_list' %}" class="btn btn-outline-primary rounded-pill px-4">
             <i class="bi bi-journal-bookmark me-1"></i> Справочник
         </a>
+        {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
         <a href="{% url 'dashboard:task_create' %}{% if current_params %}?{{ current_params }}{% endif %}" class="btn btn-primary rounded-pill px-4">
             <i class="bi bi-plus-lg me-1"></i> Новая задача
         </a>
+        {% endif %}
     </div>
 </div>
 

@@ -1,4 +1,5 @@
 {% extends 'dashboard/base.html' %}
+{% load dashboard_extras %}
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -8,9 +9,11 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="mb-0">Панель управления</h2>
             <div class="d-flex gap-2">
+                {% if user_role == 'ADMIN' %}
                 <a href="{% url 'dashboard:task_template_list' %}" class="btn btn-primary rounded-pill px-3 shadow-sm btn-hover-scale">
                     <i class="bi bi-journal-plus me-1"></i> Новый заказ по шаблону
                 </a>
+                {% endif %}
                 <a href="{% url 'dashboard:task_list' %}" class="btn btn-outline-secondary rounded-pill px-3">
                     <i class="bi bi-list-ul me-1"></i> Список задач
                 </a>
@@ -111,6 +114,7 @@
 <div class="row mt-5">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
+            {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
             <div class="d-flex align-items-center">
                 <a href="{% url 'dashboard:task_create' %}" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3 text-decoration-none shadow-sm btn-hover-scale" style="width: 42px; height: 42px;">
                     <i class="bi bi-plus-lg fs-5"></i>
@@ -120,6 +124,7 @@
                     <p class="text-muted small mb-0">Отслеживание прогресса и контроль выполнения</p>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- Filters -->
@@ -387,10 +392,11 @@
                                                 </div>
                                                 
                                                 <div class="col-lg-5 border-start">
-                                                    {% if task.stages.all %}
+                                                    {% with visible_stages=task|filter_stages:request.user %}
+                                                    {% if visible_stages %}
                                                     <h6 class="text-muted ultra-small text-uppercase fw-bold mb-3">Этапы и хронометраж</h6>
                                                     <div class="task-stages">
-                                                        {% for stage in task.stages.all %}
+                                                        {% for stage in visible_stages %}
                                                         <div class="stage-item p-2 mb-2 rounded border bg-white shadow-sm" 
                                                              id="stage-{{ stage.id }}">
                                                             <div class="d-flex align-items-center mb-1" onclick="toggleStage({{ stage.id }})" style="cursor: pointer;">
@@ -437,6 +443,7 @@
                                                         {% endfor %}
                                                     </div>
                                                     {% endif %}
+                                                    {% endwith %}
                                                 </div>
                                             </div>
                                         </div>
