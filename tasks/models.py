@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from users_app.models import TenantUser
 
 
@@ -290,6 +291,7 @@ class TaskStage(models.Model):
     STAGE_STATUS_CHOICES = [
         ('PENDING', 'В планах'),
         ('IN_PROGRESS', 'В работе'),
+        ('PAUSED', 'На паузе'),
         ('COMPLETED', 'Завершен'),
         ('FAILED', 'Проблема'),
     ]
@@ -353,12 +355,52 @@ class TaskStage(models.Model):
     def __str__(self):
         return f"{self.task.external_id} - {self.name}"
 
+    @property
+    def pause_duration(self):
+        """Total duration of pauses in minutes"""
+        return sum(p.duration_minutes for p in self.pauses.all())
+
     def save(self, *args, **kwargs):
         # Логика аналитических триггеров
         if self.pk: # Только для существующих (обновляемых) этапов
             old_stage = TaskStage.objects.get(pk=self.pk)
+            
+            # Analytical triggers
             if old_stage.data_value != self.data_value:
                 self.check_analytical_triggers()
+            
+            # --- Auto-calculation Logic ---
+            old_status = old_stage.status
+            new_status = self.status
+            now = timezone.now()
+            
+            # 1. Start Timestamp
+            if new_status == 'IN_PROGRESS' and not self.start_timestamp:
+                self.start_timestamp = now
+            
+            # 2. Pause Handling
+            if old_status != 'PAUSED' and new_status == 'PAUSED':
+                TaskStagePause.objects.create(stage=self, start_time=now, reason="Смена статуса")
+            elif old_status == 'PAUSED' and new_status != 'PAUSED':
+                active_pauses = self.pauses.filter(end_time__isnull=True)
+                for pause in active_pauses:
+                    pause.end_time = now
+                    pause.save()
+            
+            # 3. Completion
+            if new_status == 'COMPLETED':
+                self.is_completed = True
+                if not self.end_timestamp:
+                    self.end_timestamp = now
+                
+                # Calculate Duration
+                if self.start_timestamp:
+                    total_seconds = (self.end_timestamp - self.start_timestamp).total_seconds()
+                    pause_minutes = self.pause_duration
+                    total_minutes = int(total_seconds / 60)
+                    self.actual_duration = max(0, total_minutes - pause_minutes)
+            elif new_status != 'COMPLETED' and self.is_completed:
+                self.is_completed = False
         
         super().save(*args, **kwargs)
 
@@ -401,3 +443,22 @@ class TaskStage(models.Model):
             except (ValueError, TypeError):
                 pass
 
+class TaskStagePause(models.Model):
+    stage = models.ForeignKey(TaskStage, on_delete=models.CASCADE, related_name='pauses', verbose_name='Этап')
+    start_time = models.DateTimeField(auto_now_add=True, verbose_name='Начало паузы')
+    end_time = models.DateTimeField(null=True, blank=True, verbose_name='Окончание паузы')
+    reason = models.CharField(max_length=255, blank=True, verbose_name='Причина паузы')
+
+    class Meta:
+        verbose_name = 'Пауза этапа'
+        verbose_name_plural = 'Паузы этапов'
+
+    def __str__(self):
+        return f"Пауза {self.stage} ({self.start_time})"
+
+    @property
+    def duration_minutes(self):
+        if self.end_time:
+            delta = self.end_time - self.start_time
+            return int(delta.total_seconds() / 60)
+        return 0

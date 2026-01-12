@@ -67,6 +67,11 @@
                                             {{ stage_form.actual_duration }}
                                         {% endif %}
                                     </div>
+                                    {% if stage_form.instance.pk and stage_form.instance.pause_duration > 0 %}
+                                        <div class="small text-danger mt-1" title="Время на паузе">
+                                            <i class="bi bi-pause-circle"></i> {{ stage_form.instance.pause_duration }} мин.
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-1">
                                     <label class="form-label small text-muted">№</label>

@@ -11,7 +11,7 @@ from django.contrib import messages
 
 from django.db.models import Sum, Max, Q
 from tasks.models import (
-    Task, TaskStage, TaskTemplate, TaskTemplateStage,
+    Task, TaskStage, TaskTemplate, TaskTemplateStage, TaskStagePause,
     Product, Specification, TransferNote, Operation, ClientOrder
 )
 from media_app.models import Media
@@ -1766,26 +1766,35 @@ def generate_qr_code(request, pk):
     # Формируем ссылку
     login_url = request.build_absolute_uri(reverse('dashboard:quick_login', args=[token]))
     
-    # Если мы на localhost, пытаемся найти более подходящий домен (например, nip.io) для мобильных устройств
+    # Определяем правильный домен для ссылки
     host = request.get_host()
-    if 'localhost' in host or '127.0.0.1' in host:
-        try:
-            # Ищем домен с nip.io
-            better_domain = None
-            # request.tenant.domains доступен благодаря related_name='domains' в DomainMixin
+    target_domain = None
+    
+    if hasattr(request, 'tenant'):
+        # 1. Ищем основной домен
+        primary = request.tenant.domains.filter(is_primary=True).first()
+        if primary:
+            target_domain = primary.domain
+            
+        # 2. Если мы на localhost/127.0.0.1 (разработка), пытаемся найти nip.io домен
+        if 'localhost' in host or '127.0.0.1' in host:
+            nip_domain = None
             for domain in request.tenant.domains.all():
                 if 'nip.io' in domain.domain:
-                    better_domain = domain.domain
+                    nip_domain = domain.domain
                     break
             
-            if better_domain:
+            if nip_domain:
+                target_domain = nip_domain
                 # Сохраняем порт, если он есть
                 if ':' in host:
                     port = host.split(':')[1]
-                    better_domain = f"{better_domain}:{port}"
-                login_url = login_url.replace(host, better_domain)
-        except Exception:
-            pass
+                    if ':' not in target_domain:
+                        target_domain = f"{target_domain}:{port}"
+    
+    # Применяем целевой домен, если он отличается от текущего
+    if target_domain and target_domain != host:
+        login_url = login_url.replace(host, target_domain)
     
     # Генерируем QR-код
     qr = qrcode.QRCode(
@@ -1888,10 +1897,6 @@ class TaskStageStatusUpdateAjaxView(LoginRequiredMixin, TemplateView):
                 return JsonResponse({'status': 'error', 'message': 'Invalid status'}, status=400)
             
             stage.status = status
-            if status == 'COMPLETED':
-                stage.is_completed = True
-            else:
-                stage.is_completed = False
             stage.save()
             
             # Синхронизация статуса задачи
@@ -1911,7 +1916,8 @@ class TaskStageStatusUpdateAjaxView(LoginRequiredMixin, TemplateView):
                 'stage_status_display': stage.get_status_display(),
                 'is_completed': stage.is_completed,
                 'task_is_completed': stage.task.is_completed,
-                'task_status': stage.task.status
+                'task_status': stage.task.status,
+                'actual_duration': stage.actual_duration
             })
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
@@ -1952,7 +1958,8 @@ class TaskStageToggleAjaxView(LoginRequiredMixin, TemplateView):
                 'stage_status': stage.status,
                 'stage_status_display': stage.get_status_display(),
                 'task_is_completed': stage.task.is_completed,
-                'task_status': stage.task.status
+                'task_status': stage.task.status,
+                'actual_duration': stage.actual_duration
             })
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
