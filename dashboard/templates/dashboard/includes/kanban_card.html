@@ -90,9 +90,28 @@
             <div class="d-flex align-items-center gap-2">
                 {% with visible_stages=task|filter_stages:user %}
                 {% if visible_stages %}
-                    <div class="badge bg-light text-muted border rounded-pill ultra-small px-2" title="Этапы">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border rounded-pill ultra-small px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-list-task me-1"></i> {{ visible_stages.count }}
-                    </div>
+                    </button>
+                    <ul class="dropdown-menu shadow-sm border-0" style="min-width: 250px;">
+                        <li class="px-3 py-2 small text-muted">Этапы задачи</li>
+                        {% for stage in visible_stages %}
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'dashboard:task_edit' task.id %}#stage-{{ stage.id }}">
+                                <span class="small">{{ stage.name }}</span>
+                                <span class="badge bg-light text-dark border">
+                                    {% if stage.assigned_executor %}
+                                        {{ stage.assigned_executor.get_full_name|default:stage.assigned_executor.username|slice:":10" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
                 {% endif %}
                 {% endwith %}
                 
