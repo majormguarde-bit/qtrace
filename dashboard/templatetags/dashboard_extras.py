@@ -18,8 +18,7 @@ def filter_stages(task, user):
     Иначе возвращает только этапы, назначенные пользователю.
     """
     if (hasattr(user, 'role') and user.role == 'ADMIN') or \
-       getattr(user, 'is_superuser', False) or \
-       task.assigned_to == user:
+       getattr(user, 'is_superuser', False):
         return task.stages.all()
     
     return task.stages.filter(assigned_executor=user)
