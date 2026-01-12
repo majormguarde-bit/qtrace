@@ -592,7 +592,7 @@ class ProductionOrderDetailView(LoginRequiredMixin, UpdateView):
         data['is_admin'] = is_admin
 
         # Filter stages if user is not admin or task assignee
-        if is_admin or self.object.assigned_to == user:
+        if is_admin:
             stage_qs = TaskStage.objects.filter(task=self.object)
         else:
             stage_qs = TaskStage.objects.filter(task=self.object, assigned_executor=user)
