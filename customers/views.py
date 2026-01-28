@@ -639,8 +639,13 @@ def superuser_tenant_admin_edit(request, tenant_id, user_id):
             # Явно сохраняем пользователя
             user.save()
             
-            status_text = "активирован" if user.is_active else "деактивирован"
-            messages.success(request, f'Администратор {user.username} (предприятие "{tenant.name}") успешно {status_text}.')
+            # Проверяем статус тенанта
+            if not tenant.is_active and user.is_active:
+                messages.warning(request, f'Администратор {user.username} активирован, но предприятие "{tenant.name}" заблокировано. Разблокируйте предприятие, чтобы пользователь мог войти.')
+            else:
+                status_text = "активирован" if user.is_active else "деактивирован"
+                messages.success(request, f'Администратор {user.username} (предприятие "{tenant.name}") успешно {status_text}.')
+            
             return redirect('superuser_admins')
         
         # При GET запросе просто отображаем форму

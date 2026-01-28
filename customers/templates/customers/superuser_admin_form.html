@@ -45,7 +45,11 @@
                         <label class="form-label fw-medium">Предприятие (Организация)</label>
                         {% if is_tenant_user %}
                         <input type="text" class="form-control bg-light" value="{{ tenant.name }} ({{ tenant.schema_name }})" readonly>
-                        <div class="form-text">Этот пользователь является локальным администратором данного предприятия.</div>
+                        <div class="form-text">Этот пользователь является локальным администратором данного предприятия.
+                        {% if not tenant.is_active %}
+                            <br><span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>Внимание: предприятие заблокировано!</span>
+                        {% endif %}
+                        </div>
                         {% else %}
                         <select name="tenant" class="form-select">
                             <option value="">-- Без привязки к предприятию --</option>
