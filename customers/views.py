@@ -1449,6 +1449,7 @@ def superuser_template_edit(request, template_id):
         if action == 'set_parent':
             stage_id = request.POST.get('stage_id')
             parent_stage_id = request.POST.get('parent_stage_id') or None
+            position_id = request.POST.get('position_id') or None
             
             try:
                 stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
@@ -1457,8 +1458,20 @@ def superuser_template_edit(request, template_id):
                     stage.parent_stage = parent_stage
                 else:
                     stage.parent_stage = None
+                
+                # Обновляем должность
+                if position_id:
+                    from task_templates.models import Position
+                    try:
+                        position = Position.objects.get(id=position_id)
+                        stage.position = position
+                    except Position.DoesNotExist:
+                        stage.position = None
+                else:
+                    stage.position = None
+                
                 stage.save()
-                messages.success(request, 'Подчинение этапа успешно установлено.')
+                messages.success(request, 'Этап успешно обновлен.')
             except TaskTemplateStage.DoesNotExist:
                 messages.error(request, 'Этап не найден.')
             
@@ -2037,7 +2050,7 @@ def superuser_position_delete(request, position_id):
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_diagram(request, template_id):
     """Диаграмма этапов шаблона"""
-    from task_templates.models import TaskTemplate
+    from task_templates.models import TaskTemplate, Position
     import json
     
     template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
@@ -2045,8 +2058,15 @@ def superuser_template_diagram(request, template_id):
     # Получаем все этапы
     stages = template.stages.all().order_by('sequence_number')
     
+    # Получаем все должности
+    positions = Position.objects.filter(is_active=True).order_by('name')
+    
     # Подготавливаем JSON данные для JavaScript
     stages_data = []
+    total_duration_min = 0
+    total_duration_max = 0
+    positions_set = set()
+    
     for stage in stages:
         # Формируем строку длительности
         duration_str = ''
@@ -2055,9 +2075,15 @@ def superuser_template_diagram(request, template_id):
                 duration_str = f"{stage.duration_from} {stage.duration_unit.abbreviation}"
             else:
                 duration_str = f"{stage.duration_from}-{stage.duration_to} {stage.duration_unit.abbreviation}"
+            
+            # Суммируем длительность (используем минимум и максимум)
+            total_duration_min += float(stage.duration_from)
+            total_duration_max += float(stage.duration_to)
         
         # Получаем должность
         position_name = stage.position.name if stage.position else 'Не указана'
+        if stage.position:
+            positions_set.add(position_name)
         
         stages_data.append({
             'id': stage.id,
@@ -2065,6 +2091,7 @@ def superuser_template_diagram(request, template_id):
             'sequence_number': stage.sequence_number,
             'parent_stage_id': stage.parent_stage_id if stage.parent_stage else None,
             'position': position_name,
+            'position_id': stage.position_id if stage.position else None,
             'duration': duration_str,
         })
     
@@ -2072,6 +2099,11 @@ def superuser_template_diagram(request, template_id):
         'template': template,
         'all_stages': stages,
         'stages_json': json.dumps(stages_data),
+        'positions': positions,
+        'positions_json': json.dumps([{'id': p.id, 'name': p.name} for p in positions]),
+        'total_duration_min': total_duration_min,
+        'total_duration_max': total_duration_max,
+        'unique_positions': sorted(list(positions_set)),
     }
     return render(request, 'customers/superuser_template_diagram.html', context)
 
