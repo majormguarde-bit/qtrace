@@ -365,9 +365,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Обработчик клика на узел для редактирования подчиненности
-    cy.on('tap', 'node', function(evt) {
-        const node = evt.target;
+    cy.on('tap', function(evt) {
+        const target = evt.target;
+        
+        // Проверяем, что это узел
+        if (!target.isNode()) {
+            return;
+        }
+        
+        const node = target;
         const nodeId = node.id();
+        
+        console.log('Tap on node:', nodeId, 'editMode:', editMode, 'isDrawing:', isDrawing, 'shiftKey:', evt.originalEvent.shiftKey);
         
         // Если режим редактирования связей активен и нажат Shift
         if (editMode && evt.originalEvent.shiftKey) {
@@ -376,6 +385,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const targetNode = node;
                 const sourceId = sourceNode.id();
                 const targetId = targetNode.id();
+                
+                console.log('Completing connection from', sourceId, 'to', targetId);
                 
                 // Проверяем, что это не одна и та же связь
                 if (sourceId === targetId) {
@@ -393,10 +404,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Если целевой узел - это Stop
                 if (targetId === 'stop') {
+                    console.log('Target is Stop node');
                     // Извлекаем ID исходного этапа
                     const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
                     const edgeId = 'edge_' + sourceStageId + '_stop';
                     const existingEdge = cy.$('#' + edgeId);
+                    
+                    console.log('Edge ID:', edgeId, 'Exists:', existingEdge.length > 0);
                     
                     if (existingEdge.length === 0) {
                         // Добавляем новую связь к Stop
@@ -407,6 +421,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 target: 'stop'
                             }
                         });
+                        
+                        console.log('Edge added:', edgeId);
                         
                         // Подсвечиваем новую связь
                         cy.$('#' + edgeId).style('line-color', '#0056b3');
