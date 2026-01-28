@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 from django import forms
 from django.forms import inlineformset_factory
 from django.contrib import messages
+from django.utils import timezone
 
 from django.db.models import Sum
 from tasks.models import Task, TaskStage
@@ -84,7 +85,6 @@ def home(request):
         
         context['subscription_end_date'] = tenant.subscription_end_date
         if tenant.subscription_end_date:
-            from django.utils import timezone
             delta = tenant.subscription_end_date - timezone.now().date()
             context['days_left'] = delta.days
     
