@@ -244,6 +244,9 @@ class TaskTemplateStage(models.Model):
     # Порядок в шаблоне
     sequence_number = models.IntegerField(verbose_name='Номер последовательности')
     
+    # Ведёт ли этап к финальному узлу (Stop)
+    leads_to_stop = models.BooleanField(default=False, verbose_name='Ведёт к финальному узлу (Stop)')
+    
     # Аудит
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлён')

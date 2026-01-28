@@ -1450,8 +1450,9 @@ def superuser_template_edit(request, template_id):
             stage_id = request.POST.get('stage_id')
             parent_stage_id = request.POST.get('parent_stage_id') or None
             position_id = request.POST.get('position_id') or None
+            leads_to_stop = request.POST.get('leads_to_stop') == 'true'
             
-            print(f"DEBUG: set_parent action - stage_id={stage_id}, parent_stage_id={parent_stage_id}, position_id={position_id}")
+            print(f"DEBUG: set_parent action - stage_id={stage_id}, parent_stage_id={parent_stage_id}, position_id={position_id}, leads_to_stop={leads_to_stop}")
             
             try:
                 stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
@@ -1472,8 +1473,11 @@ def superuser_template_edit(request, template_id):
                 else:
                     stage.position = None
                 
+                # Обновляем флаг leads_to_stop
+                stage.leads_to_stop = leads_to_stop
+                
                 stage.save()
-                print(f"DEBUG: Stage saved - parent_stage={stage.parent_stage}, position={stage.position}")
+                print(f"DEBUG: Stage saved - parent_stage={stage.parent_stage}, position={stage.position}, leads_to_stop={stage.leads_to_stop}")
                 messages.success(request, 'Этап успешно обновлен.')
             except TaskTemplateStage.DoesNotExist:
                 print(f"DEBUG: Stage not found - stage_id={stage_id}")
@@ -2097,6 +2101,7 @@ def superuser_template_diagram(request, template_id):
             'position': position_name,
             'position_id': stage.position_id if stage.position else None,
             'duration': duration_str,
+            'leads_to_stop': stage.leads_to_stop,
         })
     
     context = {

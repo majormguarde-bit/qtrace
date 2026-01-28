@@ -267,6 +267,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Добавляем связи к Stop для этапов, которые ведут к Stop
+    stagesData.forEach(stage => {
+        if (stage.leads_to_stop) {
+            const edgeId = 'edge_' + stage.id + '_stop';
+            // Проверяем, что такой edge ещё не добавлен
+            if (!elements.find(el => el.data && el.data.id === edgeId)) {
+                elements.push({
+                    data: {
+                        id: edgeId,
+                        source: 'stage_' + stage.id,
+                        target: 'stop'
+                    }
+                });
+            }
+        }
+    });
+    
     // Инициализируем Cytoscape
     const cy = cytoscape({
         container: document.getElementById('cy'),
@@ -660,7 +677,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 'action': 'set_parent',
                 'stage_id': conn.sourceStageId,
                 'parent_stage_id': '',
-                'position_id': ''
+                'position_id': '',
+                'leads_to_stop': 'true'
             });
             
             console.log('Sending data:', Object.fromEntries(formData));
