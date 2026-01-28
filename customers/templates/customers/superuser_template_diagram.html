@@ -187,10 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
     stagesData.forEach(stage => {
         const stageName = stage.sequence_number + '. ' + stage.name;
         const position = stage.position || 'Не указана';
-        const duration = stage.duration;
+        const duration = stage.duration || 'Не указана';
         
-        // Форматируем метку без времени (время будет в отдельном прямоугольнике)
-        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position;
+        // Форматируем метку с временем
+        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position + '\n⏱ ' + duration;
         
         elements.push({
             data: {
@@ -362,62 +362,6 @@ document.addEventListener('DOMContentLoaded', function() {
             spacingFactor: 1.5,
             roots: '#start'
         }
-    });
-    
-    // Кастомный рендер для добавления светло-голубого прямоугольника с временем
-    const canvas = cy.container().querySelector('canvas');
-    const originalDraw = cy.renderer().drawNode;
-    
-    // Переопределяем функцию рисования узлов
-    cy.on('render', function() {
-        const ctx = cy.scratch().canvasContext;
-        if (!ctx) return;
-        
-        // Рисуем дополнительные элементы для каждого узла
-        cy.nodes().forEach(node => {
-            if (node.id().startsWith('stage_')) {
-                const pos = node.renderedPosition();
-                const w = node.width();
-                const h = node.height();
-                
-                // Координаты правого верхнего угла
-                const x = pos.x + w / 2;
-                const y = pos.y - h / 2;
-                
-                // Размеры светло-голубого прямоугольника
-                const boxW = 80;
-                const boxH = 40;
-                const offset = 0.2; // 20% выступания
-                
-                // Рисуем светло-голубой прямоугольник с скругленными краями
-                ctx.fillStyle = '#87ceeb';
-                ctx.strokeStyle = '#4a9fd8';
-                ctx.lineWidth = 2;
-                
-                // Рисуем скругленный прямоугольник
-                const radius = 15;
-                ctx.beginPath();
-                ctx.moveTo(x - boxW / 2 + radius, y - boxH / 2 - offset * h);
-                ctx.lineTo(x + boxW / 2 - radius, y - boxH / 2 - offset * h);
-                ctx.quadraticCurveTo(x + boxW / 2, y - boxH / 2 - offset * h, x + boxW / 2, y - boxH / 2 - offset * h + radius);
-                ctx.lineTo(x + boxW / 2, y + boxH / 2 - offset * h - radius);
-                ctx.quadraticCurveTo(x + boxW / 2, y + boxH / 2 - offset * h, x + boxW / 2 - radius, y + boxH / 2 - offset * h);
-                ctx.lineTo(x - boxW / 2 + radius, y + boxH / 2 - offset * h);
-                ctx.quadraticCurveTo(x - boxW / 2, y + boxH / 2 - offset * h, x - boxW / 2, y + boxH / 2 - offset * h - radius);
-                ctx.lineTo(x - boxW / 2, y - boxH / 2 - offset * h + radius);
-                ctx.quadraticCurveTo(x - boxW / 2, y - boxH / 2 - offset * h, x - boxW / 2 + radius, y - boxH / 2 - offset * h);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
-                // Рисуем текст времени
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(node.data('duration'), x, y - offset * h);
-            }
-        });
     });
     
     // Обработчик клика на узел для редактирования подчиненности
