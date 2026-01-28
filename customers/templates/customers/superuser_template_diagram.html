@@ -668,14 +668,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     'stage_id': conn.sourceStageId,
                     'parent_stage_id': '',
                     'position_id': ''
-                })
+                }),
+                redirect: 'manual'
             })
             .then(response => {
-                if (response.ok) {
+                console.log('Response status:', response.status);
+                
+                // Если редирект (302, 301, etc), перезагружаем страницу
+                if (response.status >= 300 && response.status < 400) {
+                    showStatus('Связь сохранена. Перезагрузка...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else if (response.ok) {
                     showStatus('Связь к Стоп сохранена. Перезагрузка...', 'success');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showStatus('Ошибка при сохранении связи', 'error');
+                    showStatus('Ошибка при сохранении связи (статус: ' + response.status + ')', 'error');
                 }
             })
             .catch(error => {
