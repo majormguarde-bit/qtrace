@@ -70,6 +70,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-cose-bilkent/4.1.0/cytoscape-cose-bilkent.min.js"></script>
 
 <script>
+// Регистрируем layout после загрузки библиотеки
+if (typeof coseBilkent !== 'undefined') {
+    cytoscape.use(coseBilkent);
+}
+
 // Данные о этапах
 const stagesDataJson = '{{ stages_json|escapejs }}';
 const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
@@ -166,11 +171,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     'border-width': 2,
                     'border-color': '#0056b3',
                     'padding': '10px',
-                    'width': 'label',
-                    'height': 'label',
                     'text-wrap': 'wrap',
                     'text-max-width': '150px',
-                    'shape': 'rectangle'
+                    'shape': 'rectangle',
+                    'min-width': '80px',
+                    'min-height': '60px'
                 }
             },
             {
