@@ -669,48 +669,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Если источник - это обычный этап, сохраняем его как финальный этап
         if (conn.sourceStageId !== 'start') {
-            // Создаём форму и отправляем её
+            // Устанавливаем значения в форму
+            document.getElementById('stageSelect').value = conn.sourceStageId;
+            document.getElementById('parentSelect').value = '';
+            document.getElementById('positionSelect').value = '';
+            
+            // Создаём скрытое поле для leads_to_stop
             const form = document.querySelector('form');
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            let leadsToStopInput = form.querySelector('input[name="leads_to_stop"]');
+            if (!leadsToStopInput) {
+                leadsToStopInput = document.createElement('input');
+                leadsToStopInput.type = 'hidden';
+                leadsToStopInput.name = 'leads_to_stop';
+                form.appendChild(leadsToStopInput);
+            }
+            leadsToStopInput.value = 'true';
             
-            const formData = new URLSearchParams({
-                'action': 'set_parent',
-                'stage_id': conn.sourceStageId,
-                'parent_stage_id': '',
-                'position_id': '',
-                'leads_to_stop': 'true'
-            });
-            
-            console.log('Sending data:', Object.fromEntries(formData));
-            
-            // Используем fetch для отправки POST запроса
-            fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': csrfToken
-                },
-                body: formData,
-                redirect: 'manual'
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                
-                // Если редирект (302, 301, etc), перезагружаем страницу
-                if (response.status >= 300 && response.status < 400) {
-                    showStatus('Связь сохранена. Перезагрузка...', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                } else if (response.ok) {
-                    showStatus('Связь к Стоп сохранена. Перезагрузка...', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showStatus('Ошибка при сохранении связи (статус: ' + response.status + ')', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showStatus('Ошибка при сохранении связи: ' + error, 'error');
-            });
+            // Отправляем форму
+            form.submit();
         } else {
             showStatus('Нельзя сохранить связь от Старта', 'error');
         }
