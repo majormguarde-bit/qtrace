@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 selector: 'edge',
                 style: {
-                    'line-color': '#155724',
+                    'line-color': '#0056b3',
                     'target-arrow-color': '#0056b3',
                     'target-arrow-shape': 'triangle',
                     'arrow-scale': 2,
@@ -381,7 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 sourceNode = node;
                 isDrawing = true;
                 node.style('border-width', 4);
-                node.style('border-color', '#ff9800');
+                node.style('border-color', '#0056b3');
+                node.style('background-color', '#0056b3');
                 showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
             } else {
                 // Завершаем рисование связи
@@ -425,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             
                             // Подсвечиваем новую связь
-                            cy.$('#' + edgeId).style('line-color', '#155724');
+                            cy.$('#' + edgeId).style('line-color', '#0056b3');
                             cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
                             cy.$('#' + edgeId).style('width', 4);
                         }
@@ -475,7 +476,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function cancelDrawing() {
         if (sourceNode) {
             sourceNode.style('border-width', 2);
-            sourceNode.style('border-color', '#0056b3');
+            sourceNode.style('border-color', '#1a3009');
+            sourceNode.style('background-color', '#2d5016');
         }
         isDrawing = false;
         sourceNode = null;
@@ -583,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Подсвечиваем новую связь
-                cy.$('#' + edgeId).style('line-color', '#155724');
+                cy.$('#' + edgeId).style('line-color', '#0056b3');
                 cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
                 cy.$('#' + edgeId).style('width', 4);
                 
