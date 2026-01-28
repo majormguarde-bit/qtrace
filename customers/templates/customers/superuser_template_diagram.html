@@ -704,8 +704,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             leadsToStopInput.value = 'true';
             
-            // Отправляем форму
-            form.submit();
+            // Добавляем обработчик для отслеживания отправки
+            showStatus('Сохранение связи...', 'info');
+            
+            // Отправляем форму с небольшой задержкой для гарантии сохранения сессии
+            setTimeout(function() {
+                form.submit();
+            }, 100);
         } else {
             showStatus('Нельзя сохранить связь от Старта', 'error');
         }
