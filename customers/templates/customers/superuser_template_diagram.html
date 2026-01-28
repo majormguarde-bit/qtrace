@@ -184,10 +184,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Добавляем узлы этапов
     stagesData.forEach(stage => {
+        const stageName = stage.sequence_number + '. ' + stage.name;
+        const position = stage.position || 'Не указана';
+        const duration = stage.duration;
+        
+        // Форматируем метку с визуальным разделением
+        // Используем специальные символы для выделения
+        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position + '\n' + duration;
+        
         elements.push({
             data: {
                 id: 'stage_' + stage.id,
-                label: stage.sequence_number + '. ' + stage.name + '\n' + (stage.position || 'Не указана') + '\n' + stage.duration
+                label: label,
+                stageName: stageName,
+                position: position,
+                duration: duration
             }
         });
     });
@@ -265,10 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     'text-wrap': 'wrap',
                     'text-max-width': '220px',
                     'shape': 'rectangle',
-                    'width': '240px',
-                    'height': '140px',
+                    'width': '280px',
+                    'height': '160px',
                     'cursor': 'pointer',
-                    'line-height': 1.4
+                    'line-height': 1.2
                 }
             },
             {
