@@ -94,7 +94,7 @@
                         <label class="form-label d-block fw-medium mb-3">Права и статус</label>
                         
                         <div class="form-check form-switch mb-3">
-                            <input class="form-check-switch form-check-input" type="checkbox" name="is_active" id="isActive" {% if is_create or edit_user.is_active %}checked{% endif %} {% if not is_create and edit_user.username == 'admin' %}disabled{% endif %}>
+                            <input class="form-check-switch form-check-input" type="checkbox" name="is_active" id="isActive" {% if is_create or edit_user.is_active %}checked{% endif %} {% if not is_create and not is_tenant_user and edit_user.username == 'admin' %}disabled{% endif %}>
                             <label class="form-check-label" for="isActive">Активный аккаунт</label>
                             <div class="small text-muted">Позволяет пользователю входить в систему.</div>
                         </div>
