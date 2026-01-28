@@ -589,24 +589,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     const sourceId = element.source().id();
                     const targetId = element.target().id();
                     
-                    // Не удаляем системные связи (Start и Stop)
-                    if ((sourceId === 'start' || sourceId === 'stop' || 
-                         targetId === 'start' || targetId === 'stop')) {
-                        showStatus('Нельзя удалить системные связи', 'error');
+                    // Не удаляем связь Start -> первый этап
+                    if (sourceId === 'start' && !targetId.includes('stop')) {
+                        showStatus('Нельзя удалить начальную связь', 'error');
                         return;
                     }
                     
-                    // Извлекаем ID этапа из targetId
-                    const stageId = targetId.replace('stage_', '');
-                    
-                    // Визуально удаляем связь с диаграммы
+                    // Удаляем связь с диаграммы
                     cy.remove(element);
                     
-                    // Устанавливаем форму для удаления родителя
-                    document.getElementById('stageSelect').value = stageId;
-                    document.getElementById('parentSelect').value = '';
-                    
-                    showStatus('Связь удалена с диаграммы. Нажмите "Сохранить" для сохранения', 'success');
+                    // Если это связь к Stop, сбрасываем флаг leads_to_stop
+                    if (targetId === 'stop') {
+                        const sourceStageId = sourceId.replace('stage_', '');
+                        document.getElementById('stageSelect').value = sourceStageId;
+                        document.getElementById('parentSelect').value = '';
+                        
+                        // Создаём скрытое поле для leads_to_stop = false
+                        const form = document.querySelector('form');
+                        let leadsToStopInput = form.querySelector('input[name="leads_to_stop"]');
+                        if (!leadsToStopInput) {
+                            leadsToStopInput = document.createElement('input');
+                            leadsToStopInput.type = 'hidden';
+                            leadsToStopInput.name = 'leads_to_stop';
+                            form.appendChild(leadsToStopInput);
+                        }
+                        leadsToStopInput.value = 'false';
+                        
+                        showStatus('Связь к Стоп удалена. Нажмите "Сохранить" для сохранения', 'success');
+                    } else {
+                        // Если это обычная связь между этапами
+                        const stageId = targetId.replace('stage_', '');
+                        
+                        // Устанавливаем форму для удаления родителя
+                        document.getElementById('stageSelect').value = stageId;
+                        document.getElementById('parentSelect').value = '';
+                        
+                        showStatus('Связь удалена с диаграммы. Нажмите "Сохранить" для сохранения', 'success');
+                    }
                 }
             }
         }
