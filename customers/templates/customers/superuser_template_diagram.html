@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 selector: 'node',
                 style: {
-                    'background-color': '#007bff',
+                    'background-color': '#2d5016',
                     'label': 'data(label)',
                     'text-valign': 'center',
                     'text-halign': 'center',
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'font-weight': 'bold',
                     'color': 'white',
                     'border-width': 2,
-                    'border-color': '#0056b3',
+                    'border-color': '#1a3009',
                     'padding': '20px',
                     'text-wrap': 'wrap',
                     'text-max-width': '220px',
@@ -317,8 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 selector: 'node:selected',
                 style: {
-                    'background-color': '#ffc107',
-                    'color': '#000',
+                    'background-color': '#3d7024',
+                    'color': 'white',
                     'border-color': '#ff9800',
                     'border-width': 3
                 }
@@ -326,8 +326,8 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 selector: 'edge',
                 style: {
-                    'line-color': '#0056b3',
-                    'target-arrow-color': '#0056b3',
+                    'line-color': '#155724',
+                    'target-arrow-color': '#155724',
                     'target-arrow-shape': 'triangle',
                     'arrow-scale': 2,
                     'width': 3,
@@ -347,8 +347,8 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 selector: 'edge:selected',
                 style: {
-                    'line-color': '#ffc107',
-                    'target-arrow-color': '#ffc107',
+                    'line-color': '#ff9800',
+                    'target-arrow-color': '#ff9800',
                     'width': 4,
                     'opacity': 1
                 }
@@ -425,8 +425,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             
                             // Подсвечиваем новую связь
-                            cy.$('#' + edgeId).style('line-color', '#28a745');
-                            cy.$('#' + edgeId).style('target-arrow-color', '#28a745');
+                            cy.$('#' + edgeId).style('line-color', '#155724');
+                            cy.$('#' + edgeId).style('target-arrow-color', '#155724');
                             cy.$('#' + edgeId).style('width', 4);
                         }
                         
@@ -583,8 +583,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Подсвечиваем новую связь
-                cy.$('#' + edgeId).style('line-color', '#28a745');
-                cy.$('#' + edgeId).style('target-arrow-color', '#28a745');
+                cy.$('#' + edgeId).style('line-color', '#155724');
+                cy.$('#' + edgeId).style('target-arrow-color', '#155724');
                 cy.$('#' + edgeId).style('width', 4);
                 
                 showStatus('Связь добавлена на диаграмму. Сохранение...', 'success');
