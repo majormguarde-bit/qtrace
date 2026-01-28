@@ -635,11 +635,15 @@ def superuser_tenant_admin_edit(request, tenant_id, user_id):
             if new_password:
                 user.password_hash = make_password(new_password)
                 messages.info(request, f'Пароль для {user.username} успешно изменен.')
-                
-            user.save()
-            messages.success(request, f'Администратор {user.username} (предприятие "{tenant.name}") обновлен.')
-            return redirect('superuser_admins')
             
+            # Явно сохраняем пользователя
+            user.save()
+            
+            status_text = "активирован" if user.is_active else "деактивирован"
+            messages.success(request, f'Администратор {user.username} (предприятие "{tenant.name}") успешно {status_text}.')
+            return redirect('superuser_admins')
+        
+        # При GET запросе просто отображаем форму
         return render(request, 'customers/superuser_admin_form.html', {
             'edit_user': user,
             'is_tenant_user': True,
