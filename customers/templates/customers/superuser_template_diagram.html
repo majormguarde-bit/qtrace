@@ -86,8 +86,8 @@
                 <div id="editModeInfo" class="text-muted" style="display: none;">
                     <small>
                         <strong>Активен режим:</strong><br>
-                        • Shift+Клик - начать связь<br>
-                        • Клик - завершить связь<br>
+                        • Shift+Клик на блок - начать связь<br>
+                        • Shift+Клик на целевой блок - завершить связь<br>
                         • Escape - отмена
                     </small>
                 </div>
@@ -278,16 +278,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     'shape': 'rectangle',
                     'width': '280px',
                     'height': '160px',
-                    'cursor': 'pointer',
                     'line-height': 1.2
                 }
             },
             {
-                selector: 'node:hover',
+                selector: 'node:active',
                 style: {
                     'border-width': 3,
-                    'border-color': '#ff9800',
-                    'box-shadow': '0 0 15px rgba(255, 152, 0, 0.6)'
+                    'border-color': '#ff9800'
                 }
             },
             {
@@ -336,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             },
             {
-                selector: 'edge:hover',
+                selector: 'edge:active',
                 style: {
                     'line-color': '#ff9800',
                     'target-arrow-color': '#ff9800',
@@ -378,9 +376,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Tap on node:', nodeId, 'editMode:', editMode, 'isDrawing:', isDrawing, 'shiftKey:', evt.originalEvent.shiftKey);
         
-        // Если режим редактирования связей активен и нажат Shift
-        if (editMode && evt.originalEvent.shiftKey) {
-            // Если уже рисуем связь, можем завершить её на любом узле (кроме Start)
+        // Если режим редактирования связей активен
+        if (editMode) {
+            // Если уже рисуем связь, завершаем её на любом узле (кроме Start)
             if (isDrawing) {
                 const targetNode = node;
                 const sourceId = sourceNode.id();
@@ -447,20 +445,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Если не рисуем связь, начинаем рисовать
-            if (nodeId === 'start' || nodeId === 'stop') {
-                showStatus('Нельзя рисовать связи от системных узлов', 'error');
+            // Если не рисуем связь и нажат Shift, начинаем рисовать
+            if (evt.originalEvent.shiftKey) {
+                if (nodeId === 'start' || nodeId === 'stop') {
+                    showStatus('Нельзя рисовать связи от системных узлов', 'error');
+                    return;
+                }
+                
+                // Начинаем рисовать связь
+                sourceNode = node;
+                isDrawing = true;
+                node.style('border-width', 4);
+                node.style('border-color', '#0056b3');
+                node.style('background-color', '#0056b3');
+                showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
                 return;
             }
-            
-            // Начинаем рисовать связь
-            sourceNode = node;
-            isDrawing = true;
-            node.style('border-width', 4);
-            node.style('border-color', '#0056b3');
-            node.style('background-color', '#0056b3');
-            showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
-            return;
         }
         
         // Обычный режим - выбор блока
@@ -532,11 +532,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (editMode) {
             showStatus('Режим редактирования активирован. Shift+Клик для рисования связей', 'info');
-            cy.style().selector('node').style('cursor', 'crosshair').update();
         } else {
             cancelDrawing();
             showStatus('Режим редактирования отключен', 'info');
-            cy.style().selector('node').style('cursor', 'pointer').update();
         }
     });
     
