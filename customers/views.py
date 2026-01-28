@@ -640,21 +640,27 @@ def superuser_tenant_admin_edit(request, tenant_id, user_id):
             # Явно сохраняем пользователя
             user.save()
             
+            # Перезагружаем пользователя из БД, чтобы убедиться, что все сохранилось
+            user.refresh_from_db()
+            
             # Проверяем статус тенанта
             if not tenant.is_active and user.is_active:
                 messages.warning(request, f'Администратор {user.username} активирован, но предприятие "{tenant.name}" заблокировано. Разблокируйте предприятие, чтобы пользователь мог войти.')
             else:
                 status_text = "активирован" if user.is_active else "деактивирован"
                 messages.success(request, f'Администратор {user.username} (предприятие "{tenant.name}") успешно {status_text}.')
-            
-            return redirect('superuser_admins')
         
         # При GET запросе просто отображаем форму
-        return render(request, 'customers/superuser_admin_form.html', {
-            'edit_user': user,
-            'is_tenant_user': True,
-            'tenant': tenant
-        })
+        if request.method == 'GET':
+            return render(request, 'customers/superuser_admin_form.html', {
+                'edit_user': user,
+                'is_tenant_user': True,
+                'tenant': tenant
+            })
+    
+    # Редирект выполняется вне контекста тенанта
+    if request.method == 'POST':
+        return redirect('superuser_admins')
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_tenant_admin_delete(request, tenant_id, user_id):
