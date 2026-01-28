@@ -1047,6 +1047,8 @@ class TenantRegistrationViewSet(viewsets.ViewSet):
                         admin_user = TenantUser.objects.create(
                             username=data['admin_username'],
                             email=data['admin_email'],
+                            first_name=data.get('admin_first_name', ''),
+                            last_name=data.get('admin_last_name', ''),
                             role='ADMIN',
                             is_active=True
                         )

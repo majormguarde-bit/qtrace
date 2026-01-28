@@ -10,6 +10,8 @@ class TenantRegistrationSerializer(serializers.Serializer):
     admin_username = serializers.CharField(max_length=150)
     admin_email = serializers.EmailField()
     admin_password = serializers.CharField(write_only=True)
+    admin_first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    admin_last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20)
     telegram = serializers.CharField(max_length=100, required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
