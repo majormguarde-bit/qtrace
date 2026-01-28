@@ -1,0 +1,176 @@
+<script>
+// Динамическое добавление/удаление этапов
+function addStageForm() {
+    const container = document.getElementById('stages-container');
+    const formCount = document.getElementById('id_tasktemplatestage_set-TOTAL_FORMS');
+    
+    if (!container || !formCount) {
+        console.error('Контейнер этапов или счетчик форм не найдены');
+        return;
+    }
+    
+    const currentCount = parseInt(formCount.value);
+    
+    // Создаем новую форму на основе последней
+    const lastForm = container.querySelector('.stage-form-group:last-child');
+    if (!lastForm) return;
+    
+    const newForm = lastForm.cloneNode(true);
+    
+    // Обновляем ID и name атрибуты
+    newForm.querySelectorAll('input, textarea, select').forEach(field => {
+        const name = field.getAttribute('name');
+        if (name) {
+            const newName = name.replace(/-\d+-/, `-${currentCount}-`);
+            field.setAttribute('name', newName);
+            field.setAttribute('id', `id_${newName}`);
+            field.value = '';
+        }
+    });
+    
+    // Очищаем значения
+    newForm.querySelectorAll('input[type="text"], textarea, input[type="number"]').forEach(field => {
+        field.value = '';
+    });
+    
+    // Очищаем чекбокс удаления
+    const deleteCheckbox = newForm.querySelector('input[type="checkbox"]');
+    if (deleteCheckbox) {
+        deleteCheckbox.checked = false;
+    }
+    
+    container.appendChild(newForm);
+    formCount.value = currentCount + 1;
+}
+
+// Валидация на клиенте
+function validateTemplateForm() {
+    const forms = document.querySelectorAll('.stage-form-group');
+    let hasError = false;
+    
+    forms.forEach(form => {
+        const nameInput = form.querySelector('input[name*="name"]');
+        const durationInput = form.querySelector('input[name*="estimated_duration_hours"]');
+        const deleteCheckbox = form.querySelector('input[type="checkbox"]');
+        
+        // Пропускаем удаляемые формы
+        if (deleteCheckbox && deleteCheckbox.checked) return;
+        
+        if (!nameInput || !nameInput.value.trim()) {
+            if (nameInput) nameInput.classList.add('is-invalid');
+            hasError = true;
+        } else {
+            if (nameInput) nameInput.classList.remove('is-invalid');
+        }
+        
+        if (!durationInput || !durationInput.value || parseFloat(durationInput.value) < 0.5) {
+            if (durationInput) durationInput.classList.add('is-invalid');
+            hasError = true;
+        } else {
+            if (durationInput) durationInput.classList.remove('is-invalid');
+        }
+    });
+    
+    return !hasError;
+}
+
+// Загрузка этапов из глобального шаблона
+function loadTemplateStages(templateId) {
+    if (!templateId) return;
+    
+    const url = `/dashboard/template/${templateId}/stages/`;
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                const container = document.getElementById('stages-container');
+                const formCount = document.getElementById('id_tasktemplatestage_set-TOTAL_FORMS');
+                
+                if (!container || !formCount) {
+                    console.error('Контейнер этапов не найден');
+                    return;
+                }
+                
+                // Очищаем существующие формы
+                container.querySelectorAll('.stage-form-group').forEach(form => {
+                    form.remove();
+                });
+                
+                // Добавляем новые формы для каждого этапа
+                data.stages.forEach((stage, index) => {
+                    addStageForm();
+                    const lastForm = container.querySelector('.stage-form-group:last-child');
+                    
+                    // Заполняем данные
+                    const nameInput = lastForm.querySelector('input[name*="name"]');
+                    const descInput = lastForm.querySelector('textarea[name*="description"]');
+                    const durationInput = lastForm.querySelector('input[name*="estimated_duration_hours"]');
+                    const sequenceInput = lastForm.querySelector('input[name*="sequence_number"]');
+                    
+                    if (nameInput) nameInput.value = stage.name;
+                    if (descInput) descInput.value = stage.description || '';
+                    if (durationInput) durationInput.value = stage.estimated_duration_hours;
+                    if (sequenceInput) sequenceInput.value = stage.sequence_number;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки этапов:', error);
+            alert('Ошибка при загрузке этапов шаблона. Пожалуйста, попробуйте еще раз.');
+        });
+}
+
+// Фильтрация и поиск
+function filterTemplates() {
+    const searchInput = document.querySelector('input[name="search"]');
+    const categorySelect = document.querySelector('select[name="category"]');
+    
+    if (searchInput && categorySelect) {
+        const form = searchInput.closest('form');
+        if (form) {
+            form.submit();
+        }
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем валидацию к формам
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (form.querySelector('.stage-form-group')) {
+                if (!validateTemplateForm()) {
+                    e.preventDefault();
+                    alert('Пожалуйста, заполните все обязательные поля и убедитесь, что длительность этапа не менее 0.5 часа.');
+                }
+            }
+        });
+    });
+    
+    // Обработчик для кнопки добавления этапа
+    const addStageBtn = document.querySelector('button[onclick="addStageForm()"]');
+    if (addStageBtn) {
+        addStageBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            addStageForm();
+        });
+    }
+    
+    // Обработчик для выбора базового шаблона
+    const baseTemplateSelect = document.getElementById('baseTemplateSelect');
+    if (baseTemplateSelect) {
+        baseTemplateSelect.addEventListener('change', function() {
+            const templateId = this.value;
+            if (templateId) {
+                loadTemplateStages(templateId);
+            }
+        });
+    }
+});
+</script>

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\config\urls.py
+# hypothesis_version: 6.151.3
+
+['admin/', 'admin/login/', 'admin_login', 'ai/', 'ai_app.urls', 'api/customers/', 'api/task-templates/', 'contact-submit/', 'contact_form_submit', 'customers.urls', 'dashboard.urls', 'dashboard/', 'get-captcha/', 'get_captcha', 'home', 'login', 'login/', 'logout', 'logout/', 'media/<path:path>', 'post', 'public', 'public_tariffs', 'register', 'register/', 'superuser/', 'superuser/admins/', 'superuser/domains/', 'superuser/finance/', 'superuser/mail-logs/', 'superuser/plans/', 'superuser/plans/add/', 'superuser/tenants/', 'superuser_admin_edit', 'superuser_admins', 'superuser_dashboard', 'superuser_db_backup', 'superuser_db_cleanup', 'superuser_db_restore', 'superuser_domains', 'superuser_finance', 'superuser_mail_logs', 'superuser_plan_edit', 'superuser_plans', 'superuser_tenants', 'tariffs/', 'task_templates.urls', 'tenant']

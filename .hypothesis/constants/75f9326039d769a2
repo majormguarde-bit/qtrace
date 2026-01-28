@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\models.py
+# hypothesis_version: 6.151.3
+
+[100, 200, 255, 500, 587, 'ADMIN', 'Client', 'SubscriptionPlan', 'WORKER', 'payments', 'profile', 'user_profiles', 'Администратор', 'Настройки почты', 'Профиль пользователя', 'Работник']

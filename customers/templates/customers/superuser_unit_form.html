@@ -1,0 +1,85 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}{% if is_create %}Добавить единицу измерения{% else %}Редактировать единицу{% endif %}{% endblock %}
+
+{% block header_title %}{% if is_create %}Добавить новую единицу измерения{% else %}Редактировать единицу: {{ unit.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-table">
+            <div class="card-body">
+                <form method="post" class="needs-validation">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted d-block mt-1">Полное название единицы (например: килограмм, метр)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.abbreviation.id_for_label }}" class="form-label">{{ form.abbreviation.label }}</label>
+                        {{ form.abbreviation }}
+                        {% if form.abbreviation.errors %}
+                        <div class="invalid-feedback d-block">{{ form.abbreviation.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted d-block mt-1">Краткое обозначение (например: кг, м, шт)</small>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            {{ form.is_active.label }}
+                        </label>
+                        {% if form.is_active.errors %}
+                        <div class="invalid-feedback d-block">{{ form.is_active.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {% if is_create %}Создать{% else %}Сохранить{% endif %}
+                        </button>
+                        <a href="{% url 'superuser_units' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-info-circle me-2"></i>Примеры
+                </h6>
+                <div class="small">
+                    <p class="mb-2">
+                        <strong>Название:</strong> килограмм<br>
+                        <strong>Сокращение:</strong> кг
+                    </p>
+                    <p class="mb-2">
+                        <strong>Название:</strong> метр<br>
+                        <strong>Сокращение:</strong> м
+                    </p>
+                    <p class="mb-2">
+                        <strong>Название:</strong> штука<br>
+                        <strong>Сокращение:</strong> шт
+                    </p>
+                    <p class="mb-0">
+                        <strong>Название:</strong> литр<br>
+                        <strong>Сокращение:</strong> л
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

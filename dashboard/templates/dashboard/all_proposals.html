@@ -1,0 +1,160 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Управление предложениями{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold"><i class="bi bi-inbox me-2"></i>Управление предложениями</h2>
+</div>
+
+<!-- Фильтры -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small text-muted text-uppercase">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все статусы</option>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search me-1"></i> Фильтр
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Таблица предложений -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="px-4 py-3">Название шаблона</th>
+                        <th class="py-3">Тенант</th>
+                        <th class="py-3">Предложено</th>
+                        <th class="py-3">Статус</th>
+                        <th class="py-3">Создано</th>
+                        <th class="px-4 py-3 text-end">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proposal in proposals %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div class="fw-bold">{{ proposal.template.name }}</div>
+                            <small class="text-muted">{{ proposal.template.description|truncatechars:60 }}</small>
+                        </td>
+                        <td class="py-3">
+                            <span class="badge bg-light text-dark border">{{ proposal.proposed_by.tenant.name|default:"—" }}</span>
+                        </td>
+                        <td class="py-3 text-muted small">
+                            {{ proposal.proposed_by.get_full_name|default:proposal.proposed_by.username }}
+                        </td>
+                        <td class="py-3">
+                            {% if proposal.status == 'PENDING' %}
+                                <span class="badge bg-warning-soft text-warning">⏳ Ожидание</span>
+                            {% elif proposal.status == 'APPROVED' %}
+                                <span class="badge bg-success-soft text-success">✓ Одобрено</span>
+                            {% elif proposal.status == 'REJECTED' %}
+                                <span class="badge bg-danger-soft text-danger">✕ Отклонено</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-muted small">
+                            {{ proposal.created_at|date:"d.m.Y H:i" }}
+                        </td>
+                        <td class="px-4 py-3 text-end">
+                            <div class="btn-group shadow-sm rounded-pill bg-white border p-1">
+                                <button type="button" class="btn btn-sm btn-light border-0 rounded-circle" 
+                                        data-bs-toggle="modal" data-bs-target="#proposalDetailModal"
+                                        onclick="loadProposalDetail({{ proposal.pk }})" title="Просмотр">
+                                    <i class="bi bi-eye text-info"></i>
+                                </button>
+                                {% if proposal.status == 'PENDING' %}
+                                <a href="{% url 'dashboard:approve_proposal' proposal.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Одобрить" onclick="return confirm('Вы уверены?')">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                </a>
+                                <a href="{% url 'dashboard:reject_proposal' proposal.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Отклонить">
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-1 opacity-10 d-block mb-3"></i>
+                            Предложений пока нет
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Пагинация -->
+{% if is_paginated %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if selected_status %}&status={{ selected_status }}{% endif %}">Первая</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">Предыдущая</a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">Следующая</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_status %}&status={{ selected_status }}{% endif %}">Последняя</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Модальное окно деталей предложения -->
+<div class="modal fade" id="proposalDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали предложения</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="proposalDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadProposalDetail(proposalId) {
+    // TODO: Реализовать загрузку деталей предложения
+    alert('Функция загрузки деталей будет реализована позже');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\migrations\0002_aisettings_api_base_url_and_more.py
+# hypothesis_version: 6.151.3
+
+[255, '0001_initial', 'active_model', 'ai_app', 'aisettings', 'api_base_url', 'chat-z-ai', 'claude-3-haiku', 'claude-3-opus', 'deepseek-v3.1', 'gemini-1.5-pro', 'gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o', 'mock', 'qwen-2.5', 'Активная модель']

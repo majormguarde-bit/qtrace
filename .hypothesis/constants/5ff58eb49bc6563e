@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0014_userprofile.py
+# hypothesis_version: 6.151.3
+
+['ADMIN', 'ID', 'UserProfile', 'WORKER', 'created_at', 'customers', 'id', 'profile', 'role', 'updated_at', 'user', 'verbose_name', 'verbose_name_plural', 'Администратор', 'Профиль пользователя', 'Работник']

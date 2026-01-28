@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\tasks\migrations\0004_taskstage.py
+# hypothesis_version: 6.151.3
+
+[200, 'ID', 'TaskStage', 'duration_minutes', 'id', 'is_completed', 'name', 'order', 'ordering', 'stages', 'task', 'tasks', 'tasks.task', 'verbose_name', 'verbose_name_plural', 'Длительность (мин)', 'Завершен', 'Задача', 'Название этапа', 'Порядок', 'Этап задачи', 'Этапы задачи']

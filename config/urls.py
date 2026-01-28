@@ -8,6 +8,8 @@ from django.conf.urls.static import static
 
 from django.views.static import serve
 
+from django.contrib.auth import views as auth_views
+
 import os
 
 from customers.views import (
@@ -42,7 +44,15 @@ from customers.views import (
 
     superuser_tenant_admin_edit, superuser_tenant_admin_delete,
 
-    public_tariffs, TenantRegistrationViewSet, SuperuserLoginView
+    public_tariffs, TenantRegistrationViewSet, SuperuserLoginView,
+    
+    superuser_templates, superuser_proposals, superuser_template_create,
+    superuser_template_edit, superuser_template_delete, superuser_template_diagram,
+    
+    superuser_materials, superuser_material_create, superuser_material_edit,
+    superuser_material_delete, superuser_units, superuser_unit_create,
+    superuser_unit_edit, superuser_unit_delete, superuser_positions,
+    superuser_position_create, superuser_position_edit, superuser_position_delete
 
 )
 
@@ -81,6 +91,8 @@ def universal_media_serve(request, path, **kwargs):
 urlpatterns = [
 
     path('admin/login/', SuperuserLoginView.as_view(), name='admin_login'),
+    
+    path('logout/', auth_views.LogoutView.as_view(next_page='/admin/login/'), name='logout'),
 
     path('admin/', admin.site.urls), # Standard admin for public schema
 
@@ -170,9 +182,9 @@ urlpatterns = [
 
     path('superuser/db-management/', superuser_db_management, name='superuser_db_management'),
 
-    path('superuser/db-management/cleanup/', superuser_db_cleanup_tenants, name='superuser_db_cleanup'),
+    path('superuser/db-management/cleanup/', superuser_db_cleanup_tenants, name='superuser_db_cleanup_tenants'),
 
-    path('superuser/db-management/optimize/', superuser_db_vacuum, name='superuser_db_optimize'),
+    path('superuser/db-management/optimize/', superuser_db_vacuum, name='superuser_db_vacuum'),
 
     path('superuser/db-management/backup/', superuser_db_backup, name='superuser_db_backup'),
 
@@ -185,24 +197,40 @@ urlpatterns = [
     path('superuser/tenants/<int:tenant_id>/admins/<int:user_id>/edit/', superuser_tenant_admin_edit, name='superuser_tenant_admin_edit'),
 
     path('superuser/tenants/<int:tenant_id>/admins/<int:user_id>/delete/', superuser_tenant_admin_delete, name='superuser_tenant_admin_delete'),
+    
+    # Шаблоны и предложения для root-администратора
+    path('superuser/templates/', superuser_templates, name='superuser_templates'),
+    path('superuser/templates/create/', superuser_template_create, name='superuser_template_create'),
+    path('superuser/templates/<int:template_id>/edit/', superuser_template_edit, name='superuser_template_edit'),
+    path('superuser/templates/<int:template_id>/delete/', superuser_template_delete, name='superuser_template_delete'),
+    path('superuser/templates/<int:template_id>/diagram/', superuser_template_diagram, name='superuser_template_diagram'),
+    path('superuser/proposals/', superuser_proposals, name='superuser_proposals'),
+    
+    # Справочники: Материалы
+    path('superuser/materials/', superuser_materials, name='superuser_materials'),
+    path('superuser/materials/create/', superuser_material_create, name='superuser_material_create'),
+    path('superuser/materials/<int:material_id>/edit/', superuser_material_edit, name='superuser_material_edit'),
+    path('superuser/materials/<int:material_id>/delete/', superuser_material_delete, name='superuser_material_delete'),
+    
+    # Справочники: Единицы измерения
+    path('superuser/units/', superuser_units, name='superuser_units'),
+    path('superuser/units/create/', superuser_unit_create, name='superuser_unit_create'),
+    path('superuser/units/<int:unit_id>/edit/', superuser_unit_edit, name='superuser_unit_edit'),
+    path('superuser/units/<int:unit_id>/delete/', superuser_unit_delete, name='superuser_unit_delete'),
+    
+    # Справочники: Должности
+    path('superuser/positions/', superuser_positions, name='superuser_positions'),
+    path('superuser/positions/create/', superuser_position_create, name='superuser_position_create'),
+    path('superuser/positions/<int:position_id>/edit/', superuser_position_edit, name='superuser_position_edit'),
+    path('superuser/positions/<int:position_id>/delete/', superuser_position_delete, name='superuser_position_delete'),
 
     
 
     path('api/customers/', include('customers.urls')),
 
     path('ai/', include('ai_app.urls')),
-
     
-
-    # Добавляем маршруты дашборда прямо в основной конфиг,
-
-    # чтобы они были доступны даже если middleware не сработал
-
-    path('login/', dashboard_views.TenantLoginView.as_view(), name='login'),
-
-    path('logout/', dashboard_views.TenantLogoutView.as_view(), name='logout'),
-
-    path('dashboard/', include('dashboard.urls')), 
+    path('api/task-templates/', include('task_templates.urls')),
 
     
 

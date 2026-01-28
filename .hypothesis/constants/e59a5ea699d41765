@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0019_alter_client_is_active_and_more.py
+# hypothesis_version: 6.151.3
+
+['client', 'created_at', 'customers', 'is_active', 'subscriptionplan', 'updated_at', 'userprofile']

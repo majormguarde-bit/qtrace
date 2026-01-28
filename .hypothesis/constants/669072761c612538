@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\serializers.py
+# hypothesis_version: 6.151.3
+
+[100, 150, 255, 'Invalid subdomain.', 'admin', 'public', 'www']

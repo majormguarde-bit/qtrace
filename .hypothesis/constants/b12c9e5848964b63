@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\migrations\0001_initial.py
+# hypothesis_version: 6.151.3
+
+[0.7, 255, 1000, 'AI включен', 'AISettings', 'API Ключ', 'ID', 'active_model', 'claude-3-haiku', 'claude-3-opus', 'gemini-1.5-pro', 'gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o', 'id', 'is_enabled', 'max_tokens', 'mock', 'provider_api_key', 'temperature', 'updated_at', 'verbose_name', 'verbose_name_plural', 'Активная модель', 'Макс. токенов', 'Настройки AI']

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0018_rename_max_storage_gb_subscriptionplan_storage_gb_and_more.py
+# hypothesis_version: 6.151.3
+
+['created_at', 'customers', 'has_mobile_app', 'max_storage_gb', 'storage_gb', 'subscriptionplan', 'updated_at', 'userprofile', 'work_days_limit']

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\admin.py
+# hypothesis_version: 6.151.3
+
+['activate_tenants', 'can_delete_media', 'contact_person', 'created_at', 'created_on', 'deactivate_tenants', 'default_from_email', 'domain', 'email', 'email_host', 'email_host_user', 'error_log', 'fields', 'ip_address', 'is_active', 'is_primary', 'is_read', 'is_sent', 'message', 'name', 'phone', 'role', 'schema_name', 'subject', 'telegram', 'tenant', 'user', 'user__email', 'user__username', 'user_agent', 'Контакты организации', 'Обратная связь', 'Подписка']

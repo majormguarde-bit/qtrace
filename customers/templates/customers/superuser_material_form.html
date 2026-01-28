@@ -1,0 +1,107 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}{% if is_create %}Добавить материал{% else %}Редактировать материал{% endif %}{% endblock %}
+
+{% block header_title %}{% if is_create %}Добавить новый материал{% else %}Редактировать материал: {{ material.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-table">
+            <div class="card-body">
+                <form method="post" class="needs-validation">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">{{ form.code.label }}</label>
+                        {{ form.code }}
+                        {% if form.code.errors %}
+                        <div class="invalid-feedback d-block">{{ form.code.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted d-block mt-1">Уникальный идентификатор материала в системе</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }}</label>
+                            {{ form.unit }}
+                            {% if form.unit.errors %}
+                            <div class="invalid-feedback d-block">{{ form.unit.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.unit_cost.id_for_label }}" class="form-label">{{ form.unit_cost.label }}</label>
+                            {{ form.unit_cost }}
+                            {% if form.unit_cost.errors %}
+                            <div class="invalid-feedback d-block">{{ form.unit_cost.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            {{ form.is_active.label }}
+                        </label>
+                        {% if form.is_active.errors %}
+                        <div class="invalid-feedback d-block">{{ form.is_active.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {% if is_create %}Создать{% else %}Сохранить{% endif %}
+                        </button>
+                        <a href="{% url 'superuser_materials' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-info-circle me-2"></i>Справка
+                </h6>
+                <p class="small text-muted mb-2">
+                    <strong>Название:</strong> Полное наименование материала или запчасти
+                </p>
+                <p class="small text-muted mb-2">
+                    <strong>Код:</strong> Уникальный идентификатор (артикул, SKU и т.д.)
+                </p>
+                <p class="small text-muted mb-2">
+                    <strong>Единица:</strong> Единица измерения (шт, кг, м и т.д.)
+                </p>
+                <p class="small text-muted mb-2">
+                    <strong>Стоимость:</strong> Цена за одну единицу
+                </p>
+                <p class="small text-muted">
+                    <strong>Статус:</strong> Активные материалы доступны при создании шаблонов
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,499 @@
+{% extends "customers/superuser_base.html" %}
+{% load static %}
+
+{% block title %}{% if is_create %}Создание шаблона{% else %}Редактирование шаблона{% endif %} - Панель управления{% endblock %}
+{% block header_title %}{% if is_create %}Создание нового шаблона{% else %}Редактирование шаблона{% endif %}{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_templates' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <form method="post" id="templateForm">
+            {% csrf_token %}
+            
+            <!-- Основные данные шаблона -->
+            <div class="card card-table mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Основные данные</h5>
+                </div>
+                <div class="card-body">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.activity_category.id_for_label }}" class="form-label">{{ form.activity_category.label }}</label>
+                        {{ form.activity_category }}
+                        {% if form.activity_category.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.activity_category.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.name.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-0">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Этапы шаблона -->
+            <div class="card card-table mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Этапы задачи</h5>
+                    <button type="button" class="btn btn-sm btn-primary" id="addStageBtn">
+                        <i class="bi bi-plus-circle me-1"></i> Добавить этап
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="stagesContainer">
+                        {% if template.stages.all %}
+                            {% for stage in template.stages.all %}
+                            <div class="stage-item card mb-3 border-secondary">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-1">
+                                            <label class="form-label">№</label>
+                                            <input type="number" class="form-control stage-sequence" value="{{ stage.sequence_number }}" min="1">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label">Название этапа</label>
+                                            <input type="text" class="form-control stage-name" value="{{ stage.name }}" placeholder="Название">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Длительность от</label>
+                                            <input type="number" class="form-control stage-duration-from" value="{{ stage.duration_from }}" step="0.01" min="0.01">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Длительность до</label>
+                                            <input type="number" class="form-control stage-duration-to" value="{{ stage.duration_to }}" step="0.01" min="0.01">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Единица времени</label>
+                                            <select class="form-select stage-duration-unit" data-duration-unit-id="{{ stage.duration_unit.id }}">
+                                                <option value="">-- Выберите --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-info w-50 addMaterialBtn" title="Добавить материал">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger w-50 removeStageBtn">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Должность -->
+                                    <div class="row g-3 mt-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Должность исполнителя</label>
+                                            <div class="input-group">
+                                                <select class="form-select stage-position" data-position-id="{{ stage.position.id }}">
+                                                    <option value="">-- Выберите должность --</option>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-primary addPositionBtn" title="Добавить новую должность">
+                                                    <i class="bi bi-plus-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Материалы для этапа -->
+                                    <div class="materials-container mt-3 ps-3 border-start border-info">
+                                        {% for material in stage.materials.all %}
+                                        <div class="material-item row g-2 mb-2 align-items-end">
+                                            <div class="col-md-5">
+                                                <small class="form-text text-muted">Материал</small>
+                                                <select class="form-control form-control-sm material-select" data-material-id="{{ material.material.id }}">
+                                                    <option value="">-- Выберите материал --</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <small class="form-text text-muted">Кол-во</small>
+                                                <input type="number" class="form-control form-control-sm material-quantity" value="{{ material.quantity }}" step="0.01" min="0.01">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <small class="form-text text-muted">Ед. изм.</small>
+                                                <input type="text" class="form-control form-control-sm material-unit" value="{{ material.material.unit.abbreviation }}" placeholder="шт" readonly>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger w-100 removeMaterialBtn">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Нажмите кнопку "Добавить этап" для создания этапов задачи
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Кнопки действия -->
+            <div class="d-flex gap-2 justify-content-end mb-4">
+                <a href="{% url 'superuser_templates' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Отмена
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i> {% if is_create %}Создать{% else %}Сохранить{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addStageBtn = document.getElementById('addStageBtn');
+    const stagesContainer = document.getElementById('stagesContainer');
+    let stageCount = document.querySelectorAll('.stage-item').length;
+    
+    // Загружаем данные о единицах времени, материалах и должностях
+    let durationUnits = [];
+    let materials = [];
+    let positions = [];
+    
+    // Fetch duration units
+    fetch('/api/customers/duration-units/')
+        .then(response => response.json())
+        .then(data => {
+            durationUnits = data;
+            updateAllDurationUnitSelects();
+        })
+        .catch(error => console.error('Error loading duration units:', error));
+    
+    // Fetch materials
+    fetch('/api/customers/materials/')
+        .then(response => response.json())
+        .then(data => {
+            materials = data;
+        })
+        .catch(error => console.error('Error loading materials:', error));
+    
+    // Fetch positions
+    fetch('/api/customers/positions/')
+        .then(response => response.json())
+        .then(data => {
+            positions = data;
+            updateAllPositionSelects();
+        })
+        .catch(error => console.error('Error loading positions:', error));
+    
+    function updateAllDurationUnitSelects() {
+        document.querySelectorAll('.stage-duration-unit').forEach(select => {
+            updateDurationUnitSelect(select);
+        });
+    }
+    
+    function updateAllPositionSelects() {
+        document.querySelectorAll('.stage-position').forEach(select => {
+            updatePositionSelect(select);
+        });
+    }
+    
+    function updateDurationUnitSelect(select) {
+        const currentValue = select.value || select.dataset.durationUnitId;
+        select.innerHTML = '<option value="">-- Выберите --</option>';
+        
+        durationUnits.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.name;
+            if (unit.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+    
+    function updatePositionSelect(select) {
+        const currentValue = select.value || select.dataset.positionId;
+        select.innerHTML = '<option value="">-- Выберите должность --</option>';
+        
+        positions.forEach(position => {
+            const option = document.createElement('option');
+            option.value = position.id;
+            option.textContent = position.name;
+            if (position.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+    
+    addStageBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        stageCount++;
+        
+        const stageHtml = `
+            <div class="stage-item card mb-3 border-secondary">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-1">
+                            <label class="form-label">№</label>
+                            <input type="number" class="form-control stage-sequence" value="${stageCount}" min="1">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Название этапа</label>
+                            <input type="text" class="form-control stage-name" placeholder="Название">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Длительность от</label>
+                            <input type="number" class="form-control stage-duration-from" value="1" step="0.01" min="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Длительность до</label>
+                            <input type="number" class="form-control stage-duration-to" value="1" step="0.01" min="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Единица времени</label>
+                            <select class="form-select stage-duration-unit">
+                                <option value="">-- Выберите --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-info w-50 addMaterialBtn" title="Добавить материал">
+                                <i class="bi bi-plus-circle"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger w-50 removeStageBtn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Должность -->
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-12">
+                            <label class="form-label">Должность исполнителя</label>
+                            <div class="input-group">
+                                <select class="form-select stage-position">
+                                    <option value="">-- Выберите должность --</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary addPositionBtn" title="Добавить новую должность">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Материалы для этапа -->
+                    <div class="materials-container mt-3 ps-3 border-start border-info"></div>
+                </div>
+            </div>
+        `;
+        
+        stagesContainer.insertAdjacentHTML('beforeend', stageHtml);
+        const newStage = stagesContainer.lastElementChild;
+        updateDurationUnitSelect(newStage.querySelector('.stage-duration-unit'));
+        updatePositionSelect(newStage.querySelector('.stage-position'));
+        attachStageListeners(newStage);
+    });
+    
+    function attachStageListeners(stageElement) {
+        const removeBtn = stageElement.querySelector('.removeStageBtn');
+        const addMaterialBtn = stageElement.querySelector('.addMaterialBtn');
+        const addPositionBtn = stageElement.querySelector('.addPositionBtn');
+        
+        removeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            stageElement.remove();
+        });
+        
+        addPositionBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const positionName = prompt('Введите название новой должности:');
+            if (positionName && positionName.trim()) {
+                // Отправляем запрос на создание новой должности
+                fetch('/api/customers/positions/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify({
+                        name: positionName.trim(),
+                        description: '',
+                        is_active: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.id) {
+                        // Добавляем новую должность в список
+                        positions.push(data);
+                        // Обновляем все селекты должностей
+                        updateAllPositionSelects();
+                        // Выбираем новую должность в текущем селекте
+                        const positionSelect = stageElement.querySelector('.stage-position');
+                        positionSelect.value = data.id;
+                        alert('Должность успешно добавлена!');
+                    } else if (data.error) {
+                        alert('Ошибка: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при добавлении должности');
+                });
+            }
+        });
+        
+        addMaterialBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const materialsContainer = stageElement.querySelector('.materials-container');
+            const materialHtml = `
+                <div class="material-item row g-2 mb-2 align-items-end">
+                    <div class="col-md-5">
+                        <small class="form-text text-muted">Материал</small>
+                        <select class="form-control form-control-sm material-select">
+                            <option value="">-- Выберите материал --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="form-text text-muted">Кол-во</small>
+                        <input type="number" class="form-control form-control-sm material-quantity" value="1" step="0.01" min="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <small class="form-text text-muted">Ед. изм.</small>
+                        <input type="text" class="form-control form-control-sm material-unit" placeholder="шт" readonly>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100 removeMaterialBtn">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            materialsContainer.insertAdjacentHTML('beforeend', materialHtml);
+            const newMaterial = materialsContainer.lastElementChild;
+            
+            // Заполняем dropdown материалов
+            const materialSelect = newMaterial.querySelector('.material-select');
+            materials.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material.id;
+                option.textContent = `${material.name} (${material.code})`;
+                option.dataset.unit = material.unit_abbreviation;
+                materialSelect.appendChild(option);
+            });
+            
+            // При выборе материала заполняем единицу измерения
+            materialSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const unitField = newMaterial.querySelector('.material-unit');
+                unitField.value = selectedOption.dataset.unit || 'шт';
+            });
+            
+            attachMaterialListeners(newMaterial);
+        });
+    }
+    
+    function attachMaterialListeners(materialElement) {
+        const removeBtn = materialElement.querySelector('.removeMaterialBtn');
+        removeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            materialElement.remove();
+        });
+    }
+    
+    // Attach listeners to existing stages
+    document.querySelectorAll('.stage-item').forEach(stage => {
+        attachStageListeners(stage);
+        stage.querySelectorAll('.material-item').forEach(material => {
+            const materialSelect = material.querySelector('.material-select');
+            const materialId = materialSelect.dataset.materialId;
+            
+            // Заполняем dropdown материалов
+            materials.forEach(mat => {
+                const option = document.createElement('option');
+                option.value = mat.id;
+                option.textContent = `${mat.name} (${mat.code})`;
+                option.dataset.unit = mat.unit_abbreviation;
+                if (mat.id == materialId) {
+                    option.selected = true;
+                }
+                materialSelect.appendChild(option);
+            });
+            
+            // При выборе материала заполняем единицу измерения
+            materialSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const unitField = material.querySelector('.material-unit');
+                unitField.value = selectedOption.dataset.unit || 'шт';
+            });
+            
+            attachMaterialListeners(material);
+        });
+    });
+    
+    // Handle form submission
+    document.getElementById('templateForm').addEventListener('submit', function(e) {
+        const stages = [];
+        document.querySelectorAll('.stage-item').forEach((item, index) => {
+            const materials = [];
+            item.querySelectorAll('.material-item').forEach(materialItem => {
+                const materialSelect = materialItem.querySelector('.material-select');
+                if (materialSelect.value) {
+                    materials.push({
+                        id: materialSelect.value,
+                        quantity: materialItem.querySelector('.material-quantity').value,
+                    });
+                }
+            });
+            
+            stages.push({
+                sequence_number: item.querySelector('.stage-sequence').value,
+                name: item.querySelector('.stage-name').value,
+                duration_from: item.querySelector('.stage-duration-from').value,
+                duration_to: item.querySelector('.stage-duration-to').value,
+                duration_unit_id: item.querySelector('.stage-duration-unit').value,
+                position_id: item.querySelector('.stage-position').value,
+                materials: materials,
+            });
+        });
+        
+        // Store stages data in hidden field
+        const stagesInput = document.createElement('input');
+        stagesInput.type = 'hidden';
+        stagesInput.name = 'stages_data';
+        stagesInput.value = JSON.stringify(stages);
+        this.appendChild(stagesInput);
+    });
+});
+</script>
+{% endblock %}

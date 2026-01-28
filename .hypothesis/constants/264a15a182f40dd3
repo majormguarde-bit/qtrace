@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\media_app\models.py
+# hypothesis_version: 6.151.3
+
+[200, '%Y%m%d_%H%M%S', '%d.%m.%Y %H:%M', '-uploaded_at', '[-\\s]+', '[^\\w\\s-]', '_', 'media', 'tenant_media/', 'unknown', 'Дата загрузки', 'Загрузил', 'Задача', 'Конец съемки', 'Медиа-файл', 'Медиа-файлы', 'Название', 'Начало съемки', 'Размер файла (байты)', 'Файл', 'Этап']

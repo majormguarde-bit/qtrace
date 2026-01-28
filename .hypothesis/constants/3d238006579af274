@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0004_create_auth_user_public.py
+# hypothesis_version: 6.151.3
+
+['0003_add_schema_name', 'auth', 'customers']

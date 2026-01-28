@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\media_app\migrations\0002_media_uploaded_by_alter_media_file.py
+# hypothesis_version: 6.151.3
+
+['0001_initial', 'file', 'media', 'media_app', 'tenant_media/', 'uploaded_by', 'users_app', 'users_app.tenantuser']

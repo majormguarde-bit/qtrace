@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\tasks\models.py
+# hypothesis_version: 6.151.3
+
+[200, '-created_at', 'CLOSE', 'COMPLETED', 'CONTINUE', 'FAILED', 'IMPORTANT', 'IN_PROGRESS', 'OPEN', 'PAUSE', 'PENDING', 'id', 'order', 'stages', 'tasks', 'В планах', 'В работе', 'Важно', 'Длительность (мин)', 'Завершен', 'Завершена', 'Заголовок', 'Задача', 'Задачи', 'Закрыть задачу', 'Исполнитель', 'Название этапа', 'Описание', 'Открыта', 'Пауза', 'Порядок', 'Проблема', 'Продолжить', 'Статус', 'Статус этапа', 'Этап задачи', 'Этапы задачи']

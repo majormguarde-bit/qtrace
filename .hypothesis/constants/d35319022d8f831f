@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0022_clean_up_old_userprofile.py
+# hypothesis_version: 6.151.3
+
+['0021_client_telegram', 'User', 'UserProfile', 'auth', 'customers', 'public']

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0001_initial.py
+# hypothesis_version: 6.151.3
+
+[100, 253, 'Client', 'Domain', 'ID', 'abstract', 'created_on', 'customers.client', 'domain', 'domains', 'id', 'is_primary', 'name', 'schema_name', 'tenant']

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\views.py
+# hypothesis_version: 6.151.3
+
+[400, 405, 500, 'POST', 'context', 'error', 'general', 'message', 'prompt', 'response', 'status', 'success', 'utf-8', 'Метод не разрешен', 'Пустой запрос']

@@ -1,0 +1,25 @@
+<div class="modal-body">
+    <h6 class="fw-bold mb-3">Отклонение предложения</h6>
+    
+    <div class="mb-3">
+        <small class="text-muted text-uppercase">Шаблон</small>
+        <div class="fw-bold">{{ proposal.template.name }}</div>
+    </div>
+    
+    <form id="rejectForm" method="post" action="{% url 'dashboard:reject_proposal' proposal.pk %}">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="reason" class="form-label">Причина отклонения <span class="text-danger">*</span></label>
+            <textarea name="reason" id="reason" class="form-control" rows="3" placeholder="Объясните, почему вы отклоняете это предложение..." required></textarea>
+            <small class="text-muted">Эта информация будет отправлена автору предложения</small>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+    <button type="submit" form="rejectForm" class="btn btn-danger">
+        <i class="bi bi-x-circle me-2"></i>Отклонить
+    </button>
+</div>

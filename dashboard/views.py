@@ -10,9 +10,11 @@ from django.contrib import messages
 from django.utils import timezone
 
 from django.db.models import Sum
+from django.db import models as django_models
 from tasks.models import Task, TaskStage
 from media_app.models import Media
 from users_app.models import TenantUser, Department, Position
+from task_templates.models import TaskTemplate, TaskTemplateStage, TemplateProposal, ActivityCategory
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -170,6 +172,22 @@ TaskStageFormSet = inlineformset_factory(
     }
 )
 
+# Formset для этапов шаблонов
+TemplateStageFormSet = inlineformset_factory(
+    TaskTemplate, TaskTemplateStage,
+    fields=['name', 'duration_from', 'duration_to', 'duration_unit', 'position', 'sequence_number'],
+    extra=1,
+    can_delete=True,
+    widgets={
+        'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
+        'duration_from': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Длительность от', 'step': '0.01', 'min': '0.01'}),
+        'duration_to': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Длительность до', 'step': '0.01', 'min': '0.01'}),
+        'duration_unit': forms.Select(attrs={'class': 'form-select'}),
+        'position': forms.Select(attrs={'class': 'form-select'}),
+        'sequence_number': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Порядок'}),
+    }
+)
+
 class TaskListView(LoginRequiredMixin, ListView):
     model = Task
     template_name = 'dashboard/task_list.html'
@@ -198,6 +216,16 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
             data['stages'] = TaskStageFormSet(self.request.POST)
         else:
             data['stages'] = TaskStageFormSet()
+        
+        # Добавляем доступные шаблоны
+        user = self.request.user
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            # Администратор видит глобальные и локальные шаблоны
+            data['templates'] = TaskTemplate.objects.all().prefetch_related('activity_category').order_by('activity_category', 'name')
+        else:
+            # Обычный пользователь видит только глобальные шаблоны
+            data['templates'] = TaskTemplate.objects.filter(template_type='global').prefetch_related('activity_category').order_by('activity_category', 'name')
+        
         return data
 
     def get_form_kwargs(self):
@@ -238,6 +266,14 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
             data['stages'] = TaskStageFormSet(self.request.POST, instance=self.object)
         else:
             data['stages'] = TaskStageFormSet(instance=self.object)
+        
+        # Добавляем доступные шаблоны
+        user = self.request.user
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            data['templates'] = TaskTemplate.objects.all().prefetch_related('activity_category').order_by('activity_category', 'name')
+        else:
+            data['templates'] = TaskTemplate.objects.filter(template_type='global').prefetch_related('activity_category').order_by('activity_category', 'name')
+        
         return data
 
     def get_form_kwargs(self):
@@ -838,3 +874,489 @@ class TaskStageToggleAjaxView(LoginRequiredMixin, TemplateView):
             })
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
+
+# --- Task Templates (Global) ---
+
+class TemplateListView(LoginRequiredMixin, ListView):
+    """Список глобальных шаблонов (только для root-администратора)"""
+    model = TaskTemplate
+    template_name = 'dashboard/template_list.html'
+    context_object_name = 'templates'
+    paginate_by = 10
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        # Только root-администратор может видеть глобальные шаблоны
+        if not getattr(user, 'is_superuser', False):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        queryset = TaskTemplate.objects.filter(template_type='global').prefetch_related('stages', 'activity_category')
+        
+        # Фильтрация по категории
+        category_id = self.request.GET.get('category')
+        if category_id:
+            queryset = queryset.filter(activity_category_id=category_id)
+        
+        # Поиск по названию и описанию
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                django_models.Q(name__icontains=search) | 
+                django_models.Q(description__icontains=search)
+            )
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = ActivityCategory.objects.all()
+        context['selected_category'] = self.request.GET.get('category')
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
+
+
+class TemplateCreateView(LoginRequiredMixin, CreateView):
+    """Создание глобального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/template_form.html'
+    fields = ['name', 'description', 'activity_category']
+    success_url = reverse_lazy('dashboard:template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not getattr(user, 'is_superuser', False):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['stages'] = TemplateStageFormSet(self.request.POST)
+        else:
+            context['stages'] = TemplateStageFormSet()
+        context['is_global'] = True
+        return context
+    
+    def form_valid(self, form):
+        context = self.get_context_data()
+        stages = context['stages']
+        
+        if stages.is_valid():
+            form.instance.template_type = 'global'
+            self.object = form.save()
+            stages.instance = self.object
+            stages.save()
+            messages.success(self.request, 'Шаблон успешно создан.')
+            return redirect(self.success_url)
+        else:
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+class TemplateEditView(LoginRequiredMixin, UpdateView):
+    """Редактирование глобального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/template_form.html'
+    fields = ['name', 'description', 'activity_category']
+    success_url = reverse_lazy('dashboard:template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not getattr(user, 'is_superuser', False):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        
+        obj = self.get_object()
+        if obj.template_type != 'global':
+            messages.error(request, 'Вы не можете редактировать локальный шаблон.')
+            return redirect('dashboard:template_list')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['stages'] = TemplateStageFormSet(self.request.POST, instance=self.object)
+        else:
+            context['stages'] = TemplateStageFormSet(instance=self.object)
+        context['template_type'] = 'global'
+        return context
+    
+    def form_valid(self, form):
+        context = self.get_context_data()
+        stages = context['stages']
+        
+        if stages.is_valid():
+            self.object = form.save()
+            stages.instance = self.object
+            stages.save()
+            messages.success(self.request, 'Шаблон успешно обновлен.')
+            return redirect(self.success_url)
+        else:
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+class TemplateDeleteView(LoginRequiredMixin, DeleteView):
+    """Удаление глобального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/confirm_delete.html'
+    success_url = reverse_lazy('dashboard:template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not getattr(user, 'is_superuser', False):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        
+        obj = self.get_object()
+        if obj.template_type != 'global':
+            messages.error(request, 'Вы не можете удалить локальный шаблон.')
+            return redirect('dashboard:template_list')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Удаление шаблона'
+        context['message'] = f'Вы уверены, что хотите удалить шаблон "{self.object.name}"?'
+        context['cancel_url'] = reverse_lazy('dashboard:template_list')
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Шаблон успешно удален.')
+        return super().delete(request, *args, **kwargs)
+
+
+class TemplateDetailView(LoginRequiredMixin, TemplateView):
+    """Просмотр деталей шаблона (AJAX)"""
+    template_name = 'dashboard/template_detail_modal.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        template_id = self.kwargs.get('pk')
+        try:
+            template = TaskTemplate.objects.prefetch_related('stages').get(pk=template_id)
+            context['template'] = template
+            context['stages'] = template.stages.all().order_by('order')
+        except TaskTemplate.DoesNotExist:
+            context['error'] = 'Шаблон не найден'
+        return context
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        template_id = self.kwargs.get('pk')
+        try:
+            template = TaskTemplate.objects.get(pk=template_id)
+            # Глобальные шаблоны видны всем, локальные - только администратору тенанта
+            if template.template_type != 'global':
+                if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+                    return JsonResponse({'error': 'Permission denied'}, status=403)
+        except TaskTemplate.DoesNotExist:
+            return JsonResponse({'error': 'Template not found'}, status=404)
+        
+        return super().dispatch(request, *args, **kwargs)
+
+
+# --- Task Templates (Local) ---
+
+class LocalTemplateListView(LoginRequiredMixin, ListView):
+    """Список локальных шаблонов тенанта"""
+    model = TaskTemplate
+    template_name = 'dashboard/local_template_list.html'
+    context_object_name = 'templates'
+    paginate_by = 10
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        # Только администратор тенанта может видеть локальные шаблоны
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        queryset = TaskTemplate.objects.filter(template_type='local').prefetch_related('stages', 'activity_category')
+        
+        # Фильтрация по категории
+        category_id = self.request.GET.get('category')
+        if category_id:
+            queryset = queryset.filter(activity_category_id=category_id)
+        
+        # Поиск по названию
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(name__icontains=search)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = ActivityCategory.objects.all()
+        context['selected_category'] = self.request.GET.get('category')
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
+
+
+class LocalTemplateCreateView(LoginRequiredMixin, CreateView):
+    """Создание локального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/local_template_form.html'
+    fields = ['name', 'description', 'activity_category']
+    success_url = reverse_lazy('dashboard:local_template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['stages'] = TemplateStageFormSet(self.request.POST)
+        else:
+            context['stages'] = TemplateStageFormSet()
+        context['global_templates'] = TaskTemplate.objects.filter(template_type='global')
+        context['template_type'] = 'local'
+        return context
+    
+    def form_valid(self, form):
+        context = self.get_context_data()
+        stages = context['stages']
+        
+        if stages.is_valid():
+            form.instance.template_type = 'local'
+            self.object = form.save()
+            stages.instance = self.object
+            stages.save()
+            messages.success(self.request, 'Локальный шаблон успешно создан.')
+            return redirect(self.success_url)
+        else:
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
+    """Редактирование локального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/local_template_form.html'
+    fields = ['name', 'description', 'activity_category']
+    success_url = reverse_lazy('dashboard:local_template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        
+        obj = self.get_object()
+        if obj.template_type == 'global':
+            messages.error(request, 'Вы не можете редактировать глобальный шаблон.')
+            return redirect('dashboard:local_template_list')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['stages'] = TemplateStageFormSet(self.request.POST, instance=self.object)
+        else:
+            context['stages'] = TemplateStageFormSet(instance=self.object)
+        context['global_templates'] = TaskTemplate.objects.filter(template_type='global')
+        context['template_type'] = 'local'
+        return context
+    
+    def form_valid(self, form):
+        context = self.get_context_data()
+        stages = context['stages']
+        
+        if stages.is_valid():
+            self.object = form.save()
+            stages.instance = self.object
+            stages.save()
+            messages.success(self.request, 'Локальный шаблон успешно обновлен.')
+            return redirect(self.success_url)
+        else:
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+class LocalTemplateDeleteView(LoginRequiredMixin, DeleteView):
+    """Удаление локального шаблона"""
+    model = TaskTemplate
+    template_name = 'dashboard/confirm_delete.html'
+    success_url = reverse_lazy('dashboard:local_template_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        
+        obj = self.get_object()
+        if obj.template_type == 'global':
+            messages.error(request, 'Вы не можете удалить глобальный шаблон.')
+            return redirect('dashboard:local_template_list')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Удаление локального шаблона'
+        context['message'] = f'Вы уверены, что хотите удалить шаблон "{self.object.name}"?'
+        context['cancel_url'] = reverse_lazy('dashboard:local_template_list')
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Локальный шаблон успешно удален.')
+        return super().delete(request, *args, **kwargs)
+
+
+# --- Template Proposals ---
+
+class MyProposalsView(LoginRequiredMixin, ListView):
+    """Мои предложения (администратор тенанта)"""
+    model = TemplateProposal
+    template_name = 'dashboard/my_proposals.html'
+    context_object_name = 'proposals'
+    paginate_by = 10
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = TemplateProposal.objects.filter(proposed_by=user).prefetch_related('template')
+        
+        # Фильтрация по статусу
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['statuses'] = TemplateProposal.PROPOSAL_STATUS_CHOICES
+        context['selected_status'] = self.request.GET.get('status')
+        return context
+
+
+class AllProposalsView(LoginRequiredMixin, ListView):
+    """Все предложения (root-администратор)"""
+    model = TemplateProposal
+    template_name = 'dashboard/all_proposals.html'
+    context_object_name = 'proposals'
+    paginate_by = 10
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not getattr(user, 'is_superuser', False):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        queryset = TemplateProposal.objects.all().prefetch_related('template', 'proposed_by')
+        
+        # Фильтрация по статусу
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['statuses'] = TemplateProposal.PROPOSAL_STATUS_CHOICES
+        context['selected_status'] = self.request.GET.get('status')
+        return context
+
+
+@login_required
+def approve_proposal(request, pk):
+    """Одобрение предложения"""
+    user = request.user
+    if not getattr(user, 'is_superuser', False):
+        messages.error(request, 'У вас нет доступа к этой странице.')
+        return redirect('dashboard:home')
+    
+    try:
+        proposal = TemplateProposal.objects.get(pk=pk)
+        proposal.approve()
+        messages.success(request, 'Предложение успешно одобрено.')
+    except TemplateProposal.DoesNotExist:
+        messages.error(request, 'Предложение не найдено.')
+    
+    return redirect('dashboard:all_proposals')
+
+
+@login_required
+def reject_proposal(request, pk):
+    """Отклонение предложения"""
+    user = request.user
+    if not getattr(user, 'is_superuser', False):
+        messages.error(request, 'У вас нет доступа к этой странице.')
+        return redirect('dashboard:home')
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        try:
+            proposal = TemplateProposal.objects.get(pk=pk)
+            proposal.reject(reason)
+            messages.success(request, 'Предложение успешно отклонено.')
+        except TemplateProposal.DoesNotExist:
+            messages.error(request, 'Предложение не найдено.')
+        
+        return redirect('dashboard:all_proposals')
+    
+    try:
+        proposal = TemplateProposal.objects.get(pk=pk)
+        return render(request, 'dashboard/reject_proposal_modal.html', {'proposal': proposal})
+    except TemplateProposal.DoesNotExist:
+        messages.error(request, 'Предложение не найдено.')
+        return redirect('dashboard:all_proposals')
+
+
+@login_required
+def withdraw_proposal(request, pk):
+    """Отзыв предложения (администратор тенанта)"""
+    user = request.user
+    if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+        messages.error(request, 'У вас нет доступа к этой странице.')
+        return redirect('dashboard:home')
+    
+    try:
+        proposal = TemplateProposal.objects.get(pk=pk, proposed_by=user)
+        proposal.withdraw()
+        messages.success(request, 'Предложение успешно отозвано.')
+    except TemplateProposal.DoesNotExist:
+        messages.error(request, 'Предложение не найдено.')
+    
+    return redirect('dashboard:my_proposals')
+
+
+@login_required
+def get_template_stages(request, pk):
+    """Получить этапы шаблона (AJAX)"""
+    try:
+        template = TaskTemplate.objects.prefetch_related('stages').get(pk=pk)
+        stages = [
+            {
+                'id': stage.id,
+                'name': stage.name,
+                'description': stage.description,
+                'estimated_duration_hours': stage.estimated_duration_hours,
+                'sequence_number': stage.sequence_number
+            }
+            for stage in template.stages.all().order_by('sequence_number')
+        ]
+        return JsonResponse({'status': 'success', 'stages': stages})
+    except TaskTemplate.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Template not found'}, status=404)

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\task_templates\serializers.py
+# hypothesis_version: 6.151.3
+
+[0.5, 255, 'action', 'activity_category', 'based_on_global', 'based_on_global.name', 'based_on_global_name', 'changes', 'created_at', 'created_by', 'created_by.username', 'created_by_username', 'description', 'global', 'id', 'is_active', 'last_category_filter', 'local', 'local_template', 'local_template.name', 'local_template_name', 'local_variants_count', 'name', 'performed_by', 'proposal', 'proposed_by', 'proposed_by.username', 'proposed_by_username', 'rejection_reason', 'reviewed_at', 'reviewed_by', 'reviewed_by.username', 'reviewed_by_username', 'sequence_number', 'show_all_categories', 'slug', 'stages', 'status', 'template', 'template.name', 'template_name', 'template_type', 'updated_at', 'updated_by', 'updated_by.username', 'updated_by_username', 'user', 'user.username', 'user_username', 'version']

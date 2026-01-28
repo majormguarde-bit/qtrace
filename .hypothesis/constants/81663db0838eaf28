@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0006_userprofile_tenant.py
+# hypothesis_version: 6.151.3
+
+['admins', 'customers', 'customers.client', 'tenant', 'userprofile', 'users_app', 'Предприятие']

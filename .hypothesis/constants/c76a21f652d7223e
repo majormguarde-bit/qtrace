@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0020_rename_sender_email_mailsettings_default_from_email_and_more.py
+# hypothesis_version: 6.151.3
+
+[500, 'contactmessage', 'customers', 'default_from_email', 'email_host', 'email_host_password', 'email_host_user', 'email_port', 'email_use_ssl', 'email_use_tls', 'error_log', 'ip_address', 'is_sent', 'mailsettings', 'password', 'port', 'sender_email', 'server', 'use_tls', 'user', 'user_agent']

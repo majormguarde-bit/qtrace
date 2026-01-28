@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\tasks\migrations\0002_task_assigned_to_task_is_completed_task_updated_at.py
+# hypothesis_version: 6.151.3
+
+['0001_initial', 'assigned_to', 'is_completed', 'task', 'tasks', 'updated_at', 'users_app', 'users_app.tenantuser']

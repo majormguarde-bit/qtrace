@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\media_app\migrations\0003_alter_media_options_media_recording_end_and_more.py
+# hypothesis_version: 6.151.3
+
+[200, '-uploaded_at', 'file', 'media', 'media_app', 'ordering', 'recording_end', 'recording_start', 'task', 'tasks', 'tasks.task', 'tenant_media/', 'title', 'uploaded_at', 'uploaded_by', 'users_app', 'users_app.tenantuser', 'verbose_name', 'verbose_name_plural', 'Дата загрузки', 'Загрузил', 'Задача', 'Конец съемки', 'Медиа-файл', 'Медиа-файлы', 'Название', 'Начало съемки', 'Файл']

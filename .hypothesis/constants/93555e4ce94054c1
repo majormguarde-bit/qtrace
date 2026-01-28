@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0003_add_schema_name.py
+# hypothesis_version: 6.151.3
+
+['client', 'customers', 'public', 'schema_name']

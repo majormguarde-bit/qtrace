@@ -1,0 +1,43 @@
+{% extends "customers/superuser_base.html" %}
+{% load static %}
+
+{% block title %}Удаление должности - Панель управления{% endblock %}
+{% block header_title %}Удаление должности{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_positions' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card card-table border-danger">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-danger">Подтверждение удаления</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Внимание!</strong> Вы собираетесь удалить должность. Это действие нельзя отменить.
+                </div>
+                
+                <p class="mb-3">
+                    Вы уверены, что хотите удалить должность <strong>"{{ position.name }}"</strong>?
+                </p>
+                
+                <form method="post" class="d-flex gap-2 justify-content-end">
+                    {% csrf_token %}
+                    <a href="{% url 'superuser_positions' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Отмена
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

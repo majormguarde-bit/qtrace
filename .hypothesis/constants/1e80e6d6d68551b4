@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0009_position_alter_tenantuser_position.py
+# hypothesis_version: 6.151.3
+
+[255, 'ID', 'Position', 'created_at', 'description', 'id', 'name', 'ordering', 'position', 'tenantuser', 'users', 'users_app', 'users_app.position', 'verbose_name', 'verbose_name_plural', 'Должности', 'Должность', 'Название', 'Описание']

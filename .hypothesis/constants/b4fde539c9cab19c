@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0003_userprofile_delete_user.py
+# hypothesis_version: 6.151.3
+
+['ADMIN', 'ID', 'User', 'UserProfile', 'WORKER', 'id', 'profile', 'role', 'user', 'users_app', 'verbose_name', 'verbose_name_plural', 'Администратор', 'Профиль пользователя', 'Работник']

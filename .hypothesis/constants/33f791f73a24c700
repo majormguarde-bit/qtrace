@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\middleware.py
+# hypothesis_version: 6.151.3
+
+[403, 'is_active', 'public', 'reason', 'tenant']

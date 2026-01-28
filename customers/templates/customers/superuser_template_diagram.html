@@ -1,0 +1,202 @@
+{% extends "customers/superuser_base.html" %}
+{% load static %}
+
+{% block title %}Диаграмма этапов - {{ template.name }}{% endblock %}
+{% block header_title %}Диаграмма этапов: {{ template.name }}{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_templates' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-table">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Структура этапов (интерактивная диаграмма)</h5>
+                    <small class="text-muted">💡 Нажмите на блок для изменения подчиненности</small>
+                </div>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                
+                <!-- Диаграмма Mermaid -->
+                <div class="mermaid" id="mermaidDiagram">
+                    graph TD
+                    Start["🟢 Старт"]
+                    Stop["🔴 Стоп"]
+                    
+                    {% for stage in all_stages %}
+                    Stage{{ stage.id }}["<b>{{ stage.sequence_number }}. {{ stage.name }}</b><br/>{{ stage.position.name|default:'Не указана' }}<br/>{{ stage.duration_from }}-{{ stage.duration_to }}{% if stage.duration_unit %} {{ stage.duration_unit.abbreviation }}{% endif %}"]
+                    {% endfor %}
+                    
+                    Start --> {% if all_stages %}Stage{{ all_stages.0.id }}{% else %}Stop{% endif %}
+                    
+                    {% for stage in all_stages %}
+                        {% if stage.parent_stage %}
+                        Stage{{ stage.parent_stage.id }} --> Stage{{ stage.id }}
+                        {% elif forloop.first %}
+                        Start --> Stage{{ stage.id }}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% for stage in all_stages %}
+                        {% if not stage.parent_stage and forloop.last %}
+                        Stage{{ stage.id }} --> Stop
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <!-- Управление подчинением -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6>Управление подчинением этапов</h6>
+                    <form method="post" action="{% url 'superuser_template_edit' template.id %}" class="row g-3">
+                        {% csrf_token %}
+                        <div class="col-md-5">
+                            <label class="form-label">Выберите этап:</label>
+                            <select name="stage_id" class="form-select" required id="stageSelect">
+                                <option value="">-- Выберите этап --</option>
+                                {% for stage in all_stages %}
+                                <option value="{{ stage.id }}">{{ stage.sequence_number }}. {{ stage.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Родительский этап:</label>
+                            <select name="parent_stage_id" class="form-select" id="parentSelect">
+                                <option value="">-- Нет подчинения --</option>
+                                {% for stage in all_stages %}
+                                <option value="{{ stage.id }}">{{ stage.sequence_number }}. {{ stage.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" name="action" value="set_parent" class="btn btn-primary w-100">
+                                <i class="bi bi-link me-1"></i> Установить
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Информация о статусе -->
+                <div id="statusMessage" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Стили для узлов диаграммы */
+.mermaid .nodeLabel {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.mermaid .node {
+    stroke: #007bff;
+    stroke-width: 2px;
+    fill: #007bff;
+}
+
+.mermaid .node text {
+    fill: white;
+    font-size: 12px;
+}
+
+.mermaid .edgePath path {
+    stroke: #0056b3;
+    stroke-width: 2px;
+}
+
+.mermaid .arrowheadPath {
+    fill: #0056b3;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+// Данные о этапах
+const stagesData = {{ stages_json|safe }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем Mermaid
+    mermaid.initialize({ 
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true
+        }
+    });
+    
+    // Перерисовываем диаграмму
+    mermaid.contentLoaded();
+    
+    // Обработчик для формы
+    const stageSelect = document.getElementById('stageSelect');
+    const parentSelect = document.getElementById('parentSelect');
+    
+    if (stageSelect) {
+        stageSelect.addEventListener('change', function() {
+            const stageId = this.value;
+            if (stageId) {
+                // Находим текущего родителя этого этапа
+                const stage = stagesData.find(s => s.id == parseInt(stageId));
+                if (stage && stage.parent_stage_id) {
+                    parentSelect.value = stage.parent_stage_id;
+                } else {
+                    parentSelect.value = '';
+                }
+            }
+        });
+    }
+    
+    // Обработчик отправки формы
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const stageId = stageSelect.value;
+            const parentId = parentSelect.value;
+            
+            if (!stageId) {
+                e.preventDefault();
+                showStatus('Пожалуйста, выберите этап', 'error');
+                return;
+            }
+            
+            // Показываем сообщение об успехе после отправки
+            setTimeout(() => {
+                showStatus('✓ Подчиненность обновлена', 'success');
+                setTimeout(() => location.reload(), 1500);
+            }, 500);
+        });
+    }
+});
+
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.innerHTML = `<div class="alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+}
+</script>
+{% endblock %}

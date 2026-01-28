@@ -1,157 +1,638 @@
-{% extends 'dashboard/base.html' %}
-
-{% block title %}Инструкция пользователя{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-primary text-white border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <h1 class="display-5 fw-bold mb-2">Руководство пользователя Q-TRACE</h1>
-                    <p class="lead mb-0">Добро пожаловать в систему управления задачами и медиа-отчетностью.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Вход и доступ -->
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title h5 fw-bold text-primary mb-3">
-                        <i class="bi bi-box-arrow-in-right me-2"></i> Вход и доступ
-                    </h3>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item px-0 py-3">
-                            <strong>Доступ из сети:</strong> Для работы со смартфона или другого компьютера в вашей сети используйте адрес текущего сайта.
-                        </li>
-                        <li class="list-group-item px-0 py-3">
-                            <strong>Ваш кабинет:</strong> У каждого предприятия есть свой поддомен на базе основного домена платформы.
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Управление задачами -->
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title h5 fw-bold text-primary mb-3">
-                        <i class="bi bi-list-check me-2"></i> Работа с задачами
-                    </h3>
-                    <p class="text-muted small">Вы можете управлять задачами прямо с главной страницы или в разделе «Задачи».</p>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge bg-warning text-dark p-2">Пауза</span>
-                        <span class="badge bg-info p-2">Работа</span>
-                        <span class="badge bg-danger p-2">Важно</span>
-                        <span class="badge bg-success p-2">Закрыть</span>
-                    </div>
-                    <ul class="list-group list-group-flush small">
-                        <li class="list-group-item px-0"><strong>Этапы:</strong> Нажимайте на название этапа, чтобы отметить его выполнение.</li>
-                        <li class="list-group-item px-0"><strong>Автоматизация:</strong> Задача закроется автоматически, когда вы отметите ВСЕ этапы.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Медиатека -->
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title h5 fw-bold text-primary mb-3">
-                        <i class="bi bi-camera-video me-2"></i> Медиатека и отчеты
-                    </h3>
-                    <p>Система позволяет фиксировать процесс работы с помощью фото и видео.</p>
-                    <div class="bg-light p-3 rounded mb-3">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-camera-fill me-2 text-success"></i>
-                            <span><strong>Запись видео:</strong> Специальный режим для фиксации этапов.</span>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-upload me-2 text-primary"></i>
-                            <span><strong>Загрузка:</strong> Можно выбрать готовые файлы из галереи смартфона.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Роли и права -->
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title h5 fw-bold text-primary mb-3">
-                        <i class="bi bi-shield-lock me-2"></i> Роли в системе
-                    </h3>
-                    <div class="accordion accordion-flush" id="rolesAccordion">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleAdmin">
-                                    Администратор
-                                </button>
-                            </h2>
-                            <div id="roleAdmin" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
-                                <div class="accordion-body px-0 small">
-                                    Полный доступ ко всем задачам и файлам предприятия. Управление сотрудниками, подразделениями и должностями.
-                                </div>
-                            </div>
-                        </div>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleWorker">
-                                    Сотрудник (Исполнитель)
-                                </button>
-                            </h2>
-                            <div id="roleWorker" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
-                                <div class="accordion-body px-0 small">
-                                    Видит только назначенные ему задачи и свои загруженные файлы. Может менять статусы и отмечать этапы.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Мобильные советы -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0 bg-light shadow-sm">
-                <div class="card-body p-4">
-                    <h4 class="h5 fw-bold mb-3"><i class="bi bi-phone me-2"></i> Советы для смартфонов</h4>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-white p-2 rounded shadow-sm me-3">
-                                    <i class="bi bi-hand-index-thumb fs-4 text-primary"></i>
-                                </div>
-                                <span>Используйте долгое нажатие для выбора нескольких файлов.</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-white p-2 rounded shadow-sm me-3">
-                                    <i class="bi bi-layout-sidebar-inset fs-4 text-primary"></i>
-                                </div>
-                                <span>Свайп вправо открывает боковое меню.</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-white p-2 rounded shadow-sm me-3">
-                                    <i class="bi bi-arrow-clockwise fs-4 text-primary"></i>
-                                </div>
-                                <span>Тяните список вниз для обновления данных.</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% extends 'dashboard/base.html' %}
+
+
+
+{% block title %}Инструкция пользователя{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="row mb-4">
+
+        <div class="col-12">
+
+            <div class="card bg-primary text-white border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <h1 class="display-5 fw-bold mb-2">Руководство пользователя Q-TRACE</h1>
+
+                    <p class="lead mb-0">Добро пожаловать в систему управления задачами и медиа-отчетностью.</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="row g-4">
+
+        <!-- Вход и доступ -->
+
+        <div class="col-md-6">
+
+            <div class="card h-100 border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Вход и доступ
+
+                    </h3>
+
+                    <ul class="list-group list-group-flush">
+
+                        <li class="list-group-item px-0 py-3">
+
+                            <strong>Доступ из сети:</strong> Для работы со смартфона или другого компьютера в вашей сети используйте адрес текущего сайта.
+
+                        </li>
+
+                        <li class="list-group-item px-0 py-3">
+
+                            <strong>Ваш кабинет:</strong> У каждого предприятия есть свой поддомен на базе основного домена платформы.
+
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Управление задачами -->
+
+        <div class="col-md-6">
+
+            <div class="card h-100 border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+
+                        <i class="bi bi-list-check me-2"></i> Работа с задачами
+
+                    </h3>
+
+                    <p class="text-muted small">Вы можете управлять задачами прямо с главной страницы или в разделе «Задачи».</p>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+
+                        <span class="badge bg-warning text-dark p-2">Пауза</span>
+
+                        <span class="badge bg-info p-2">Работа</span>
+
+                        <span class="badge bg-danger p-2">Важно</span>
+
+                        <span class="badge bg-success p-2">Закрыть</span>
+
+                    </div>
+
+                    <ul class="list-group list-group-flush small">
+
+                        <li class="list-group-item px-0"><strong>Этапы:</strong> Нажимайте на название этапа, чтобы отметить его выполнение.</li>
+
+                        <li class="list-group-item px-0"><strong>Автоматизация:</strong> Задача закроется автоматически, когда вы отметите ВСЕ этапы.</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Медиатека -->
+
+        <div class="col-md-6">
+
+            <div class="card h-100 border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+
+                        <i class="bi bi-camera-video me-2"></i> Медиатека и отчеты
+
+                    </h3>
+
+                    <p>Система позволяет фиксировать процесс работы с помощью фото и видео.</p>
+
+                    <div class="bg-light p-3 rounded mb-3">
+
+                        <div class="d-flex align-items-center mb-2">
+
+                            <i class="bi bi-camera-fill me-2 text-success"></i>
+
+                            <span><strong>Запись видео:</strong> Специальный режим для фиксации этапов.</span>
+
+                        </div>
+
+                        <div class="d-flex align-items-center">
+
+                            <i class="bi bi-upload me-2 text-primary"></i>
+
+                            <span><strong>Загрузка:</strong> Можно выбрать готовые файлы из галереи смартфона.</span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Шаблоны задач -->
+
+        <div class="col-md-6">
+
+            <div class="card h-100 border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+
+                        <i class="bi bi-file-earmark-text me-2"></i> Шаблоны задач
+
+                    </h3>
+
+                    <p class="text-muted small mb-3">Система позволяет создавать и использовать шаблоны для быстрого создания задач.</p>
+
+                    <div class="bg-light p-3 rounded mb-3">
+
+                        <div class="mb-2">
+
+                            <strong class="text-primary">Глобальные шаблоны</strong>
+
+                            <p class="small text-muted mb-0">Доступны всем тенантам. Управляются root-администратором.</p>
+
+                        </div>
+
+                        <div>
+
+                            <strong class="text-primary">Локальные шаблоны</strong>
+
+                            <p class="small text-muted mb-0">Доступны только в рамках вашего тенанта. Можно предложить в глобальный репозиторий.</p>
+
+                        </div>
+
+                    </div>
+
+                    <ul class="list-group list-group-flush small">
+
+                        <li class="list-group-item px-0"><strong>Создание:</strong> Перейдите в раздел «Шаблоны» или «Мои шаблоны».</li>
+
+                        <li class="list-group-item px-0"><strong>Использование:</strong> При создании задачи выберите шаблон для автоматического заполнения.</li>
+
+                        <li class="list-group-item px-0"><strong>Предложение:</strong> Предложите полезный локальный шаблон в глобальный репозиторий.</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Роли и права -->
+
+        <div class="col-md-6">
+
+            <div class="card h-100 border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+
+                        <i class="bi bi-shield-lock me-2"></i> Роли в системе
+
+                    </h3>
+
+                    <div class="accordion accordion-flush" id="rolesAccordion">
+
+                        <div class="accordion-item">
+
+                            <h2 class="accordion-header">
+
+                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleAdmin">
+
+                                    Администратор
+
+                                </button>
+
+                            </h2>
+
+                            <div id="roleAdmin" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
+
+                                <div class="accordion-body px-0 small">
+
+                                    Полный доступ ко всем задачам и файлам предприятия. Управление сотрудниками, подразделениями и должностями.
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="accordion-item">
+
+                            <h2 class="accordion-header">
+
+                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleWorker">
+
+                                    Сотрудник (Исполнитель)
+
+                                </button>
+
+                            </h2>
+
+                            <div id="roleWorker" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
+
+                                <div class="accordion-body px-0 small">
+
+                                    Видит только назначенные ему задачи и свои загруженные файлы. Может менять статусы и отмечать этапы.
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Подробное руководство по шаблонам -->
+
+    <div class="row mt-4">
+
+        <div class="col-12">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-primary text-white border-0">
+
+                    <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i> Подробное руководство: Шаблоны задач</h4>
+
+                </div>
+
+                <div class="card-body">
+
+                    <!-- Для Root-администратора -->
+
+                    <div class="mb-4">
+
+                        <h5 class="fw-bold text-primary mb-3">
+
+                            <i class="bi bi-crown me-2"></i> Для Root-администратора
+
+                        </h5>
+
+                        <div class="accordion accordion-flush" id="adminAccordion">
+
+                            <div class="accordion-item">
+
+                                <h2 class="accordion-header">
+
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#adminTemplates">
+
+                                        Управление глобальными шаблонами
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="adminTemplates" class="accordion-collapse collapse" data-bs-parent="#adminAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <ol class="small">
+
+                                            <li class="mb-2"><strong>Просмотр:</strong> Перейдите в меню → <strong>Шаблоны задач</strong></li>
+
+                                            <li class="mb-2"><strong>Создание:</strong> Нажмите <strong>"Создать шаблон"</strong>, заполните поля (название, описание, категория) и добавьте этапы</li>
+
+                                            <li class="mb-2"><strong>Редактирование:</strong> Нажмите кнопку <strong>"Редактировать"</strong> (карандаш) и измените необходимые поля</li>
+
+                                            <li class="mb-2"><strong>Удаление:</strong> Нажмите кнопку <strong>"Удалить"</strong> (корзина) и подтвердите</li>
+
+                                            <li class="mb-2"><strong>Просмотр деталей:</strong> Нажмите кнопку <strong>"Просмотр"</strong> (глаз) для просмотра полных деталей</li>
+
+                                        </ol>
+
+                                        <div class="alert alert-info small mb-0">
+
+                                            <strong>Совет:</strong> Минимальная длительность этапа - 0.5 часа. Используйте описательные названия для удобства других администраторов.
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="accordion-item">
+
+                                <h2 class="accordion-header">
+
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#adminProposals">
+
+                                        Управление предложениями
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="adminProposals" class="accordion-collapse collapse" data-bs-parent="#adminAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <ol class="small">
+
+                                            <li class="mb-2"><strong>Просмотр:</strong> Перейдите в меню → <strong>Управление предложениями</strong></li>
+
+                                            <li class="mb-2"><strong>Одобрение:</strong> Найдите предложение со статусом <strong>"Ожидание"</strong> и нажмите <strong>"Одобрить"</strong> (галочка)</li>
+
+                                            <li class="mb-2"><strong>Отклонение:</strong> Нажмите <strong>"Отклонить"</strong> (крестик), введите причину и подтвердите</li>
+
+                                            <li class="mb-2"><strong>Фильтрация:</strong> Используйте фильтр по статусу для поиска нужных предложений</li>
+
+                                        </ol>
+
+                                        <div class="alert alert-info small mb-0">
+
+                                            <strong>Совет:</strong> При одобрении предложения создается новый глобальный шаблон. При отклонении администратор тенанта получит уведомление с причиной.
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Для администратора тенанта -->
+
+                    <div class="mb-4">
+
+                        <h5 class="fw-bold text-primary mb-3">
+
+                            <i class="bi bi-person-badge me-2"></i> Для администратора тенанта
+
+                        </h5>
+
+                        <div class="accordion accordion-flush" id="tenantAccordion">
+
+                            <div class="accordion-item">
+
+                                <h2 class="accordion-header">
+
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tenantTemplates">
+
+                                        Управление локальными шаблонами
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="tenantTemplates" class="accordion-collapse collapse" data-bs-parent="#tenantAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <ol class="small">
+
+                                            <li class="mb-2"><strong>Просмотр:</strong> Перейдите в меню → <strong>Мои шаблоны</strong></li>
+
+                                            <li class="mb-2"><strong>Создание с нуля:</strong> Нажмите <strong>"Создать локальный шаблон"</strong>, оставьте поле "Основан на" пустым и заполните данные</li>
+
+                                            <li class="mb-2"><strong>Создание на основе глобального:</strong> Выберите глобальный шаблон в поле "Основан на" - этапы скопируются автоматически</li>
+
+                                            <li class="mb-2"><strong>Редактирование:</strong> Нажмите <strong>"Редактировать"</strong> и измените необходимые поля</li>
+
+                                            <li class="mb-2"><strong>Удаление:</strong> Нажмите <strong>"Удалить"</strong> и подтвердите</li>
+
+                                            <li class="mb-2"><strong>Предложение:</strong> Нажмите <strong>"Предложить"</strong> для отправки шаблона в глобальный репозиторий</li>
+
+                                        </ol>
+
+                                        <div class="alert alert-info small mb-0">
+
+                                            <strong>Совет:</strong> Локальные шаблоны видны только в вашем тенанте. Если вы создали полезный шаблон, предложите его другим тенантам.
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="accordion-item">
+
+                                <h2 class="accordion-header">
+
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tenantProposals">
+
+                                        Управление своими предложениями
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="tenantProposals" class="accordion-collapse collapse" data-bs-parent="#tenantAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <ol class="small">
+
+                                            <li class="mb-2"><strong>Просмотр:</strong> Перейдите в меню → <strong>Мои предложения</strong></li>
+
+                                            <li class="mb-2"><strong>Редактирование:</strong> Найдите предложение со статусом <strong>"Ожидание"</strong> и нажмите <strong>"Редактировать"</strong></li>
+
+                                            <li class="mb-2"><strong>Отзыв:</strong> Нажмите <strong>"Отозвать"</strong> для отзыва предложения</li>
+
+                                            <li class="mb-2"><strong>Просмотр результата:</strong> Если одобрено - статус <strong>"Одобрено"</strong>, если отклонено - статус <strong>"Отклонено"</strong> с причиной</li>
+
+                                        </ol>
+
+                                        <div class="alert alert-info small mb-0">
+
+                                            <strong>Совет:</strong> Вы можете редактировать предложение только пока оно в статусе "Ожидание". После одобрения или отклонения редактирование невозможно.
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="accordion-item">
+
+                                <h2 class="accordion-header">
+
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tenantUsage">
+
+                                        Использование шаблонов при создании задач
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="tenantUsage" class="accordion-collapse collapse" data-bs-parent="#tenantAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <ol class="small">
+
+                                            <li class="mb-2">Перейдите в <strong>Задачи</strong> → <strong>Создать задачу</strong></li>
+
+                                            <li class="mb-2">В форме найдите поле <strong>"Выбрать шаблон"</strong></li>
+
+                                            <li class="mb-2">Выберите нужный шаблон из списка (система отображает шаблоны из выбранной категории)</li>
+
+                                            <li class="mb-2">Нажмите <strong>"Показать все категории"</strong> для просмотра шаблонов из всех категорий</li>
+
+                                            <li class="mb-2">При выборе система автоматически заполнит название, описание и этапы</li>
+
+                                            <li class="mb-2">Вы можете изменить любые предзаполненные данные</li>
+
+                                            <li class="mb-2">Нажмите <strong>"Создать задачу"</strong></li>
+
+                                        </ol>
+
+                                        <div class="alert alert-info small mb-0">
+
+                                            <strong>Совет:</strong> Локальные шаблоны всегда видны независимо от выбранной категории. Это позволяет быстро найти нужный шаблон.
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Мобильные советы -->
+
+    <div class="row mt-4">
+
+        <div class="col-12">
+
+            <div class="card border-0 bg-light shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <h4 class="h5 fw-bold mb-3"><i class="bi bi-phone me-2"></i> Советы для смартфонов</h4>
+
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+
+                            <div class="d-flex align-items-center">
+
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+
+                                    <i class="bi bi-hand-index-thumb fs-4 text-primary"></i>
+
+                                </div>
+
+                                <span>Используйте долгое нажатие для выбора нескольких файлов.</span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="d-flex align-items-center">
+
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+
+                                    <i class="bi bi-layout-sidebar-inset fs-4 text-primary"></i>
+
+                                </div>
+
+                                <span>Свайп вправо открывает боковое меню.</span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <div class="d-flex align-items-center">
+
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+
+                                    <i class="bi bi-arrow-clockwise fs-4 text-primary"></i>
+
+                                </div>
+
+                                <span>Тяните список вниз для обновления данных.</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

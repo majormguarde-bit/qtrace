@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\authentication.py
+# hypothesis_version: 6.151.3
+
+['User is inactive', 'User not found', 'public', 'tenant', 'user_id', 'user_inactive', 'user_not_found', 'user_type']

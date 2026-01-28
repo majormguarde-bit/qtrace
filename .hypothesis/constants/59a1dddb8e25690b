@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0017_alter_contactmessage_options_alter_payment_options_and_more.py
+# hypothesis_version: 6.151.3
+
+[100, 200, 254, 255, 587, 'address', 'amount', 'can_delete_media', 'client', 'comment', 'contact_person', 'contactmessage', 'created_at', 'customers', 'customers.client', 'date', 'default_from_email', 'description', 'email', 'email_host', 'email_host_password', 'email_host_user', 'email_port', 'email_use_ssl', 'email_use_tls', 'error_log', 'has_mobile_app', 'ip_address', 'is_active', 'is_read', 'is_sent', 'mailsettings', 'max_storage_gb', 'max_users', 'message', 'name', 'password', 'payment', 'payment_date', 'payments', 'phone', 'port', 'price_month', 'price_year', 'sender_email', 'server', 'storage_gb', 'subject', 'subscription_plan', 'subscriptionplan', 'telegram', 'tenant', 'use_tls', 'user', 'user_agent', 'userprofile', 'work_days_limit']

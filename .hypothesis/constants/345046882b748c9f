@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0012_contactmessage.py
+# hypothesis_version: 6.151.3
+
+[254, 255, '-created_at', '0011_mailsettings', 'ContactMessage', 'Email', 'ID', 'IP адрес', 'User Agent', 'created_at', 'customers', 'email', 'error_log', 'id', 'ip_address', 'is_sent', 'message', 'name', 'ordering', 'user_agent', 'verbose_name', 'verbose_name_plural', 'Дата отправки', 'Имя', 'Лог ошибки', 'Отправлено по почте', 'Сообщение']

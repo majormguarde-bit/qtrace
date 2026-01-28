@@ -136,9 +136,28 @@
                     </a>
                     {% endif %}
                     
-                    {% if request.user.is_superuser %}
+                    {% if request.user.role == 'ADMIN' and not request.user.is_superuser %}
+                    <hr>
+                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Мой тенант</div>
+                    <a href="{% url 'dashboard:local_template_list' %}" class="sidebar-link {% if 'local_template' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-file-earmark-text me-2"></i> Мои шаблоны
+                    </a>
+                    <a href="{% url 'dashboard:my_proposals' %}" class="sidebar-link {% if 'my_proposals' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-send me-2"></i> Мои предложения
+                    </a>
+                    {% endif %}
+                    
+                    {% if request.user.is_superuser or request.user.is_staff %}
                     <hr>
                     <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
+                    <a href="{% url 'dashboard:template_list' %}" class="sidebar-link {% if 'template_list' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-file-earmark-text me-2"></i> Шаблоны задач
+                    </a>
+                    <a href="{% url 'dashboard:all_proposals' %}" class="sidebar-link {% if 'all_proposals' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-inbox me-2"></i> Управление предложениями
+                    </a>
+                    <hr>
+                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Система</div>
                     <a href="/admin/" target="_blank" class="sidebar-link">
                         <i class="bi bi-database-fill me-2"></i> Вход в базу
                     </a>
@@ -197,8 +216,16 @@
                 <a href="{% url 'dashboard:department_list' %}" class="nav-link text-white">Подразделения</a>
                 <a href="{% url 'dashboard:position_list' %}" class="nav-link text-white">Должности</a>
                 {% endif %}
-                {% if request.user.is_superuser %}
-                <hr>
+                {% if request.user.role == 'ADMIN' and not request.user.is_superuser %}
+                <hr class="border-secondary">
+                <a href="{% url 'dashboard:local_template_list' %}" class="nav-link text-white">Мои шаблоны</a>
+                <a href="{% url 'dashboard:my_proposals' %}" class="nav-link text-white">Мои предложения</a>
+                {% endif %}
+                {% if request.user.is_superuser or request.user.is_staff %}
+                <hr class="border-secondary">
+                <a href="{% url 'dashboard:template_list' %}" class="nav-link text-white">Шаблоны задач</a>
+                <a href="{% url 'dashboard:all_proposals' %}" class="nav-link text-white">Управление предложениями</a>
+                <hr class="border-secondary">
                 <a href="/admin/" class="nav-link text-white" target="_blank">Вход в базу</a>
                 {% endif %}
                 <form action="{% url 'dashboard:logout' %}" method="post">

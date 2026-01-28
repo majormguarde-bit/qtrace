@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0010_tenantuser_can_delete_media.py
+# hypothesis_version: 6.151.3
+
+['can_delete_media', 'tenantuser', 'users_app', 'Может удалять медиа']

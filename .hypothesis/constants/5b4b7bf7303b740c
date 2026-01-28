@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\admin.py
+# hypothesis_version: 6.151.3
+
+['ADMIN', 'Important dates', 'N/A', 'POST', 'Permissions', 'Personal info', 'Role', 'admin', 'auth/', 'created_at', 'date_joined', 'department', 'description', 'email', 'fields', 'first_name', 'get_full_name', 'get_role', 'is_active', 'is_staff', 'last_name', 'name', 'parent', 'password_hash', 'phone', 'position', 'public', 'role', 'tenant', 'updated_at', 'user', 'user__email', 'user__username', 'username']

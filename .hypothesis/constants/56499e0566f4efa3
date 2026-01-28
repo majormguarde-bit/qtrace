@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0007_client_phone_client_subscription_end_date_and_more.py
+# hypothesis_version: 6.151.3
+
+[100, 'Telegram', 'client', 'customers', 'is_active', 'phone', 'telegram', 'Активен', 'Срок подписки', 'Телефон']

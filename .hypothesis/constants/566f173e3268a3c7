@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0007_tenantuser_phone_department_tenantuser_department_and_more.py
+# hypothesis_version: 6.151.3
+
+[255, 'Department', 'ID', 'UserProfile', 'children', 'created_at', 'department', 'description', 'id', 'name', 'ordering', 'parent', 'phone', 'tenantuser', 'updated_at', 'users', 'users_app', 'users_app.department', 'verbose_name', 'verbose_name_plural', 'Название', 'Описание', 'Подразделение', 'Подразделения', 'Телефон']

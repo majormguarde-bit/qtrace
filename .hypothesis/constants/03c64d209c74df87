@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\task_templates\tests.py
+# hypothesis_version: 6.151.3
+
+[1000, '0.25', '0.5', '1.0', 'Based on global', 'Category 1', 'Category 2', 'First stage', 'Global Template', 'Local Description', 'Local Template', 'Local Variant', 'New Name', 'Stage', 'Stage 1', 'Template 1', 'Template 2', 'Test', 'Test Category', 'Test Description', 'Test Template', 'Updated', 'Updated Template', 'approved', 'category-1', 'category-2', 'create', 'delete', 'global', 'local', 'pending', 'rejected', 'sequence_number', 'test-category', 'update', 'Автосервис', 'Атомная энергетика', 'Доставка', 'Логистика', 'Обслуживание техники']

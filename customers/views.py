@@ -30,7 +30,8 @@ from django.contrib.auth.hashers import make_password
 from .models import Client, Domain, Payment, SubscriptionPlan, MailSettings, ContactMessage, UserProfile
 from users_app.models import TenantUser
 from .serializers import TenantRegistrationSerializer
-from django.db.models import Sum, Max
+from django.db.models import Sum, Max, F
+from task_templates.models import DurationUnit, Material, UnitOfMeasure
 
 
 def superuser_required(user):
@@ -246,7 +247,7 @@ def superuser_admin_create(request):
 from django.contrib.auth import views as auth_views
 
 class SuperuserLoginView(auth_views.LoginView):
-    template_name = 'dashboard/login.html' # Используем существующий шаблон
+    template_name = 'customers/superuser_login.html'  # Используем новый шаблон для root-администратора
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1290,3 +1291,773 @@ def superuser_db_restore(request, filename):
             messages.error(request, f'Ошибка при восстановлении: {e}')
             
     return redirect('superuser_db_management')
+
+
+# Views для root-администратора для доступа к шаблонам и предложениям
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_templates(request):
+    """Список глобальных шаблонов для root-администратора"""
+    from task_templates.models import TaskTemplate, ActivityCategory
+    
+    queryset = TaskTemplate.objects.filter(template_type='global').prefetch_related('stages', 'activity_category')
+    
+    # Фильтрация по категории
+    category_id = request.GET.get('category')
+    if category_id:
+        queryset = queryset.filter(activity_category_id=category_id)
+    
+    # Поиск по названию и описанию
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | 
+            Q(description__icontains=search)
+        )
+    
+    queryset = queryset.order_by('-created_at')
+    
+    # Пагинация
+    page_obj, sort_by, per_page = get_paginated_data(request, queryset, '-created_at')
+    
+    categories = ActivityCategory.objects.all()
+    
+    context = {
+        'page_obj': page_obj,
+        'templates': page_obj,
+        'categories': categories,
+        'selected_category': category_id,
+        'search_query': search or '',
+    }
+    return render(request, 'customers/superuser_templates.html', context)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_create(request):
+    """Создание нового глобального шаблона"""
+    from task_templates.models import TaskTemplate, ActivityCategory, TaskTemplateStage, Material, StageMaterial
+    from django import forms
+    import json
+    
+    class TemplateForm(forms.ModelForm):
+        class Meta:
+            model = TaskTemplate
+            fields = ['name', 'description', 'activity_category']
+            labels = {
+                'name': 'Название шаблона',
+                'description': 'Описание',
+                'activity_category': 'Категория',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите название'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Описание шаблона'}),
+                'activity_category': forms.Select(attrs={'class': 'form-select'}),
+            }
+    
+    if request.method == 'POST':
+        form = TemplateForm(request.POST)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.template_type = 'global'
+            template.save()
+            
+            # Обработка этапов и материалов
+            stages_data = request.POST.get('stages_data')
+            if stages_data:
+                try:
+                    from task_templates.models import DurationUnit
+                    stages = json.loads(stages_data)
+                    for stage_data in stages:
+                        # Получаем duration_unit по ID или используем default (hour)
+                        duration_unit_id = stage_data.get('duration_unit_id')
+                        if not duration_unit_id:
+                            # Используем час как default
+                            duration_unit = DurationUnit.objects.filter(unit_type='hour').first()
+                            if not duration_unit:
+                                # Если нет, создаём
+                                duration_unit, _ = DurationUnit.objects.get_or_create(
+                                    unit_type='hour',
+                                    defaults={'name': 'Час', 'abbreviation': 'ч'}
+                                )
+                        else:
+                            duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+                        
+                        stage = TaskTemplateStage.objects.create(
+                            template=template,
+                            name=stage_data.get('name', ''),
+                            duration_from=float(stage_data.get('duration_from', 1)),
+                            duration_to=float(stage_data.get('duration_to', 1)),
+                            duration_unit=duration_unit,
+                            position_id=stage_data.get('position_id') or None,
+                            sequence_number=int(stage_data.get('sequence_number', 1))
+                        )
+                        
+                        # Обработка материалов для этапа
+                        materials = stage_data.get('materials', [])
+                        for material_data in materials:
+                            material_id = material_data.get('id')
+                            if material_id:
+                                try:
+                                    material = Material.objects.get(id=material_id)
+                                    # Создаём связь материала с этапом
+                                    StageMaterial.objects.create(
+                                        stage=stage,
+                                        material=material,
+                                        quantity=float(material_data.get('quantity', 1))
+                                    )
+                                except Material.DoesNotExist:
+                                    pass  # Пропускаем несуществующие материалы
+                except (json.JSONDecodeError, ValueError) as e:
+                    messages.warning(request, f'Ошибка при сохранении этапов: {e}')
+            
+            messages.success(request, f'Шаблон "{template.name}" успешно создан.')
+            return redirect('superuser_templates')
+    else:
+        form = TemplateForm()
+
+    
+    return render(request, 'customers/superuser_template_form.html', {
+        'form': form,
+        'is_create': True,
+    })
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_edit(request, template_id):
+    """Редактирование глобального шаблона"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage, Material, StageMaterial
+    from django import forms
+    import json
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    class TemplateForm(forms.ModelForm):
+        class Meta:
+            model = TaskTemplate
+            fields = ['name', 'description', 'activity_category']
+            labels = {
+                'name': 'Название шаблона',
+                'description': 'Описание',
+                'activity_category': 'Категория',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+                'activity_category': forms.Select(attrs={'class': 'form-select'}),
+            }
+    
+    if request.method == 'POST':
+        # Проверяем, это ли запрос на установку подчинения
+        action = request.POST.get('action')
+        if action == 'set_parent':
+            stage_id = request.POST.get('stage_id')
+            parent_stage_id = request.POST.get('parent_stage_id') or None
+            
+            try:
+                stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
+                if parent_stage_id:
+                    parent_stage = TaskTemplateStage.objects.get(id=parent_stage_id, template=template)
+                    stage.parent_stage = parent_stage
+                else:
+                    stage.parent_stage = None
+                stage.save()
+                messages.success(request, 'Подчинение этапа успешно установлено.')
+            except TaskTemplateStage.DoesNotExist:
+                messages.error(request, 'Этап не найден.')
+            
+            return redirect('superuser_template_diagram', template_id=template.id)
+        
+        # Обычное редактирование шаблона
+        form = TemplateForm(request.POST, instance=template)
+        if form.is_valid():
+            form.save()
+            
+            # Удаляем старые этапы и материалы
+            template.stages.all().delete()
+            
+            # Обработка новых этапов и материалов
+            stages_data = request.POST.get('stages_data')
+            if stages_data:
+                try:
+                    from task_templates.models import DurationUnit
+                    stages = json.loads(stages_data)
+                    for stage_data in stages:
+                        # Получаем duration_unit по ID или используем default (hour)
+                        duration_unit_id = stage_data.get('duration_unit_id')
+                        if not duration_unit_id:
+                            # Используем час как default
+                            duration_unit = DurationUnit.objects.filter(unit_type='hour').first()
+                            if not duration_unit:
+                                # Если нет, создаём
+                                duration_unit, _ = DurationUnit.objects.get_or_create(
+                                    unit_type='hour',
+                                    defaults={'name': 'Час', 'abbreviation': 'ч'}
+                                )
+                        else:
+                            duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+                        
+                        stage = TaskTemplateStage.objects.create(
+                            template=template,
+                            name=stage_data.get('name', ''),
+                            duration_from=float(stage_data.get('duration_from', 1)),
+                            duration_to=float(stage_data.get('duration_to', 1)),
+                            duration_unit=duration_unit,
+                            position_id=stage_data.get('position_id') or None,
+                            sequence_number=int(stage_data.get('sequence_number', 1))
+                        )
+                        
+                        # Обработка материалов для этапа
+                        materials = stage_data.get('materials', [])
+                        for material_data in materials:
+                            material_id = material_data.get('id')
+                            if material_id:
+                                try:
+                                    material = Material.objects.get(id=material_id)
+                                    # Создаём связь материала с этапом
+                                    StageMaterial.objects.create(
+                                        stage=stage,
+                                        material=material,
+                                        quantity=float(material_data.get('quantity', 1))
+                                    )
+                                except Material.DoesNotExist:
+                                    pass  # Пропускаем несуществующие материалы
+                except (json.JSONDecodeError, ValueError) as e:
+                    messages.warning(request, f'Ошибка при сохранении этапов: {e}')
+            
+            messages.success(request, f'Шаблон "{template.name}" успешно обновлен.')
+            return redirect('superuser_templates')
+    else:
+        form = TemplateForm(instance=template)
+    
+    return render(request, 'customers/superuser_template_form.html', {
+        'form': form,
+        'template': template,
+        'is_create': False,
+    })
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_delete(request, template_id):
+    """Удаление глобального шаблона"""
+    from task_templates.models import TaskTemplate
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    if request.method == 'POST':
+        name = template.name
+        template.delete()
+        messages.success(request, f'Шаблон "{name}" успешно удален.')
+        return redirect('superuser_templates')
+    
+    return render(request, 'customers/superuser_template_confirm_delete.html', {
+        'template': template,
+    })
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_proposals(request):
+    """Список всех предложений по шаблонам для root-администратора"""
+    from task_templates.models import TemplateProposal
+    
+    queryset = TemplateProposal.objects.all().select_related('template', 'proposed_by').prefetch_related('stages')
+    
+    # Фильтрация по статусу
+    status = request.GET.get('status')
+    if status:
+        queryset = queryset.filter(status=status)
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(template__name__icontains=search) |
+            Q(proposed_by__username__icontains=search)
+        )
+    
+    queryset = queryset.order_by('-created_at')
+    
+    # Пагинация
+    page_obj, sort_by, per_page = get_paginated_data(request, queryset, '-created_at')
+    
+    context = {
+        'page_obj': page_obj,
+        'proposals': page_obj,
+        'search_query': search or '',
+        'selected_status': status,
+    }
+    return render(request, 'customers/superuser_proposals.html', context)
+
+
+
+# API endpoints for template form data
+
+def api_duration_units(request):
+    """API endpoint для получения единиц времени (доступен всем)"""
+    units = DurationUnit.objects.all().values('id', 'name', 'abbreviation', 'unit_type')
+    return JsonResponse(list(units), safe=False)
+
+
+def api_materials(request):
+    """API endpoint для получения материалов (доступен всем)"""
+    materials = Material.objects.filter(is_active=True).select_related('unit').values(
+        'id', 'name', 'code', 'unit__abbreviation'
+    ).annotate(unit_abbreviation=F('unit__abbreviation'))
+    
+    # Преобразуем результаты для фронтенда
+    result = []
+    for material in materials:
+        result.append({
+            'id': material['id'],
+            'name': material['name'],
+            'code': material['code'],
+            'unit_abbreviation': material['unit_abbreviation'] or 'шт',
+        })
+    
+    return JsonResponse(result, safe=False)
+
+
+def api_positions(request):
+    """API endpoint для получения должностей (доступен всем)"""
+    from task_templates.models import Position
+    
+    if request.method == 'POST':
+        # Создание новой должности
+        try:
+            import json
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            
+            if not name:
+                return JsonResponse({'error': 'Название должности не может быть пустым'}, status=400)
+            
+            # Проверяем, не существует ли уже такая должность
+            position, created = Position.objects.get_or_create(
+                name=name,
+                defaults={
+                    'description': data.get('description', ''),
+                    'is_active': data.get('is_active', True)
+                }
+            )
+            
+            if created:
+                return JsonResponse({
+                    'id': position.id,
+                    'name': position.name,
+                    'description': position.description,
+                    'is_active': position.is_active
+                })
+            else:
+                return JsonResponse({'error': 'Должность с таким названием уже существует'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    else:
+        # Получение списка должностей
+        positions = Position.objects.filter(is_active=True).values('id', 'name')
+        return JsonResponse(list(positions), safe=False)
+
+
+# Views для управления справочниками (Materials и Units of Measure)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_materials(request):
+    """Список всех материалов"""
+    queryset = Material.objects.all().select_related('unit').order_by('name')
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | 
+            Q(code__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    # Фильтрация по статусу
+    status = request.GET.get('status')
+    if status == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif status == 'inactive':
+        queryset = queryset.filter(is_active=False)
+    
+    page_obj, sort_by, per_page = get_paginated_data(request, queryset, 'name')
+    
+    context = {
+        'page_obj': page_obj,
+        'materials': page_obj,
+        'search_query': search or '',
+        'status_filter': status or '',
+    }
+    return render(request, 'customers/superuser_materials.html', context)
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_material_create(request):
+    """Создание нового материала"""
+    from django import forms
+    
+    class MaterialForm(forms.ModelForm):
+        class Meta:
+            model = Material
+            fields = ['name', 'description', 'code', 'unit', 'unit_cost', 'is_active']
+            labels = {
+                'name': 'Название материала',
+                'description': 'Описание',
+                'code': 'Код материала',
+                'unit': 'Единица измерения',
+                'unit_cost': 'Стоимость за единицу',
+                'is_active': 'Активен',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите название'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Описание материала'}),
+                'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Уникальный код'}),
+                'unit': forms.Select(attrs={'class': 'form-select'}),
+                'unit_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = MaterialForm(request.POST)
+        if form.is_valid():
+            material = form.save()
+            messages.success(request, f'Материал "{material.name}" успешно создан.')
+            return redirect('superuser_materials')
+    else:
+        form = MaterialForm()
+    
+    return render(request, 'customers/superuser_material_form.html', {
+        'form': form,
+        'is_create': True,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_material_edit(request, material_id):
+    """Редактирование материала"""
+    from django import forms
+    
+    material = get_object_or_404(Material, id=material_id)
+    
+    class MaterialForm(forms.ModelForm):
+        class Meta:
+            model = Material
+            fields = ['name', 'description', 'code', 'unit', 'unit_cost', 'is_active']
+            labels = {
+                'name': 'Название материала',
+                'description': 'Описание',
+                'code': 'Код материала',
+                'unit': 'Единица измерения',
+                'unit_cost': 'Стоимость за единицу',
+                'is_active': 'Активен',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+                'code': forms.TextInput(attrs={'class': 'form-control'}),
+                'unit': forms.Select(attrs={'class': 'form-select'}),
+                'unit_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = MaterialForm(request.POST, instance=material)
+        if form.is_valid():
+            material = form.save()
+            messages.success(request, f'Материал "{material.name}" успешно обновлен.')
+            return redirect('superuser_materials')
+    else:
+        form = MaterialForm(instance=material)
+    
+    return render(request, 'customers/superuser_material_form.html', {
+        'form': form,
+        'material': material,
+        'is_create': False,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_material_delete(request, material_id):
+    """Удаление материала"""
+    material = get_object_or_404(Material, id=material_id)
+    
+    if request.method == 'POST':
+        name = material.name
+        material.delete()
+        messages.success(request, f'Материал "{name}" успешно удален.')
+        return redirect('superuser_materials')
+    
+    return render(request, 'customers/superuser_material_confirm_delete.html', {
+        'material': material,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_units(request):
+    """Список всех единиц измерения"""
+    queryset = UnitOfMeasure.objects.all().order_by('name')
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | 
+            Q(abbreviation__icontains=search)
+        )
+    
+    # Фильтрация по статусу
+    status = request.GET.get('status')
+    if status == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif status == 'inactive':
+        queryset = queryset.filter(is_active=False)
+    
+    page_obj, sort_by, per_page = get_paginated_data(request, queryset, 'name')
+    
+    context = {
+        'page_obj': page_obj,
+        'units': page_obj,
+        'search_query': search or '',
+        'status_filter': status or '',
+    }
+    return render(request, 'customers/superuser_units.html', context)
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_unit_create(request):
+    """Создание новой единицы измерения"""
+    from django import forms
+    
+    class UnitForm(forms.ModelForm):
+        class Meta:
+            model = UnitOfMeasure
+            fields = ['name', 'abbreviation', 'is_active']
+            labels = {
+                'name': 'Название',
+                'abbreviation': 'Сокращение',
+                'is_active': 'Активна',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: килограмм'}),
+                'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: кг'}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = UnitForm(request.POST)
+        if form.is_valid():
+            unit = form.save()
+            messages.success(request, f'Единица измерения "{unit.name}" успешно создана.')
+            return redirect('superuser_units')
+    else:
+        form = UnitForm()
+    
+    return render(request, 'customers/superuser_unit_form.html', {
+        'form': form,
+        'is_create': True,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_unit_edit(request, unit_id):
+    """Редактирование единицы измерения"""
+    from django import forms
+    
+    unit = get_object_or_404(UnitOfMeasure, id=unit_id)
+    
+    class UnitForm(forms.ModelForm):
+        class Meta:
+            model = UnitOfMeasure
+            fields = ['name', 'abbreviation', 'is_active']
+            labels = {
+                'name': 'Название',
+                'abbreviation': 'Сокращение',
+                'is_active': 'Активна',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control'}),
+                'abbreviation': forms.TextInput(attrs={'class': 'form-control'}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = UnitForm(request.POST, instance=unit)
+        if form.is_valid():
+            unit = form.save()
+            messages.success(request, f'Единица измерения "{unit.name}" успешно обновлена.')
+            return redirect('superuser_units')
+    else:
+        form = UnitForm(instance=unit)
+    
+    return render(request, 'customers/superuser_unit_form.html', {
+        'form': form,
+        'unit': unit,
+        'is_create': False,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_unit_delete(request, unit_id):
+    """Удаление единицы измерения"""
+    unit = get_object_or_404(UnitOfMeasure, id=unit_id)
+    
+    if request.method == 'POST':
+        name = unit.name
+        unit.delete()
+        messages.success(request, f'Единица измерения "{name}" успешно удалена.')
+        return redirect('superuser_units')
+    
+    return render(request, 'customers/superuser_unit_confirm_delete.html', {
+        'unit': unit,
+    })
+
+
+# Views для управления справочником должностей
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_positions(request):
+    """Список всех должностей"""
+    from task_templates.models import Position
+    
+    queryset = Position.objects.all().order_by('name')
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | 
+            Q(description__icontains=search)
+        )
+    
+    # Фильтрация по статусу
+    status = request.GET.get('status')
+    if status == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif status == 'inactive':
+        queryset = queryset.filter(is_active=False)
+    
+    page_obj, sort_by, per_page = get_paginated_data(request, queryset, 'name')
+    
+    context = {
+        'page_obj': page_obj,
+        'positions': page_obj,
+        'search_query': search or '',
+        'status_filter': status or '',
+    }
+    return render(request, 'customers/superuser_positions.html', context)
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_position_create(request):
+    """Создание новой должности"""
+    from task_templates.models import Position
+    from django import forms
+    
+    class PositionForm(forms.ModelForm):
+        class Meta:
+            model = Position
+            fields = ['name', 'description', 'is_active']
+            labels = {
+                'name': 'Название должности',
+                'description': 'Описание',
+                'is_active': 'Активна',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: Сварщик'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Описание должности'}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = PositionForm(request.POST)
+        if form.is_valid():
+            position = form.save()
+            messages.success(request, f'Должность "{position.name}" успешно создана.')
+            return redirect('superuser_positions')
+    else:
+        form = PositionForm()
+    
+    return render(request, 'customers/superuser_position_form.html', {
+        'form': form,
+        'is_create': True,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_position_edit(request, position_id):
+    """Редактирование должности"""
+    from task_templates.models import Position
+    from django import forms
+    
+    position = get_object_or_404(Position, id=position_id)
+    
+    class PositionForm(forms.ModelForm):
+        class Meta:
+            model = Position
+            fields = ['name', 'description', 'is_active']
+            labels = {
+                'name': 'Название должности',
+                'description': 'Описание',
+                'is_active': 'Активна',
+            }
+            widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control'}),
+                'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+                'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            }
+    
+    if request.method == 'POST':
+        form = PositionForm(request.POST, instance=position)
+        if form.is_valid():
+            position = form.save()
+            messages.success(request, f'Должность "{position.name}" успешно обновлена.')
+            return redirect('superuser_positions')
+    else:
+        form = PositionForm(instance=position)
+    
+    return render(request, 'customers/superuser_position_form.html', {
+        'form': form,
+        'position': position,
+        'is_create': False,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_position_delete(request, position_id):
+    """Удаление должности"""
+    from task_templates.models import Position
+    
+    position = get_object_or_404(Position, id=position_id)
+    
+    if request.method == 'POST':
+        name = position.name
+        position.delete()
+        messages.success(request, f'Должность "{name}" успешно удалена.')
+        return redirect('superuser_positions')
+    
+    return render(request, 'customers/superuser_position_confirm_delete.html', {
+        'position': position,
+    })
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_diagram(request, template_id):
+    """Диаграмма этапов шаблона"""
+    from task_templates.models import TaskTemplate
+    import json
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    # Получаем все этапы
+    stages = template.stages.all().order_by('sequence_number')
+    
+    # Подготавливаем JSON данные для JavaScript
+    stages_data = []
+    for stage in stages:
+        stages_data.append({
+            'id': stage.id,
+            'name': stage.name,
+            'parent_stage_id': stage.parent_stage_id if stage.parent_stage else None,
+        })
+    
+    context = {
+        'template': template,
+        'all_stages': stages,
+        'stages_json': json.dumps(stages_data),
+    }
+    return render(request, 'customers/superuser_template_diagram.html', context)
+

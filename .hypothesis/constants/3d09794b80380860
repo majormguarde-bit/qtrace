@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0011_mailsettings.py
+# hypothesis_version: 6.151.3
+
+[254, 255, 587, '0010_payment', 'ID', 'MailSettings', 'SMTP сервер', 'customers', 'default_from_email', 'email_host', 'email_host_password', 'email_host_user', 'email_port', 'email_use_ssl', 'email_use_tls', 'id', 'smtp.gmail.com', 'verbose_name', 'verbose_name_plural', 'Использовать SSL', 'Использовать TLS', 'Настройки почты', 'Пароль', 'Пользователь (Email)', 'Порт']

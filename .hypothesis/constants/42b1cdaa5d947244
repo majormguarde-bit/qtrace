@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\task_templates\viewsets.py
+# hypothesis_version: 6.151.3
+
+['-created_at', 'activity_category', 'add_stage', 'approve', 'based_on_global', 'create', 'create_local_variant', 'created_at', 'delete', 'description', 'error', 'get', 'global', 'is_active', 'last_category_filter', 'local', 'local_template', 'name', 'post', 'proposed_by', 'put', 'reject', 'rejection_reason', 'reorder_stages', 'retrieve', 'sequence_number', 'show_all_categories', 'stage_order', 'status', 'template_type', 'update', 'update_stage']

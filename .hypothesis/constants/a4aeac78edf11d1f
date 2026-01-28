@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0009_subscriptionplan_client_subscription_plan.py
+# hypothesis_version: 6.151.3
+
+[100, 'ID', 'SubscriptionPlan', 'client', 'created_at', 'customers', 'has_mobile_app', 'id', 'is_active', 'max_users', 'name', 'price_month', 'price_year', 'storage_gb', 'subscription_plan', 'tenants', 'verbose_name', 'verbose_name_plural', 'work_days_limit', 'Активен', 'Дней работы/хранения', 'Макс. пользователей', 'Мобильное приложение', 'Название тарифа', 'Объем хранилища (ГБ)', 'Тарифные планы', 'Тарифный план', 'Цена в год', 'Цена в месяц']

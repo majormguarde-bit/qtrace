@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\tasks\migrations\0003_alter_task_options_task_status_and_more.py
+# hypothesis_version: 6.151.3
+
+[200, '-created_at', 'CLOSE', 'CONTINUE', 'IMPORTANT', 'OPEN', 'PAUSE', 'assigned_to', 'description', 'is_completed', 'ordering', 'status', 'task', 'tasks', 'title', 'users_app', 'users_app.tenantuser', 'verbose_name', 'verbose_name_plural', 'Важно', 'Завершена', 'Заголовок', 'Задача', 'Задачи', 'Закрыть задачу', 'Исполнитель', 'Описание', 'Открыта', 'Пауза', 'Продолжить', 'Статус']

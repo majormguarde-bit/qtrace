@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0002_alter_user_groups_alter_user_user_permissions.py
+# hypothesis_version: 6.151.3
+
+['0001_initial', 'auth', 'auth.group', 'auth.permission', 'groups', 'tenant_user', 'tenant_user_set', 'user', 'user permissions', 'user_permissions', 'users_app']

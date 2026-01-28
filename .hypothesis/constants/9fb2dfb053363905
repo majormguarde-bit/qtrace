@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\migrations\0006_aimodelconfig_remove_aisettings_anthropic_api_key_and_more.py
+# hypothesis_version: 6.151.3
+
+[0.7, 255, 'AIModelConfig', 'API Ключ', 'Alibaba Qwen-2.5', 'Base URL', 'DeepSeek-V3.1 (Free)', 'ID', 'OpenAI GPT-3.5 Turbo', 'OpenAI GPT-4', 'Z.AI (DeepSeek-V3)', 'active_model', 'ai_app', 'aisettings', 'anthropic_api_key', 'anthropic_api_url', 'api_key', 'api_url', 'chat-z-ai', 'deepseek-v3.1', 'deepseek_api_key', 'deepseek_api_url', 'gemini-1.5-pro', 'gemini_api_key', 'gemini_api_url', 'gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'id', 'mock', 'model_code', 'openai_api_key', 'openai_api_url', 'qwen-2.5', 'temperature', 'updated_at', 'verbose_name', 'verbose_name_plural', 'Активная модель', 'Код модели', 'Температура', 'Эмуляция (без API)']

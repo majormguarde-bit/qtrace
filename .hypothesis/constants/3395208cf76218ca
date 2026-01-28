@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\dashboard\urls.py
+# hypothesis_version: 6.151.3
+
+['dashboard', 'department_create', 'department_delete', 'department_edit', 'department_list', 'departments/', 'departments/create/', 'employee_create', 'employee_delete', 'employee_edit', 'employee_list', 'employees/', 'employees/create/', 'help', 'help/', 'home', 'login', 'login/', 'logout', 'logout/', 'media/', 'media/record/', 'media/upload/', 'media_create', 'media_delete', 'media_list', 'media_record', 'position_create_ajax', 'position_delete', 'position_edit', 'position_list', 'positions/', 'task_create', 'task_edit', 'task_list', 'tasks/', 'tasks/<int:pk>/edit/', 'tasks/create/']

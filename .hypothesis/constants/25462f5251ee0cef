@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\migrations\0003_aisettings_anthropic_api_key_and_more.py
+# hypothesis_version: 6.151.3
+
+[255, 'Anthropic API Key', 'Base URL', 'DeepSeek API Key', 'Gemini API Key', 'OpenAI API Key', 'ai_app', 'aisettings', 'anthropic_api_key', 'api_base_url', 'deepseek_api_key', 'gemini_api_key', 'openai_api_key', 'provider_api_key', 'Активный API Ключ']

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\tasks\migrations\0005_taskstage_is_worker_added_taskstage_status.py
+# hypothesis_version: 6.151.3
+
+['0004_taskstage', 'COMPLETED', 'FAILED', 'IN_PROGRESS', 'PENDING', 'is_worker_added', 'status', 'tasks', 'taskstage', 'В планах', 'В работе', 'Завершен', 'Проблема', 'Статус этапа']

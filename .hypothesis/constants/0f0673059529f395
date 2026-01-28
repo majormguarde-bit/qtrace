@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\urls.py
+# hypothesis_version: 6.151.3
+
+['ai_analyze_photo', 'ai_chat_api', 'api/analyze-photo/', 'api/chat/']

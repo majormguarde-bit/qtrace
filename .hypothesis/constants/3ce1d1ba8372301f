@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\task_templates\services.py
+# hypothesis_version: 6.151.3
+
+[0.5, 'action', 'activity_category', 'add_stage', 'approve_proposal', 'approved', 'changes', 'create', 'delete', 'delete_stage', 'description', 'global', 'global_template_id', 'id', 'local', 'name', 'new', 'new_order', 'old', 'pending', 'reject_proposal', 'rejected', 'rejection_reason', 'reorder_stages', 'sequence_number', 'sequence_number__max', 'stage_id', 'stage_name', 'stages', 'status', 'template_name', 'template_type', 'update', 'update_stage', 'withdraw_proposal']

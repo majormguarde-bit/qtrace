@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\customers\migrations\0010_payment.py
+# hypothesis_version: 6.151.3
+
+['-payment_date', 'ID', 'Payment', 'amount', 'client', 'comment', 'created_at', 'customers', 'customers.client', 'id', 'ordering', 'payment_date', 'payments', 'verbose_name', 'verbose_name_plural', 'Дата платежа', 'Комментарий', 'Организация', 'Платеж', 'Платежи', 'Сумма платежа']

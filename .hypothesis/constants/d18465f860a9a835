@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\config\settings.py
+# hypothesis_version: 6.151.3
+
+['*', '.localhost', '.lvh.me', '.qtrace.ru', '/', '/login/', '/media/', '127.0.0.1', '192.168.1.220', '5432', 'ALGORITHM', 'APP_DIRS', 'BACKEND', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD', 'DB_PORT', 'DB_USER', 'DIRS', 'ENGINE', 'HOST', 'HS256', 'NAME', 'OPTIONS', 'PASSWORD', 'PORT', 'SIGNING_KEY', 'USER', 'UTC', 'ai_app', 'config.tenant_urls', 'config.urls', 'context_processors', 'customers', 'customers.Client', 'customers.Domain', 'dashboard', 'default', 'django.contrib.admin', 'django.contrib.auth', 'django_filters', 'django_tenants', 'djoser', 'localhost', 'lvh.me', 'media_app', 'postgres', 'qtrace.ru', 'rest_framework', 'ru', 'skkp_db', 'static', 'static/', 'staticfiles', 'task_templates', 'tasks', 'users_app']

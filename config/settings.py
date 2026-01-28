@@ -90,6 +90,10 @@ SHARED_APPS = [
 
     'ai_app',
 
+    'task_templates',
+
+    'django_filters',
+
 ]
 
 

@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\media_app\migrations\0004_media_stage_alter_media_file_alter_media_title.py
+# hypothesis_version: 6.151.3
+
+[200, '0004_taskstage', 'file', 'media', 'media_app', 'stage', 'tasks', 'tasks.taskstage', 'title', 'Название', 'Файл', 'Этап']

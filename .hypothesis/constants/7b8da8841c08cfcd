@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\ai_app\models.py
+# hypothesis_version: 6.151.3
+
+[0.7, 255, 1000, 'AI включен', 'API Ключ', 'Alibaba Qwen-2.5', 'Base URL', 'DeepSeek-V3.1 (Free)', 'DeepSeek-V3.2', 'OpenAI GPT-3.5 Turbo', 'OpenAI GPT-4', 'Z.AI (DeepSeek-V3)', 'chat-z-ai', 'deepseek-3.2', 'deepseek-v3.1', 'gemini-1.5-pro', 'gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'mock', 'qwen-2.5', 'Активная модель', 'Код модели', 'Макс. токенов', 'Настройки AI', 'Температура', 'Эмуляция (без API)']

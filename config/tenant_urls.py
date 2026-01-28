@@ -18,7 +18,10 @@ urlpatterns = [
     path('api/', include('media_app.urls')),
     path('ai/', include('ai_app.urls')),
     
-    # Dashboard routes
+    # Dashboard routes - теперь в тенанте
+    path('login/', dashboard_views.TenantLoginView.as_view(), name='login'),
+    path('logout/', dashboard_views.TenantLogoutView.as_view(), name='logout'),
+    path('dashboard/', include('dashboard.urls')),
     path('', include('dashboard.urls')),
 ]
 

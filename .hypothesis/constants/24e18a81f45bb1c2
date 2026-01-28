@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\task_templates\admin.py
+# hypothesis_version: 6.151.3
+
+['action', 'activity_category', 'changes', 'created_at', 'created_by_id', 'description', 'is_active', 'last_category_filter', 'local_template', 'local_template__name', 'name', 'performed_by_id', 'proposal', 'proposed_by_id', 'reviewed_at', 'sequence_number', 'show_all_categories', 'slug', 'status', 'template', 'template__name', 'template_type', 'updated_at', 'updated_by_id', 'user_id', 'version']

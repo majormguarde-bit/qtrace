@@ -46,4 +46,25 @@ urlpatterns = [
     path('stages/<int:pk>/status-update-ajax/', views.TaskStageStatusUpdateAjaxView.as_view(), name='task_stage_status_update_ajax'),
     path('stages/<int:pk>/media-upload-ajax/', views.TaskStageMediaUploadAjaxView.as_view(), name='task_stage_media_upload_ajax'),
     path('tasks/<int:pk>/stages/create-ajax/', views.TaskStageCreateAjaxView.as_view(), name='task_stage_create_ajax'),
+    
+    # Task Templates (Global)
+    path('templates/', views.TemplateListView.as_view(), name='template_list'),
+    path('templates/create/', views.TemplateCreateView.as_view(), name='template_create'),
+    path('templates/<int:pk>/edit/', views.TemplateEditView.as_view(), name='template_edit'),
+    path('templates/<int:pk>/delete/', views.TemplateDeleteView.as_view(), name='template_delete'),
+    path('templates/<int:pk>/detail/', views.TemplateDetailView.as_view(), name='template_detail'),
+    path('template/<int:pk>/stages/', views.get_template_stages, name='get_template_stages'),
+    
+    # Task Templates (Local)
+    path('my-templates/', views.LocalTemplateListView.as_view(), name='local_template_list'),
+    path('my-templates/create/', views.LocalTemplateCreateView.as_view(), name='local_template_create'),
+    path('my-templates/<int:pk>/edit/', views.LocalTemplateEditView.as_view(), name='local_template_edit'),
+    path('my-templates/<int:pk>/delete/', views.LocalTemplateDeleteView.as_view(), name='local_template_delete'),
+    
+    # Template Proposals
+    path('my-proposals/', views.MyProposalsView.as_view(), name='my_proposals'),
+    path('proposals/', views.AllProposalsView.as_view(), name='all_proposals'),
+    path('proposals/<int:pk>/approve/', views.approve_proposal, name='approve_proposal'),
+    path('proposals/<int:pk>/reject/', views.reject_proposal, name='reject_proposal'),
+    path('proposals/<int:pk>/withdraw/', views.withdraw_proposal, name='withdraw_proposal'),
 ]

@@ -1,0 +1,338 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} шаблона{% endblock %}
+
+{% block content %}
+<style>
+    .template-form-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .form-card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+    
+    .form-card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .form-card-body {
+        padding: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-label .required {
+        color: #dc3545;
+    }
+    
+    .form-control, .form-select {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        background-color: white;
+        width: 100%;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .form-control::placeholder {
+        color: #6c757d;
+    }
+    
+    textarea.form-control {
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    
+    .form-control.is-invalid, .form-select.is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .stage-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stage-number {
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 28px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stage-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stage-row.full {
+        grid-template-columns: 1fr;
+    }
+    
+    .stage-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .btn-add-stage {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .btn-add-stage:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn-submit {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+        width: 100%;
+    }
+    
+    .btn-submit:hover {
+        background-color: #218838;
+    }
+    
+    .btn-cancel {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+        width: 100%;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #5a6268;
+        color: white;
+    }
+    
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    @media (max-width: 768px) {
+        .stage-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="template-form-container">
+    <div class="container">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <!-- Основная информация -->
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3>{% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} шаблона</h3>
+                        </div>
+                        <div class="form-card-body">
+                            <div class="form-group">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    Название <span class="required">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                <div class="invalid-feedback">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    Описание
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                <div class="invalid-feedback">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.activity_category.id_for_label }}" class="form-label">
+                                    Категория деятельности <span class="required">*</span>
+                                </label>
+                                {{ form.activity_category }}
+                                {% if form.activity_category.errors %}
+                                <div class="invalid-feedback">{{ form.activity_category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Этапы -->
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3>Этапы выполнения</h3>
+                        </div>
+                        <div class="form-card-body">
+                            <div id="stages-container">
+                                {{ stages.management_form }}
+                                
+                                {% for form_stage in stages %}
+                                <div class="stage-card">
+                                    <div class="stage-number">{{ forloop.counter }}</div>
+                                    
+                                    <div class="stage-row">
+                                        <div>
+                                            <label class="form-label">Название этапа <span class="required">*</span></label>
+                                            {{ form_stage.name }}
+                                            {% if form_stage.name.errors %}
+                                            <div class="invalid-feedback">{{ form_stage.name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="form-label">Часов <span class="required">*</span></label>
+                                            {{ form_stage.estimated_duration_hours }}
+                                            {% if form_stage.estimated_duration_hours.errors %}
+                                            <div class="invalid-feedback">{{ form_stage.estimated_duration_hours.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="form-label">Порядок</label>
+                                            {{ form_stage.sequence_number }}
+                                            {% if form_stage.sequence_number.errors %}
+                                            <div class="invalid-feedback">{{ form_stage.sequence_number.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="stage-row full">
+                                        <div>
+                                            <label class="form-label">Описание</label>
+                                            {{ form_stage.description }}
+                                            {% if form_stage.description.errors %}
+                                            <div class="invalid-feedback">{{ form_stage.description.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="stage-actions">
+                                        <label class="form-check-label" style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                                            {{ form_stage.DELETE }}
+                                            <span>Удалить этот этап</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <button type="button" class="btn-add-stage" onclick="addStageForm()">
+                                + Добавить этап
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Боковая панель -->
+                <div class="col-md-4">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h3>Действия</h3>
+                        </div>
+                        <div class="form-card-body">
+                            <div class="button-group">
+                                <button type="submit" class="btn-submit">
+                                    {% if form.instance.pk %}Обновить{% else %}Создать{% endif %} шаблон
+                                </button>
+                                <a href="{% url 'dashboard:template_list' %}" class="btn-cancel">
+                                    Отмена
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% include 'dashboard/includes/template_scripts.html' %}
+{% endblock %}

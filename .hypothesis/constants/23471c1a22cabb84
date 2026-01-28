@@ -1,0 +1,4 @@
+# file: D:\projects_2026\qtrace.ru\skkp_project\users_app\migrations\0004_tenantuser.py
+# hypothesis_version: 6.151.3
+
+[150, 254, 255, 'ADMIN', 'ID', 'TenantUser', 'WORKER', 'created_at', 'email', 'first_name', 'id', 'is_active', 'last_name', 'password_hash', 'role', 'updated_at', 'username', 'users_app', 'verbose_name', 'verbose_name_plural', 'Администратор', 'Пользователи тенанта', 'Пользователь тенанта', 'Работник']
