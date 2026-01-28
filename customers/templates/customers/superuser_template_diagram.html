@@ -410,7 +410,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
                     } else {
-                        // Если это Stop - просто показываем сообщение
+                        // Если это Stop - добавляем связь визуально
+                        const edgeId = 'edge_' + sourceStageId + '_stop';
+                        const existingEdge = cy.$('#' + edgeId);
+                        
+                        if (existingEdge.length === 0) {
+                            // Добавляем новую связь к Stop
+                            cy.add({
+                                data: {
+                                    id: edgeId,
+                                    source: sourceId,
+                                    target: 'stop'
+                                }
+                            });
+                            
+                            // Подсвечиваем новую связь
+                            cy.$('#' + edgeId).style('line-color', '#28a745');
+                            cy.$('#' + edgeId).style('target-arrow-color', '#28a745');
+                            cy.$('#' + edgeId).style('width', 4);
+                        }
+                        
                         showStatus('Связь к Стоп создана. Это финальный узел.', 'success');
                     }
                 } else {
