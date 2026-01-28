@@ -24,7 +24,7 @@
                 {% csrf_token %}
                 
                 <!-- Cytoscape диаграмма -->
-                <div id="cy" style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa;"></div>
+                <div id="cy" style="width: 100%; height: 800px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa;"></div>
                 
                 <!-- Информация о статусе -->
                 <div id="statusMessage" class="mt-3"></div>
@@ -36,9 +36,29 @@
                         Колесо мыши - масштабирование | 
                         Перетаскивание - панорама | 
                         Клик на блок - выбрать | 
+                        Shift+Клик - начать рисовать связь | 
                         Delete - удалить связь | 
+                        Escape - отмена | 
                         Ctrl+R - сбросить вид
                     </small>
+                </div>
+                
+                <!-- Режим редактирования -->
+                <div class="mt-2 p-2 bg-light rounded">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="editModeToggle">
+                        <label class="form-check-label" for="editModeToggle">
+                            Режим редактирования связей (Shift+Click для рисования)
+                        </label>
+                    </div>
+                    <div id="editModeInfo" class="mt-2 text-muted" style="display: none;">
+                        <small>
+                            <strong>Активен режим редактирования:</strong><br>
+                            1. Shift+Клик на блок - начать рисовать связь<br>
+                            2. Клик на целевой блок - завершить связь<br>
+                            3. Escape - отмена рисования
+                        </small>
+                    </div>
                 </div>
                 
                 <!-- Управление подчинением -->
@@ -87,6 +107,12 @@ const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
 
 document.addEventListener('DOMContentLoaded', function() {
     const templateId = parseInt('{{ template.id }}');
+    
+    // Переменные для режима редактирования связей
+    let editMode = false;
+    let isDrawing = false;
+    let sourceNode = null;
+    let tempEdge = null;
     
     // Подготавливаем элементы для Cytoscape
     const elements = [];
@@ -171,17 +197,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     'label': 'data(label)',
                     'text-valign': 'center',
                     'text-halign': 'center',
-                    'font-size': 12,
+                    'font-size': 13,
                     'font-weight': 'bold',
                     'color': 'white',
                     'border-width': 2,
                     'border-color': '#0056b3',
-                    'padding': '15px',
+                    'padding': '20px',
                     'text-wrap': 'wrap',
-                    'text-max-width': '180px',
+                    'text-max-width': '220px',
                     'shape': 'rectangle',
-                    'min-width': '120px',
-                    'min-height': '80px'
+                    'width': '240px',
+                    'height': '140px',
+                    'cursor': 'pointer',
+                    'line-height': 1.4
+                }
+            },
+            {
+                selector: 'node:hover',
+                style: {
+                    'border-width': 3,
+                    'border-color': '#ff9800',
+                    'box-shadow': '0 0 15px rgba(255, 152, 0, 0.6)'
                 }
             },
             {
@@ -190,8 +226,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     'background-color': '#28a745',
                     'border-color': '#1e7e34',
                     'shape': 'ellipse',
-                    'width': 100,
-                    'height': 100
+                    'width': 120,
+                    'height': 120,
+                    'font-size': 14,
+                    'font-weight': 'bold'
                 }
             },
             {
@@ -200,8 +238,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     'background-color': '#dc3545',
                     'border-color': '#bb2d3b',
                     'shape': 'ellipse',
-                    'width': 100,
-                    'height': 100
+                    'width': 120,
+                    'height': 120,
+                    'font-size': 14,
+                    'font-weight': 'bold'
                 }
             },
             {
@@ -219,9 +259,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     'line-color': '#0056b3',
                     'target-arrow-color': '#0056b3',
                     'target-arrow-shape': 'triangle',
-                    'arrow-scale': 1.5,
-                    'width': 2,
-                    'curve-style': 'bezier'
+                    'arrow-scale': 2,
+                    'width': 3,
+                    'curve-style': 'bezier',
+                    'opacity': 0.8
+                }
+            },
+            {
+                selector: 'edge:hover',
+                style: {
+                    'line-color': '#ff9800',
+                    'target-arrow-color': '#ff9800',
+                    'width': 4,
+                    'opacity': 1
                 }
             },
             {
@@ -229,7 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 style: {
                     'line-color': '#ffc107',
                     'target-arrow-color': '#ffc107',
-                    'width': 3
+                    'width': 4,
+                    'opacity': 1
                 }
             }
         ],
@@ -248,7 +299,56 @@ document.addEventListener('DOMContentLoaded', function() {
         const node = evt.target;
         const nodeId = node.id();
         
-        // Пропускаем Старт и Стоп
+        // Если режим редактирования связей активен и нажат Shift
+        if (editMode && evt.originalEvent.shiftKey) {
+            if (nodeId === 'start' || nodeId === 'stop') {
+                showStatus('Нельзя рисовать связи от/к системным узлам', 'error');
+                return;
+            }
+            
+            if (!isDrawing) {
+                // Начинаем рисовать связь
+                sourceNode = node;
+                isDrawing = true;
+                node.style('border-width', 4);
+                node.style('border-color', '#ff9800');
+                showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
+            } else {
+                // Завершаем рисование связи
+                if (nodeId === 'start' || nodeId === 'stop') {
+                    showStatus('Нельзя создать связь к системному узлу', 'error');
+                    cancelDrawing();
+                    return;
+                }
+                
+                const targetNode = node;
+                const sourceId = sourceNode.id();
+                const targetId = targetNode.id();
+                
+                // Проверяем, что это не одна и та же связь
+                if (sourceId === targetId) {
+                    showStatus('Нельзя создать связь на самого себя', 'error');
+                    cancelDrawing();
+                    return;
+                }
+                
+                // Извлекаем ID этапов
+                const sourceStageId = sourceId.replace('stage_', '');
+                const targetStageId = targetId.replace('stage_', '');
+                
+                // Устанавливаем форму для создания связи
+                document.getElementById('stageSelect').value = targetStageId;
+                document.getElementById('parentSelect').value = sourceStageId;
+                
+                showStatus('Связь создана. Нажмите "Установить" для сохранения', 'success');
+                document.querySelector('.mt-4').scrollIntoView({ behavior: 'smooth' });
+                
+                cancelDrawing();
+            }
+            return;
+        }
+        
+        // Обычный режим - выбор блока
         if (nodeId === 'start' || nodeId === 'stop') {
             return;
         }
@@ -271,6 +371,52 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.mt-4').scrollIntoView({ behavior: 'smooth' });
         
         showStatus('Этап выбран. Установите родителя и нажмите "Установить"', 'info');
+    });
+    
+    // Функция отмены рисования
+    function cancelDrawing() {
+        if (sourceNode) {
+            sourceNode.style('border-width', 2);
+            sourceNode.style('border-color', '#0056b3');
+        }
+        isDrawing = false;
+        sourceNode = null;
+        if (tempEdge) {
+            cy.remove(tempEdge);
+            tempEdge = null;
+        }
+    }
+    
+    // Обработчик Escape для отмены
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (isDrawing) {
+                cancelDrawing();
+                showStatus('Рисование отменено', 'info');
+            }
+        }
+        
+        // Ctrl+R - сбросить вид
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            cy.fit();
+            showStatus('Вид сброшен', 'info');
+        }
+    });
+    
+    // Обработчик переключения режима редактирования
+    document.getElementById('editModeToggle').addEventListener('change', function(e) {
+        editMode = e.target.checked;
+        document.getElementById('editModeInfo').style.display = editMode ? 'block' : 'none';
+        
+        if (editMode) {
+            showStatus('Режим редактирования активирован. Shift+Клик для рисования связей', 'info');
+            cy.style().selector('node').style('cursor', 'crosshair').update();
+        } else {
+            cancelDrawing();
+            showStatus('Режим редактирования отключен', 'info');
+            cy.style().selector('node').style('cursor', 'pointer').update();
+        }
     });
     
     // Обработчик удаления связей (Delete)
@@ -304,23 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
-        // Ctrl+R - сбросить вид
-        if (e.ctrlKey && e.key === 'r') {
-            e.preventDefault();
-            cy.fit();
-            showStatus('Вид сброшен', 'info');
-        }
-    });
-    
-    // Zoom с помощью колеса мыши
-    cy.on('wheel', function(event) {
-        // Cytoscape.js обрабатывает zoom автоматически
-    });
-    
-    // Pan с помощью перетаскивания фона
-    cy.on('grab', 'node', function(evt) {
-        // Cytoscape.js обрабатывает drag автоматически
     });
     
     // Обработчик отправки формы
@@ -338,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Показываем сообщение об успехе после отправки
             setTimeout(() => {
-                showStatus('✓ Подчиненность обновлена', 'success');
+                showStatus('Подчиненность обновлена. Перезагрузка...', 'success');
                 setTimeout(() => location.reload(), 1500);
             }, 500);
         });
