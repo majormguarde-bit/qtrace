@@ -598,6 +598,7 @@ def superuser_admin_edit(request, user_id):
                     t_user.email = user.email
                     t_user.first_name = user.first_name
                     t_user.last_name = user.last_name
+                    # Администратор тенанта НИКОГДА не может быть суперадминистратором
                     t_user.role = 'ADMIN'
                     t_user.password_hash = user.password # Синхронизируем хеш
                     t_user.is_active = user.is_active

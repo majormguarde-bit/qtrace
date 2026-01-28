@@ -130,12 +130,14 @@
                 
                 <hr class="mx-3 opacity-25">
                 <div class="px-3 mb-2 small text-uppercase opacity-50">Управление базой</div>
+                {% if user.is_superuser %}
                 <a href="{% url 'superuser_db_management' %}" class="sidebar-link {% if 'db-management' in request.path or 'db_management' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-database-fill-gear me-2"></i> Обслуживание БД
                 </a>
                 <a href="/admin/" class="sidebar-link text-info">
                     <i class="bi bi-database-fill-gear me-2"></i> Вход в базу
                 </a>
+                {% endif %}
                 
                 <hr class="mx-3 opacity-25">
                 <a href="{% url 'home' %}" class="sidebar-link">
@@ -182,9 +184,11 @@
                         <a href="{% url 'superuser_admin_create' %}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-person-plus me-1"></i> Добавить администратора
                         </a>
+                        {% if user.is_superuser %}
                         <a href="/admin/" class="btn btn-sm btn-dark">
                             <i class="bi bi-database-fill-gear me-1"></i> База данных
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
