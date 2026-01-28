@@ -67,7 +67,6 @@
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-cose-bilkent/4.1.0/cytoscape-cose-bilkent.min.js"></script>
 
 <script>
 // Данные о этапах
@@ -75,10 +74,6 @@ const stagesDataJson = '{{ stages_json|escapejs }}';
 const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Регистрируем layout после загрузки всех библиотек
-    if (typeof cytoscape !== 'undefined' && typeof coseBilkent !== 'undefined') {
-        cytoscape.use(coseBilkent);
-    }
     const templateId = parseInt('{{ template.id }}');
     
     // Подготавливаем элементы для Cytoscape
@@ -227,22 +222,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         ],
         layout: {
-            name: 'cose-bilkent',
+            name: 'breadthfirst',
             directed: true,
             animate: true,
             animationDuration: 500,
-            nodeSeparation: 100,
-            edgeElasticity: 0.45,
-            nestingFactor: 0.1,
-            gravity: 0.25,
-            numIter: 2500,
-            tile: true,
-            tilingPaddingVertical: 10,
-            tilingPaddingHorizontal: 10,
-            gravityRangeCompound: 1.5,
-            gravityCompound: 1.0,
-            gravityRange: 3.8,
-            initialEnergyOnIncremental: 0.3
+            spacingFactor: 1.5,
+            roots: '#start'
         }
     });
     
