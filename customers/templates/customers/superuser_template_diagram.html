@@ -656,6 +656,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const form = document.querySelector('form');
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
+            const formData = new URLSearchParams({
+                'action': 'set_parent',
+                'stage_id': conn.sourceStageId,
+                'parent_stage_id': '',
+                'position_id': ''
+            });
+            
+            console.log('Sending data:', Object.fromEntries(formData));
+            
             // Используем fetch для отправки POST запроса
             fetch(form.action, {
                 method: 'POST',
@@ -663,12 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': csrfToken
                 },
-                body: new URLSearchParams({
-                    'action': 'set_parent',
-                    'stage_id': conn.sourceStageId,
-                    'parent_stage_id': '',
-                    'position_id': ''
-                }),
+                body: formData,
                 redirect: 'manual'
             })
             .then(response => {

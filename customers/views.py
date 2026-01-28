@@ -1451,6 +1451,8 @@ def superuser_template_edit(request, template_id):
             parent_stage_id = request.POST.get('parent_stage_id') or None
             position_id = request.POST.get('position_id') or None
             
+            print(f"DEBUG: set_parent action - stage_id={stage_id}, parent_stage_id={parent_stage_id}, position_id={position_id}")
+            
             try:
                 stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
                 if parent_stage_id:
@@ -1471,8 +1473,10 @@ def superuser_template_edit(request, template_id):
                     stage.position = None
                 
                 stage.save()
+                print(f"DEBUG: Stage saved - parent_stage={stage.parent_stage}, position={stage.position}")
                 messages.success(request, 'Этап успешно обновлен.')
             except TaskTemplateStage.DoesNotExist:
+                print(f"DEBUG: Stage not found - stage_id={stage_id}")
                 messages.error(request, 'Этап не найден.')
             
             return redirect('superuser_template_diagram', template_id=template.id)
