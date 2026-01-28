@@ -397,44 +397,47 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Извлекаем ID этапов
-                const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
-                const targetStageId = targetId === 'stop' ? 'stop' : targetId.replace('stage_', '');
-                
-                // Если целевой узел - это обычный этап или Stop
-                if (targetId !== 'start') {
-                    // Если это обычный этап
-                    if (targetId !== 'stop') {
-                        // Устанавливаем форму для создания связи
-                        document.getElementById('stageSelect').value = targetStageId;
-                        document.getElementById('parentSelect').value = sourceStageId === 'start' ? '' : sourceStageId;
-                        
-                        showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
-                    } else {
-                        // Если это Stop - добавляем связь визуально
-                        const edgeId = 'edge_' + sourceStageId + '_stop';
-                        const existingEdge = cy.$('#' + edgeId);
-                        
-                        if (existingEdge.length === 0) {
-                            // Добавляем новую связь к Stop
-                            cy.add({
-                                data: {
-                                    id: edgeId,
-                                    source: sourceId,
-                                    target: 'stop'
-                                }
-                            });
-                            
-                            // Подсвечиваем новую связь
-                            cy.$('#' + edgeId).style('line-color', '#0056b3');
-                            cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
-                            cy.$('#' + edgeId).style('width', 4);
-                        }
-                        
-                        showStatus('Связь к Стоп создана. Это финальный узел.', 'success');
-                    }
-                } else {
+                // Нельзя создать связь к Старту
+                if (targetId === 'start') {
                     showStatus('Нельзя создать связь к Старту', 'error');
+                    cancelDrawing();
+                    return;
+                }
+                
+                // Если целевой узел - это Stop
+                if (targetId === 'stop') {
+                    // Извлекаем ID исходного этапа
+                    const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
+                    const edgeId = 'edge_' + sourceStageId + '_stop';
+                    const existingEdge = cy.$('#' + edgeId);
+                    
+                    if (existingEdge.length === 0) {
+                        // Добавляем новую связь к Stop
+                        cy.add({
+                            data: {
+                                id: edgeId,
+                                source: sourceId,
+                                target: 'stop'
+                            }
+                        });
+                        
+                        // Подсвечиваем новую связь
+                        cy.$('#' + edgeId).style('line-color', '#0056b3');
+                        cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
+                        cy.$('#' + edgeId).style('width', 4);
+                    }
+                    
+                    showStatus('Связь к Стоп создана. Это финальный узел.', 'success');
+                } else {
+                    // Если это обычный этап
+                    const targetStageId = targetId.replace('stage_', '');
+                    const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
+                    
+                    // Устанавливаем форму для создания связи
+                    document.getElementById('stageSelect').value = targetStageId;
+                    document.getElementById('parentSelect').value = sourceStageId === 'start' ? '' : sourceStageId;
+                    
+                    showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
                 }
                 
                 cancelDrawing();
