@@ -1056,7 +1056,12 @@ class TenantRegistrationViewSet(viewsets.ViewSet):
                     # Определяем протокол и порт для ссылки
                     protocol = 'https' if request.is_secure() else 'http'
                     port = request.get_port()
-                    port_str = f":{port}" if port not in (80, 443) else ""
+                    
+                    # Не добавляем порт, если это стандартный порт для протокола
+                    if (protocol == 'https' and port == 443) or (protocol == 'http' and port == 80):
+                        port_str = ""
+                    else:
+                        port_str = f":{port}"
                     
                     return Response({
                         'message': 'Заявка на регистрацию принята. Организация будет активирована после проверки администратором.',
