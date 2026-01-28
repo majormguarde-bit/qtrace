@@ -371,21 +371,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Если режим редактирования связей активен и нажат Shift
         if (editMode && evt.originalEvent.shiftKey) {
-            if (nodeId === 'start' || nodeId === 'stop') {
-                showStatus('Нельзя рисовать связи от системных узлов', 'error');
-                return;
-            }
-            
-            if (!isDrawing) {
-                // Начинаем рисовать связь
-                sourceNode = node;
-                isDrawing = true;
-                node.style('border-width', 4);
-                node.style('border-color', '#0056b3');
-                node.style('background-color', '#0056b3');
-                showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
-            } else {
-                // Завершаем рисование связи
+            // Если уже рисуем связь, можем завершить её на любом узле (кроме Start)
+            if (isDrawing) {
                 const targetNode = node;
                 const sourceId = sourceNode.id();
                 const targetId = targetNode.id();
@@ -441,7 +428,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 cancelDrawing();
+                return;
             }
+            
+            // Если не рисуем связь, начинаем рисовать
+            if (nodeId === 'start' || nodeId === 'stop') {
+                showStatus('Нельзя рисовать связи от системных узлов', 'error');
+                return;
+            }
+            
+            // Начинаем рисовать связь
+            sourceNode = node;
+            isDrawing = true;
+            node.style('border-width', 4);
+            node.style('border-color', '#0056b3');
+            node.style('background-color', '#0056b3');
+            showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
             return;
         }
         
