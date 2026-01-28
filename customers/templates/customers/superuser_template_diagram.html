@@ -503,11 +503,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Извлекаем ID этапа из targetId
                     const stageId = targetId.replace('stage_', '');
                     
+                    // Визуально удаляем связь с диаграммы
+                    cy.remove(element);
+                    
                     // Устанавливаем форму для удаления родителя
                     document.getElementById('stageSelect').value = stageId;
                     document.getElementById('parentSelect').value = '';
                     
-                    showStatus('Связь удалена. Нажмите "Сохранить" для сохранения', 'success');
+                    showStatus('Связь удалена с диаграммы. Нажмите "Сохранить" для сохранения', 'success');
                 }
             }
         }
@@ -524,6 +527,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 showStatus('Пожалуйста, выберите этап', 'error');
                 return;
+            }
+            
+            // Добавляем новую связь на диаграмму визуально
+            const targetNodeId = 'stage_' + stageId;
+            const sourceNodeId = parentId ? 'stage_' + parentId : 'start';
+            const edgeId = 'edge_' + (parentId || 'start') + '_' + stageId;
+            
+            // Проверяем, существует ли уже такая связь
+            const existingEdge = cy.$('#' + edgeId);
+            if (existingEdge.length === 0) {
+                // Добавляем новую связь
+                cy.add({
+                    data: {
+                        id: edgeId,
+                        source: sourceNodeId,
+                        target: targetNodeId
+                    }
+                });
+                
+                // Подсвечиваем новую связь
+                cy.$('#' + edgeId).style('line-color', '#28a745');
+                cy.$('#' + edgeId).style('target-arrow-color', '#28a745');
+                cy.$('#' + edgeId).style('width', 4);
+                
+                showStatus('Связь добавлена на диаграмму. Сохранение...', 'success');
             }
             
             // Показываем сообщение об успехе после отправки
