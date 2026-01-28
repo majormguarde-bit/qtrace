@@ -2048,10 +2048,24 @@ def superuser_template_diagram(request, template_id):
     # Подготавливаем JSON данные для JavaScript
     stages_data = []
     for stage in stages:
+        # Формируем строку длительности
+        duration_str = ''
+        if stage.duration_from and stage.duration_unit:
+            if stage.duration_from == stage.duration_to:
+                duration_str = f"{stage.duration_from} {stage.duration_unit.abbreviation}"
+            else:
+                duration_str = f"{stage.duration_from}-{stage.duration_to} {stage.duration_unit.abbreviation}"
+        
+        # Получаем должность
+        position_name = stage.position.name if stage.position else 'Не указана'
+        
         stages_data.append({
             'id': stage.id,
             'name': stage.name,
+            'sequence_number': stage.sequence_number,
             'parent_stage_id': stage.parent_stage_id if stage.parent_stage else None,
+            'position': position_name,
+            'duration': duration_str,
         })
     
     context = {
