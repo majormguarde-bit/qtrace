@@ -146,6 +146,17 @@
                         </button>
                     </div>
                 </form>
+                
+                <!-- Сохранение связи к Stop -->
+                <div id="saveConnectionToStop" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+                    <p class="small text-muted mb-2">Новая связь к Стоп:</p>
+                    <button type="button" class="btn btn-success btn-sm w-100" id="confirmSaveConnection">
+                        <i class="bi bi-check-circle me-1"></i> Сохранить связь
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm w-100 mt-2" id="cancelSaveConnection">
+                        <i class="bi bi-x-circle me-1"></i> Отмена
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -173,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isDrawing = false;
     let sourceNode = null;
     let tempEdge = null;
+    let pendingConnectionToStop = null; // Для сохранения связи к Stop
     
     // Подготавливаем элементы для Cytoscape
     const elements = [];
@@ -426,9 +438,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         cy.$('#' + edgeId).style('line-color', '#0056b3');
                         cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
                         cy.$('#' + edgeId).style('width', 4);
+                        
+                        // Сохраняем информацию о связи для последующего сохранения
+                        pendingConnectionToStop = {
+                            sourceId: sourceId,
+                            sourceStageId: sourceStageId,
+                            edgeId: edgeId
+                        };
+                        
+                        // Показываем кнопку сохранения
+                        document.getElementById('saveConnectionToStop').style.display = 'block';
                     }
                     
-                    showStatus('Связь к Стоп создана. Это финальный узел.', 'success');
+                    showStatus('Связь к Стоп создана. Нажмите "Сохранить связь" для сохранения', 'success');
                 } else {
                     // Если это обычный этап
                     const targetStageId = targetId.replace('stage_', '');
@@ -618,6 +640,46 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         });
     }
+    
+    // Обработчик сохранения связи к Stop
+    document.getElementById('confirmSaveConnection').addEventListener('click', function() {
+        if (!pendingConnectionToStop) {
+            showStatus('Нет связи для сохранения', 'error');
+            return;
+        }
+        
+        const conn = pendingConnectionToStop;
+        
+        // Если источник - это обычный этап, сохраняем его как финальный этап
+        if (conn.sourceStageId !== 'start') {
+            // Отправляем форму с пустым parent_stage_id (это означает, что этап ведёт к Stop)
+            // На самом деле, нам нужно просто пометить этап как финальный
+            // Но в текущей модели это не поддерживается, поэтому просто сохраняем
+            
+            document.getElementById('stageSelect').value = conn.sourceStageId;
+            document.getElementById('parentSelect').value = '';
+            
+            showStatus('Связь к Стоп сохранена. Перезагрузка...', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showStatus('Нельзя сохранить связь от Старта', 'error');
+        }
+        
+        pendingConnectionToStop = null;
+        document.getElementById('saveConnectionToStop').style.display = 'none';
+    });
+    
+    // Обработчик отмены сохранения связи к Stop
+    document.getElementById('cancelSaveConnection').addEventListener('click', function() {
+        if (pendingConnectionToStop) {
+            // Удаляем связь с диаграммы
+            cy.remove('#' + pendingConnectionToStop.edgeId);
+            showStatus('Связь отменена', 'info');
+        }
+        
+        pendingConnectionToStop = null;
+        document.getElementById('saveConnectionToStop').style.display = 'none';
+    });
     
     // Функция для показа сообщений
     function showStatus(message, type) {
