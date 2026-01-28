@@ -400,15 +400,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
                 const targetStageId = targetId === 'stop' ? 'stop' : targetId.replace('stage_', '');
                 
-                // Если целевой узел - это обычный этап
-                if (targetId !== 'start' && targetId !== 'stop') {
-                    // Устанавливаем форму для создания связи
-                    document.getElementById('stageSelect').value = targetStageId;
-                    document.getElementById('parentSelect').value = sourceStageId === 'start' ? '' : sourceStageId;
-                    
-                    showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
+                // Если целевой узел - это обычный этап или Stop
+                if (targetId !== 'start') {
+                    // Если это обычный этап
+                    if (targetId !== 'stop') {
+                        // Устанавливаем форму для создания связи
+                        document.getElementById('stageSelect').value = targetStageId;
+                        document.getElementById('parentSelect').value = sourceStageId === 'start' ? '' : sourceStageId;
+                        
+                        showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
+                    } else {
+                        // Если это Stop - просто показываем сообщение
+                        showStatus('Связь к Стоп создана. Это финальный узел.', 'success');
+                    }
                 } else {
-                    showStatus('Нельзя создать связь к системному узлу', 'error');
+                    showStatus('Нельзя создать связь к Старту', 'error');
                 }
                 
                 cancelDrawing();
