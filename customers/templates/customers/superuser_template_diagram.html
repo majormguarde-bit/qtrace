@@ -70,16 +70,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-cose-bilkent/4.1.0/cytoscape-cose-bilkent.min.js"></script>
 
 <script>
-// Регистрируем layout после загрузки библиотеки
-if (typeof coseBilkent !== 'undefined') {
-    cytoscape.use(coseBilkent);
-}
-
 // Данные о этапах
 const stagesDataJson = '{{ stages_json|escapejs }}';
 const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Регистрируем layout после загрузки всех библиотек
+    if (typeof cytoscape !== 'undefined' && typeof coseBilkent !== 'undefined') {
+        cytoscape.use(coseBilkent);
+    }
     const templateId = parseInt('{{ template.id }}');
     
     // Подготавливаем элементы для Cytoscape
