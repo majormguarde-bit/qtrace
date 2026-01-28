@@ -652,15 +652,36 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Если источник - это обычный этап, сохраняем его как финальный этап
         if (conn.sourceStageId !== 'start') {
-            // Отправляем форму с пустым parent_stage_id (это означает, что этап ведёт к Stop)
-            // На самом деле, нам нужно просто пометить этап как финальный
-            // Но в текущей модели это не поддерживается, поэтому просто сохраняем
+            // Создаём форму и отправляем её
+            const form = document.querySelector('form');
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
-            document.getElementById('stageSelect').value = conn.sourceStageId;
-            document.getElementById('parentSelect').value = '';
-            
-            showStatus('Связь к Стоп сохранена. Перезагрузка...', 'success');
-            setTimeout(() => location.reload(), 1500);
+            // Используем fetch для отправки POST запроса
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'action': 'set_parent',
+                    'stage_id': conn.sourceStageId,
+                    'parent_stage_id': '',
+                    'position_id': ''
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    showStatus('Связь к Стоп сохранена. Перезагрузка...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showStatus('Ошибка при сохранении связи', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showStatus('Ошибка при сохранении связи: ' + error, 'error');
+            });
         } else {
             showStatus('Нельзя сохранить связь от Старта', 'error');
         }
