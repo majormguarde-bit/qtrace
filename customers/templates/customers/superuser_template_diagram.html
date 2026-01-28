@@ -17,38 +17,17 @@
             <div class="card-header bg-light">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Структура этапов (интерактивная диаграмма)</h5>
-                    <small class="text-muted">💡 Нажмите на блок для изменения подчиненности</small>
+                    <small class="text-muted">💡 Перетаскивайте блоки, нажимайте для редактирования подчиненности</small>
                 </div>
             </div>
             <div class="card-body">
                 {% csrf_token %}
                 
-                <!-- Диаграмма Mermaid -->
-                <div class="mermaid" id="mermaidDiagram">
-                    graph TD
-                    Start["🟢 Старт"]
-                    Stop["🔴 Стоп"]
-                    
-                    {% for stage in all_stages %}
-                    Stage{{ stage.id }}["<b>{{ stage.sequence_number }}. {{ stage.name }}</b><br/>{{ stage.position.name|default:'Не указана' }}<br/>{{ stage.duration_from }}-{{ stage.duration_to }}{% if stage.duration_unit %} {{ stage.duration_unit.abbreviation }}{% endif %}"]
-                    {% endfor %}
-                    
-                    Start --> {% if all_stages %}Stage{{ all_stages.0.id }}{% else %}Stop{% endif %}
-                    
-                    {% for stage in all_stages %}
-                        {% if stage.parent_stage %}
-                        Stage{{ stage.parent_stage.id }} --> Stage{{ stage.id }}
-                        {% elif forloop.first %}
-                        Start --> Stage{{ stage.id }}
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% for stage in all_stages %}
-                        {% if not stage.parent_stage and forloop.last %}
-                        Stage{{ stage.id }} --> Stop
-                        {% endif %}
-                    {% endfor %}
-                </div>
+                <!-- Cytoscape диаграмма -->
+                <div id="cy" style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa;"></div>
+                
+                <!-- Информация о статусе -->
+                <div id="statusMessage" class="mt-3"></div>
                 
                 <!-- Управление подчинением -->
                 <div class="mt-4 p-3 bg-light rounded">
@@ -80,101 +59,283 @@
                         </div>
                     </form>
                 </div>
-                
-                <!-- Информация о статусе -->
-                <div id="statusMessage" class="mt-3"></div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.mermaid {
-    display: flex;
-    justify-content: center;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+#cy {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.mermaid svg {
-    max-width: 100%;
-    height: auto;
+/* Стили для узлов */
+#cy {
+    background-color: #f8f9fa;
 }
 
-/* Стили для узлов диаграммы */
-.mermaid .nodeLabel {
+.cy-node {
+    background-color: #007bff;
+    color: white;
+    text-valign: center;
+    text-halign: center;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+    border-width: 2px;
+    border-color: #0056b3;
+    padding: 10px;
 }
 
-.mermaid .node {
-    stroke: #007bff;
-    stroke-width: 2px;
-    fill: #007bff;
+.cy-node.start {
+    background-color: #28a745;
+    border-color: #1e7e34;
 }
 
-.mermaid .node text {
-    fill: white;
-    font-size: 12px;
+.cy-node.stop {
+    background-color: #dc3545;
+    border-color: #bb2d3b;
 }
 
-.mermaid .edgePath path {
-    stroke: #0056b3;
-    stroke-width: 2px;
+.cy-node:selected {
+    background-color: #ffc107;
+    color: #000;
+    border-color: #ff9800;
+    border-width: 3px;
 }
 
-.mermaid .arrowheadPath {
-    fill: #0056b3;
+/* Стили для ребер */
+#cy {
+    edge-text-rotation: autorotate;
+}
+
+.cy-edge {
+    line-color: #0056b3;
+    target-arrow-color: #0056b3;
+    target-arrow-shape: triangle;
+    arrow-scale: 1.5;
+    width: 2px;
+    curve-style: bezier;
+}
+
+.cy-edge:selected {
+    line-color: #ffc107;
+    target-arrow-color: #ffc107;
+    width: 3px;
 }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-cose-bilkent/4.1.0/cytoscape-cose-bilkent.min.js"></script>
+
 <script>
 // Данные о этапах
-const stagesData = {{ stages_json|safe }};
+const stagesDataJson = '{{ stages_json|escapejs }}';
+const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализируем Mermaid
-    mermaid.initialize({ 
-        startOnLoad: true,
-        theme: 'default',
-        securityLevel: 'loose',
-        flowchart: {
-            useMaxWidth: true,
-            htmlLabels: true
-        }
+    const templateId = parseInt('{{ template.id }}');
+    
+    // Подготавливаем элементы для Cytoscape
+    const elements = [];
+    
+    // Добавляем узел "Старт"
+    elements.push({
+        data: { id: 'start', label: '🟢 Старт' },
+        classes: 'start'
     });
     
-    // Перерисовываем диаграмму
-    mermaid.contentLoaded();
+    // Добавляем узлы этапов
+    stagesData.forEach(stage => {
+        elements.push({
+            data: {
+                id: 'stage_' + stage.id,
+                label: stage.sequence_number + '. ' + stage.name + '\n' + (stage.position || 'Не указана') + '\n' + stage.duration
+            }
+        });
+    });
     
-    // Обработчик для формы
-    const stageSelect = document.getElementById('stageSelect');
-    const parentSelect = document.getElementById('parentSelect');
+    // Добавляем узел "Стоп"
+    elements.push({
+        data: { id: 'stop', label: '🔴 Стоп' },
+        classes: 'stop'
+    });
     
-    if (stageSelect) {
-        stageSelect.addEventListener('change', function() {
-            const stageId = this.value;
-            if (stageId) {
-                // Находим текущего родителя этого этапа
-                const stage = stagesData.find(s => s.id == parseInt(stageId));
-                if (stage && stage.parent_stage_id) {
-                    parentSelect.value = stage.parent_stage_id;
-                } else {
-                    parentSelect.value = '';
-                }
+    // Добавляем ребра (связи)
+    // От Старта к первому этапу
+    if (stagesData.length > 0) {
+        elements.push({
+            data: {
+                id: 'edge_start_' + stagesData[0].id,
+                source: 'start',
+                target: 'stage_' + stagesData[0].id
+            }
+        });
+    } else {
+        // Если нет этапов, соединяем Старт со Стопом
+        elements.push({
+            data: {
+                id: 'edge_start_stop',
+                source: 'start',
+                target: 'stop'
             }
         });
     }
+    
+    // Добавляем ребра для подчиненности
+    stagesData.forEach(stage => {
+        if (stage.parent_stage_id) {
+            elements.push({
+                data: {
+                    id: 'edge_' + stage.parent_stage_id + '_' + stage.id,
+                    source: 'stage_' + stage.parent_stage_id,
+                    target: 'stage_' + stage.id
+                }
+            });
+        }
+    });
+    
+    // От последнего этапа к Стопу
+    if (stagesData.length > 0) {
+        const lastStage = stagesData[stagesData.length - 1];
+        elements.push({
+            data: {
+                id: 'edge_' + lastStage.id + '_stop',
+                source: 'stage_' + lastStage.id,
+                target: 'stop'
+            }
+        });
+    }
+    
+    // Инициализируем Cytoscape
+    const cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: elements,
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    'background-color': '#007bff',
+                    'label': 'data(label)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'font-size': 11,
+                    'font-weight': 'bold',
+                    'color': 'white',
+                    'border-width': 2,
+                    'border-color': '#0056b3',
+                    'padding': '10px',
+                    'width': 'label',
+                    'height': 'label',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '150px',
+                    'shape': 'rectangle'
+                }
+            },
+            {
+                selector: 'node.start',
+                style: {
+                    'background-color': '#28a745',
+                    'border-color': '#1e7e34',
+                    'shape': 'ellipse',
+                    'width': 100,
+                    'height': 100
+                }
+            },
+            {
+                selector: 'node.stop',
+                style: {
+                    'background-color': '#dc3545',
+                    'border-color': '#bb2d3b',
+                    'shape': 'ellipse',
+                    'width': 100,
+                    'height': 100
+                }
+            },
+            {
+                selector: 'node:selected',
+                style: {
+                    'background-color': '#ffc107',
+                    'color': '#000',
+                    'border-color': '#ff9800',
+                    'border-width': 3
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'line-color': '#0056b3',
+                    'target-arrow-color': '#0056b3',
+                    'target-arrow-shape': 'triangle',
+                    'arrow-scale': 1.5,
+                    'width': 2,
+                    'curve-style': 'bezier'
+                }
+            },
+            {
+                selector: 'edge:selected',
+                style: {
+                    'line-color': '#ffc107',
+                    'target-arrow-color': '#ffc107',
+                    'width': 3
+                }
+            }
+        ],
+        layout: {
+            name: 'cose-bilkent',
+            directed: true,
+            animate: true,
+            animationDuration: 500,
+            nodeSeparation: 100,
+            edgeElasticity: 0.45,
+            nestingFactor: 0.1,
+            gravity: 0.25,
+            numIter: 2500,
+            tile: true,
+            tilingPaddingVertical: 10,
+            tilingPaddingHorizontal: 10,
+            gravityRangeCompound: 1.5,
+            gravityCompound: 1.0,
+            gravityRange: 3.8,
+            initialEnergyOnIncremental: 0.3
+        }
+    });
+    
+    // Обработчик клика на узел для редактирования подчиненности
+    cy.on('tap', 'node', function(evt) {
+        const node = evt.target;
+        const nodeId = node.id();
+        
+        // Пропускаем Старт и Стоп
+        if (nodeId === 'start' || nodeId === 'stop') {
+            return;
+        }
+        
+        // Извлекаем ID этапа
+        const stageId = nodeId.replace('stage_', '');
+        
+        // Устанавливаем значение в форму
+        document.getElementById('stageSelect').value = stageId;
+        
+        // Находим текущего родителя
+        const stage = stagesData.find(s => s.id == stageId);
+        if (stage && stage.parent_stage_id) {
+            document.getElementById('parentSelect').value = stage.parent_stage_id;
+        } else {
+            document.getElementById('parentSelect').value = '';
+        }
+        
+        // Скроллим к форме
+        document.querySelector('.mt-4').scrollIntoView({ behavior: 'smooth' });
+        
+        showStatus('✓ Этап выбран. Установите родителя и нажмите "Установить"', 'info');
+    });
     
     // Обработчик отправки формы
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
-            const stageId = stageSelect.value;
-            const parentId = parentSelect.value;
+            const stageId = document.getElementById('stageSelect').value;
+            const parentId = document.getElementById('parentSelect').value;
             
             if (!stageId) {
                 e.preventDefault();
@@ -189,14 +350,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         });
     }
+    
+    // Функция для показа сообщений
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('statusMessage');
+        const alertClass = type === 'success' ? 'success' : (type === 'error' ? 'danger' : 'info');
+        statusDiv.innerHTML = `<div class="alert alert-${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    }
 });
-
-function showStatus(message, type) {
-    const statusDiv = document.getElementById('statusMessage');
-    statusDiv.innerHTML = `<div class="alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show" role="alert">
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>`;
-}
 </script>
 {% endblock %}
