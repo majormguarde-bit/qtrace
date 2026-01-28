@@ -1,0 +1,122 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Финансы - Панель управления{% endblock %}
+{% block header_title %}Финансовый учет{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" class="form-control border-start-0" placeholder="Поиск по названию организации..." value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">Найти</button>
+                    </div>
+                    {% if search_query %}
+                    <div class="col-md-3">
+                        <a href="?" class="btn btn-outline-secondary w-100">Сбросить</a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-table shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-wallet2 me-2 text-primary"></i>Сводка платежей</h5>
+                <span class="badge bg-light text-dark border">{{ page_obj.paginator.count }} клиентов</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Организация</th>
+                                <th>Тариф</th>
+                                <th>Всего оплачено</th>
+                                <th>Последний платеж</th>
+                                <th>Подписка до</th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tenant in page_obj %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-primary">{{ tenant.name }}</div>
+                                    <div class="small text-muted">{{ tenant.schema_name }}</div>
+                                </td>
+                                <td>
+                                    {% if tenant.subscription_plan %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3">
+                                            {{ tenant.subscription_plan.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted small">Не назначен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ tenant.total_paid|default:"0.00" }} ₽</span>
+                                </td>
+                                <td>
+                                    {% if tenant.last_payment_date %}
+                                        <div class="small fw-medium">{{ tenant.last_payment_date|date:"d.m.Y" }}</div>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.subscription_end_date %}
+                                        <div class="small {% if tenant.subscription_end_date < today %}text-danger fw-bold{% endif %}">
+                                            {{ tenant.subscription_end_date|date:"d.m.Y" }}
+                                            {% if tenant.subscription_end_date < today %}
+                                                <i class="bi bi-exclamation-triangle-fill ms-1" title="Истекла"></i>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small">Бессрочно</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'superuser_client_payments' tenant.id %}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-currency-dollar me-1"></i> Платежи
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted">Клиенты не найдены</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="card-footer bg-white py-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}&search={{ search_query }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

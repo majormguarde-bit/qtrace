@@ -1,0 +1,492 @@
+{% extends 'customers/base.html' %}
+{% load static humanize %}
+
+{% block extra_css %}
+    /* Hero Carousel Refined */
+    #heroCarousel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        z-index: 0;
+        overflow: hidden;
+    }
+
+    .carousel-item {
+        height: 100vh;
+        min-height: 600px;
+        background-size: cover;
+        background-position: center;
+    }
+    
+    .carousel-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(3, 7, 18, 0.4);
+        z-index: 2;
+    }
+
+    .scroll-dimmer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--bg-dark);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 3;
+    }
+
+    .carousel-caption {
+        position: absolute;
+        top: 15%;
+        bottom: auto;
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(25px);
+        border-radius: 2.5rem;
+        padding: 3.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.7);
+        max-width: 850px;
+        margin: 0 auto;
+        z-index: 4;
+    }
+
+    .main-content-wrapper {
+        margin-top: 85vh;
+        position: relative;
+        z-index: 10;
+        background: transparent;
+    }
+
+    .feature-icon {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2));
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--accent-cyan);
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .scroll-indicator {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 2.5rem;
+        animation: bounce 2s infinite;
+        cursor: pointer;
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    
+    .scroll-indicator:hover {
+        color: #fff;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateX(-50%) translateY(0);
+        }
+        40% {
+            transform: translateX(-50%) translateY(-10px);
+        }
+        60% {
+            transform: translateX(-50%) translateY(-5px);
+        }
+    }
+{% endblock %}
+
+{% block hero %}
+    <!-- Hero Carousel -->
+    <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <div class="scroll-dimmer"></div>
+        
+        <!-- Scroll Indicator -->
+        <a href="#login-card" class="scroll-indicator" title="Прокрутить вниз">
+            <i class="bi bi-chevron-down"></i>
+        </a>
+
+        <div class="carousel-inner">
+            <div class="carousel-item active" style="background-image: url('{% static 'img/slide5.png' %}')">
+                <div class="carousel-overlay"></div>
+                <div class="carousel-caption d-none d-md-block text-start">
+                    <h2 class="display-5 fw-bold mb-3">Цифровизация Вашего производства</h2>
+                    <p class="lead mb-4">Интеллектуальные решения для контроля и управления рабочими процессами.</p>
+                    <p class="d-none d-lg-block mb-4 text-white-50" style="max-width: 600px;">
+                        Наша платформа предоставляет полный набор инструментов для оцифровки всех этапов производства. 
+                        Встроенный <strong>AI-ассистент</strong> поможет проанализировать загруженность сотрудников и предложит оптимальное распределение задач.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap justify-content-start mb-3">
+                        <a href="{% url 'public_tariffs' %}" class="btn btn-outline-light btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-tag me-2"></i>Тарифы
+                        </a>
+                        <a href="{% static 'docs/skkp.html' %}" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm" target="_blank">
+                            <i class="bi bi-file-earmark-slides me-2"></i>Презентация
+                        </a>
+                    </div>
+                    <div class="d-flex gap-3 flex-wrap justify-content-start">
+                        <a href="#register" class="btn btn-success btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Запуск проекта
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item" style="background-image: url('{% static 'img/slide1.jpg' %}')">
+                <div class="carousel-overlay"></div>
+                <div class="carousel-caption d-none d-md-block text-start">
+                    <h2 class="display-5 fw-bold mb-3">Аналитика и Рост</h2>
+                    <p class="lead mb-3">Принимайте взвешенные решения на основе данных вашего бизнеса.</p>
+                    <p class="d-none d-lg-block mb-4 text-white-50" style="max-width: 600px;">
+                        Получайте мгновенные отчеты и прогнозы развития. Искусственный интеллект автоматически выявляет "узкие места" 
+                        в процессах и формирует рекомендации по повышению эффективности работы вашей компании.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap justify-content-start">
+                        <a href="#register" class="btn btn-success btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Запуск проекта
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item" style="background-image: url('{% static 'img/slide2.jpg' %}')">
+                <div class="carousel-overlay"></div>
+                <div class="carousel-caption d-none d-md-block">
+                    <h2 class="display-5 fw-bold mb-3">Командная работа</h2>
+                    <p class="lead mb-3">Объедините всех сотрудников в едином цифровом пространстве.</p>
+                    <p class="d-none d-lg-block mb-4 text-white-50" style="max-width: 600px; margin: 0 auto;">
+                        Единая среда коммуникации связывает офис и производство. Каждый сотрудник видит свои задачи и инструкции, 
+                        а умный помощник напоминает о сроках и помогает в заполнении отчетности.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap justify-content-center">
+                        <a href="#register" class="btn btn-success btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Запуск проекта
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item" style="background-image: url('{% static 'img/slide3.jpg' %}')">
+                <div class="carousel-overlay"></div>
+                <div class="carousel-caption d-none d-md-block text-end">
+                    <h2 class="display-5 fw-bold mb-3">Автоматизация процессов</h2>
+                    <p class="lead mb-3">Освободите время для стратегии, поручив рутину системе.</p>
+                    <p class="d-none d-lg-block mb-4 text-white-50 ms-auto" style="max-width: 600px;">
+                        Автоматическое создание задач по расписанию, генерация документов и уведомлений. 
+                        AI-модуль берет на себя рутинные проверки, позволяя команде сосредоточиться на важных стратегических целях.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap justify-content-end">
+                        <a href="#register" class="btn btn-success btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Запуск проекта
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item" style="background-image: url('{% static 'img/slide4.jpg' %}')">
+                <div class="carousel-overlay"></div>
+                <div class="carousel-caption d-none d-md-block">
+                    <h2 class="display-5 fw-bold mb-3">Фотофиксация работы</h2>
+                    <p class="lead mb-3">Простой контроль качества: от заводского цеха до поста автосервиса.</p>
+                    <p class="d-none d-lg-block mb-4 text-white-50" style="max-width: 600px; margin: 0 auto;">
+                        Загружайте фотоотчеты прямо с мобильного устройства. Наш <strong>AI-ассистент</strong> мгновенно анализирует изображения, 
+                        проверяет соответствие стандартам качества и наличие защитной экипировки на сотрудниках.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap justify-content-center">
+                        <a href="#register" class="btn btn-success btn-lg px-4 rounded-pill shadow-sm">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Запуск проекта
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+        </button>
+    </div>
+{% endblock %}
+
+{% block content_class %}main-content-wrapper{% endblock %}
+
+{% block content %}
+    <div class="container py-5 position-relative">
+        <div class="row g-4 justify-content-center">
+            <!-- Login Card (New) -->
+            <div class="col-lg-8 mb-4" id="login-card" data-aos="fade-up">
+                <div class="glass-card p-4 p-md-5" style="border-left: 4px solid var(--accent-cyan);">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="feature-icon me-3 mb-0">
+                            <i class="bi bi-person-workspace"></i>
+                        </div>
+                        <h2 class="h3 mb-0 fw-bold text-white">Уже есть проект?</h2>
+                    </div>
+                    
+                    {% if "localhost" in request.get_host or "127.0.0.1" in request.get_host %}
+                    <div class="alert alert-info py-2 small mb-3 border-0" style="background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan);">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Для доступа из сети используйте: <strong>http://{{ local_ip }}.nip.io:8000</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <form action="/" method="GET" class="row g-3">
+                        <div class="col-md-8">
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-transparent border-end-0 text-white-50">
+                                    <i class="bi bi-globe"></i>
+                                </span>
+                                <input type="text" class="form-control bg-transparent text-white border-start-0" 
+                                       name="login_subdomain" required placeholder="Введите ваш поддомен">
+                                <span class="input-group-text bg-transparent text-white-50">.{{ request.get_host }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-cyan w-100 btn-lg rounded-pill h-100" onclick="redirectToSubdomain()">
+                                Войти в систему
+                            </button>
+                        </div>
+                    </form>
+                    <div class="small text-white-50 mt-3">
+                        Введите название вашей организации, которое вы указывали при регистрации.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Card -->
+            <div class="col-lg-8" id="register" data-aos="fade-up">
+                <div class="glass-card p-4 p-md-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="feature-icon me-3 mb-0">
+                            <i class="bi bi-rocket-takeoff"></i>
+                        </div>
+                        <h2 class="h3 mb-0 fw-bold text-white">Запустить проект</h2>
+                    </div>
+                    
+                    <form id="registrationForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-semibold text-white">Название компании</label>
+                                <input type="text" class="form-control" name="company_name" required placeholder="ООО 'ТехноМир'">
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-semibold text-white">Поддомен</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="subdomain" required pattern="[a-z0-9]+" placeholder="company-name">
+                                    <span class="input-group-text bg-transparent border-start-0 text-white-50">.{{ request.get_host }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-semibold text-white">Телефон</label>
+                                <input type="tel" class="form-control" name="phone" required placeholder="+7 (___) ___-__-__">
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-semibold text-white">Тарифный план</label>
+                                <select class="form-select" name="subscription_plan" id="id_subscription_plan" required>
+                                    <option value="" disabled selected>Выберите тариф...</option>
+                                    {% for plan in plans %}
+                                        <option value="{{ plan.id }}" 
+                                                data-users="{{ plan.max_users }}" 
+                                                data-storage="{{ plan.storage_gb }}" 
+                                                data-days="{{ plan.work_days_limit }}"
+                                                data-mobile="{% if plan.has_mobile_app %}есть{% else %}нет{% endif %}">
+                                            {{ plan.name }} ({{ plan.price_month|floatformat:0|intcomma }} ₽/мес)
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div id="plan-details" class="mt-2 small" style="color: var(--accent-cyan); min-height: 1.2rem;">
+                                    <!-- Сюда будут подставляться параметры тарифа -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
+                                <label class="form-label fw-semibold text-white">Email организации</label>
+                                <input type="email" class="form-control" name="email" placeholder="info@company.com">
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-4 mb-4" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2);">
+                            <h6 class="mb-3 text-uppercase fw-bold small" style="color: var(--accent-cyan);">Учетные данные администратора</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label small text-white-50">Логин</label>
+                                    <input type="text" class="form-control" name="admin_username" required placeholder="admin">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label small text-white-50">Email</label>
+                                    <input type="email" class="form-control" name="admin_email" required placeholder="admin@mail.ru">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label small text-white-50">Пароль</label>
+                                    <input type="password" class="form-control" name="admin_password" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill" id="regBtn">
+                            Создать рабочее пространство
+                        </button>
+                    </form>
+                    <div id="regAlert" class="alert mt-4 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mt-5 g-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h4 class="text-white">Контроль качества</h4>
+                    <p style="color: var(--text-muted);">Инструменты фотофиксации и чек-листы для гарантии результата на каждом этапе.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h4 class="text-white">Прослеживаемость</h4>
+                    <p style="color: var(--text-muted);">Полная история операций: кто, когда и как выполнял каждую задачу в системе.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <h4 class="text-white">Автоматизация</h4>
+                    <p style="color: var(--text-muted);">Умное распределение ресурсов и автоматическая отчетность для руководства.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function redirectToSubdomain() {
+            const subdomain = document.querySelector('input[name="login_subdomain"]').value.trim();
+            if (subdomain) {
+                const currentHost = window.location.host;
+                window.location.href = window.location.protocol + '//' + subdomain + '.' + currentHost + '/login/';
+            } else {
+                alert('Пожалуйста, введите поддомен вашей организации.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const planSelect = document.getElementById('id_subscription_plan');
+            const planDetails = document.getElementById('plan-details');
+
+            function updatePlanDetails() {
+                const selected = planSelect.options[planSelect.selectedIndex];
+                if (selected && selected.value) {
+                    const users = selected.getAttribute('data-users');
+                    const storage = selected.getAttribute('data-storage');
+                    const days = selected.getAttribute('data-days');
+                    const mobile = selected.getAttribute('data-mobile');
+                    
+                    planDetails.innerHTML = `<i class="bi bi-info-circle me-1"></i> 
+                        ${users} пользователей, ${storage} ГБ диск, ${days} дней хранения, мобильное приложение: ${mobile}`;
+                } else {
+                    planDetails.innerHTML = '';
+                }
+            }
+
+            if (planSelect) {
+                planSelect.addEventListener('change', updatePlanDetails);
+            }
+
+            // Автоматическая подстановка тарифа из URL (?plan=ID)
+            const urlParams = new URLSearchParams(window.location.search);
+            const planId = urlParams.get('plan');
+            if (planId) {
+                if (planSelect) {
+                    planSelect.value = planId;
+                    updatePlanDetails(); // Обновляем детали сразу после подстановки
+                    // Прокрутка к форме, если выбран тариф
+                    const registerSection = document.getElementById('register');
+                    if (registerSection) {
+                        registerSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            }
+        });
+
+        // Скролл-эффект для карусели
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY;
+            const carousel = document.querySelector('#heroCarousel');
+            const dimmer = document.querySelector('.scroll-dimmer');
+            const captions = document.querySelectorAll('.carousel-caption');
+            
+            if (carousel) {
+                const opacity = Math.min(scrolled / (window.innerHeight * 0.7), 1);
+                dimmer.style.opacity = opacity;
+                
+                captions.forEach(cap => {
+                    cap.style.opacity = 1 - (scrolled / 400);
+                });
+            }
+        });
+
+        // Обработка регистрации
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('regBtn');
+            const alert = document.getElementById('regAlert');
+            const formData = new FormData(e.target);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Создание...';
+            
+            try {
+                const response = await fetch('/register/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert.className = 'alert alert-success mt-4';
+                    alert.innerHTML = `<h4>Успех!</h4> Рабочее пространство создано. <br> 
+                                     Перейдите по ссылке: <a href="${data.tenant_url}" class="fw-bold">${data.tenant_url}</a>`;
+                    alert.classList.remove('d-none');
+                    e.target.reset();
+                } else {
+                    throw new Error(data.error || 'Ошибка при регистрации');
+                }
+            } catch (err) {
+                alert.className = 'alert alert-danger mt-4';
+                alert.textContent = err.message;
+                alert.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Создать рабочее пространство';
+            }
+        });
+    </script>
+{% endblock %}

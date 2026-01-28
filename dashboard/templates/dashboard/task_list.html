@@ -1,0 +1,246 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Задачи</h2>
+    <a href="{% url 'dashboard:task_create' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-plus-lg me-1"></i> Новая задача
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4" style="width: 40px;"></th>
+                        <th>Заголовок</th>
+                        <th>Статус</th>
+                        <th>Исполнитель</th>
+                        <th class="pe-4">Создано</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    {% for task in tasks %}
+                    <!-- Main Row -->
+                    <tr class="task-row cursor-pointer" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
+                        <td class="ps-4">
+                            <i class="bi bi-chevron-right chevron-icon transition-300"></i>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ task.title }}</div>
+                        </td>
+                        <td class="task-status-badge">
+                            {% if task.status == 'OPEN' %}
+                            <span class="badge bg-primary-soft text-primary border border-primary-subtle px-3 rounded-pill">Открыта</span>
+                            {% elif task.status == 'PAUSE' %}
+                            <span class="badge bg-warning-soft text-warning-emphasis border border-warning-subtle px-3 rounded-pill">Пауза</span>
+                            {% elif task.status == 'CONTINUE' %}
+                            <span class="badge bg-info-soft text-info-emphasis border border-info-subtle px-3 rounded-pill">В работе</span>
+                            {% elif task.status == 'IMPORTANT' %}
+                            <span class="badge bg-danger-soft text-danger border border-danger-subtle px-3 rounded-pill">Важно</span>
+                            {% elif task.status == 'CLOSE' %}
+                            <span class="badge bg-success-soft text-success border border-success-subtle px-3 rounded-pill">Закрыта</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                        <td class="pe-4 text-muted small">{{ task.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    
+                    <!-- Details Row (Accordion) -->
+                    <tr class="collapse-row">
+                        <td colspan="5" class="p-0 border-0">
+                            <div class="collapse" id="task-details-{{ task.id }}">
+                                <div class="p-4 bg-light-subtle border-bottom">
+                                    <div class="row">
+                                        <div class="col-lg-8">
+                                            <h6 class="text-muted small text-uppercase fw-bold mb-2">Описание</h6>
+                                            <div class="text-dark mb-4 lead-sm">{{ task.description|linebreaks|default:"Нет описания" }}</div>
+                                            
+                                            <!-- Task Control Buttons -->
+                                            <h6 class="text-muted small text-uppercase fw-bold mb-2">Управление статусом</h6>
+                                            <div class="task-controls d-flex flex-wrap gap-2 mb-4">
+                                                <button class="btn btn-white btn-sm btn-status border shadow-sm px-3" 
+                                                        data-task-id="{{ task.id }}" data-status="PAUSE">
+                                                    <i class="bi bi-pause-fill text-warning"></i> Пауза
+                                                </button>
+                                                <button class="btn btn-white btn-sm btn-status border shadow-sm px-3" 
+                                                        data-task-id="{{ task.id }}" data-status="CONTINUE">
+                                                    <i class="bi bi-play-fill text-info"></i> Работа
+                                                </button>
+                                                <button class="btn btn-white btn-sm btn-status border shadow-sm px-3" 
+                                                        data-task-id="{{ task.id }}" data-status="IMPORTANT">
+                                                    <i class="bi bi-exclamation-triangle text-danger"></i> Важно
+                                                </button>
+                                                <button class="btn btn-white btn-sm btn-status border shadow-sm px-3" 
+                                                        data-task-id="{{ task.id }}" data-status="CLOSE">
+                                                    <i class="bi bi-check-lg text-success"></i> Закрыть
+                                                </button>
+                                            </div>
+
+                                            <div class="d-flex align-items-center gap-3">
+                                                <a href="{% url 'dashboard:task_edit' task.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                                    <i class="bi bi-pencil-square me-1"></i> Редактировать
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                            <div class="col-lg-4 border-start-lg">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h6 class="text-muted small text-uppercase fw-bold mb-0">Этапы выполнения</h6>
+                                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" onclick="showAddStageForm({{ task.id }})">
+                                                        <i class="bi bi-plus-circle me-1"></i>Этап
+                                                    </button>
+                                                </div>
+
+                                                <div id="add-stage-form-{{ task.id }}" class="mb-3 d-none">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="text" class="form-control" placeholder="Название нового этапа..." id="new-stage-name-{{ task.id }}">
+                                                        <button class="btn btn-primary" onclick="addNewStage({{ task.id }})">Добавить</button>
+                                                        <button class="btn btn-outline-secondary" onclick="hideAddStageForm({{ task.id }})">✕</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="task-stages" id="task-stages-list-{{ task.id }}">
+                                                    {% for stage in task.stages.all %}
+                                                    <div class="stage-container mb-2">
+                                                        <div class="stage-item d-flex align-items-center p-2 rounded border bg-white shadow-sm {% if stage.is_worker_added %}border-info-subtle{% endif %}" 
+                                                             id="stage-{{ stage.id }}" 
+                                                             onclick="toggleStageForm({{ stage.id }})" 
+                                                             style="cursor: pointer;">
+                                                            <div class="stage-checkbox me-3" onclick="event.stopPropagation(); toggleStage({{ stage.id }})">
+                                                                {% if stage.is_completed %}
+                                                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                                                {% else %}
+                                                                <i class="bi bi-circle text-muted fs-5"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="stage-info flex-grow-1">
+                                                                <div class="{% if stage.is_completed %}text-decoration-line-through text-muted{% endif %} fw-medium small">
+                                                                    {{ stage.name }}
+                                                                    {% if stage.is_worker_added %}
+                                                                    <span class="badge bg-info-soft text-info ultra-small ms-1">Сотрудник</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div class="text-muted ultra-small d-flex align-items-center gap-2">
+                                                                    <span><i class="bi bi-clock me-1"></i>{{ stage.duration_minutes }} мин.</span>
+                                                                    <span class="stage-status-label-{{ stage.id }} badge {% if stage.status == 'COMPLETED' %}bg-success-soft text-success{% elif stage.status == 'IN_PROGRESS' %}bg-primary-soft text-primary{% elif stage.status == 'FAILED' %}bg-danger-soft text-danger{% else %}bg-light text-muted{% endif %} px-2">
+                                                                        {{ stage.get_status_display }}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="ms-2 text-muted">
+                                                                <i class="bi bi-chevron-down small opacity-50"></i>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Stage Detail Form (Hidden by default) -->
+                                                        <div id="stage-form-{{ stage.id }}" class="stage-detail-form d-none p-3 border border-top-0 rounded-bottom bg-white shadow-sm mt-n1">
+                                                            <h6 class="ultra-small text-uppercase fw-bold text-muted mb-3">Управление этапом</h6>
+                                                            
+                                                            <div class="mb-3">
+                                                                <label class="ultra-small fw-bold text-muted d-block mb-2">Статус этапа</label>
+                                                                <div class="d-flex flex-wrap gap-2">
+                                                                    <button onclick="updateStageStatus({{ stage.id }}, 'PENDING')" class="btn btn-outline-secondary btn-xs status-btn-PENDING-{{ stage.id }} {% if stage.status == 'PENDING' %}active{% endif %}">В планах</button>
+                                                                    <button onclick="updateStageStatus({{ stage.id }}, 'IN_PROGRESS')" class="btn btn-outline-primary btn-xs status-btn-IN_PROGRESS-{{ stage.id }} {% if stage.status == 'IN_PROGRESS' %}active{% endif %}">В работе</button>
+                                                                    <button onclick="updateStageStatus({{ stage.id }}, 'COMPLETED')" class="btn btn-outline-success btn-xs status-btn-COMPLETED-{{ stage.id }} {% if stage.status == 'COMPLETED' %}active{% endif %}">Завершен</button>
+                                                                    <button onclick="updateStageStatus({{ stage.id }}, 'FAILED')" class="btn btn-outline-danger btn-xs status-btn-FAILED-{{ stage.id }} {% if stage.status == 'FAILED' %}active{% endif %}">Проблема</button>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Stage Media Files -->
+                                                            <div class="mb-3">
+                                                                <label class="ultra-small fw-bold text-muted d-block mb-2">Файлы этапа</label>
+                                                                <div class="d-flex flex-wrap gap-2" id="stage-media-list-{{ stage.id }}">
+                                                                    {% for media in stage.media.all %}
+                                                                    <div class="media-preview-container position-relative">
+                                                                        <a href="{{ media.file.url }}" target="_blank" class="d-block border rounded overflow-hidden shadow-sm hover-opacity transition-200" title="{{ media.title }}">
+                                                                            {% if ".mp4" in media.file.name or ".mov" in media.file.name or ".avi" in media.file.name %}
+                                                                                <div class="bg-dark d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                                                    <i class="bi bi-play-btn-fill text-white fs-4"></i>
+                                                                                </div>
+                                                                            {% else %}
+                                                                                <img src="{{ media.file.url }}" alt="{{ media.title }}" style="width: 60px; height: 60px; object-fit: cover;">
+                                                                            {% endif %}
+                                                                        </a>
+                                                                    </div>
+                                                                    {% empty %}
+                                                                    <div class="text-muted small italic opacity-50 py-2 no-media-text-{{ stage.id }}">Нет файлов</div>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="d-flex gap-2">
+                                                                <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1" 
+                                                                        onclick="triggerMediaUpload({{ stage.id }}, 'image/*')">
+                                                                    <i class="bi bi-camera me-1"></i> Фото
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger flex-grow-1" 
+                                                                        onclick="triggerMediaUpload({{ stage.id }}, 'video/*')">
+                                                                    <i class="bi bi-video me-1"></i> Видео
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-clipboard-x display-1 opacity-10 d-block mb-3"></i>
+                            Задач пока нет
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .transition-300 { transition: all 0.3s ease; }
+    .task-row[aria-expanded="true"] .chevron-icon {
+        transform: rotate(90deg);
+        color: var(--bs-primary);
+    }
+    .task-row:hover { background-color: rgba(var(--bs-primary-rgb), 0.02) !important; }
+    .ultra-small { font-size: 0.7rem; }
+    .lead-sm { font-size: 0.95rem; line-height: 1.6; }
+    .btn-white { background: #fff; border-color: #dee2e6; }
+    .btn-white:hover { background: #f8f9fa; border-color: #c1c9d0; }
+    
+    .hover-opacity:hover { opacity: 0.8; }
+    .transition-200 { transition: all 0.2s ease; }
+    .media-preview-container img, .media-preview-container div {
+        border: 1px solid #eee;
+    }
+    
+    @media (min-width: 992px) {
+        .border-start-lg { border-left: 1px solid #dee2e6 !important; }
+    }
+</style>
+
+
+{% if is_paginated %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

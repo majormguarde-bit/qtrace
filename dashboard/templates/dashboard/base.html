@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Панель управления{% endblock %} - Q-TRACE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+        }
+        .sidebar-link {
+            color: rgba(255, 255, 255, .8);
+            text-decoration: none;
+            padding: 10px 20px;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font-size: 1rem;
+        }
+        .sidebar-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, .1);
+        }
+        .sidebar-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        
+        /* Task & Stage styles */
+        .stage-item { transition: all 0.2s; border-radius: 8px; }
+        .stage-item:hover { background-color: rgba(0,0,0,0.05); }
+        .stage-item:active { background-color: rgba(0,0,0,0.1) !important; }
+        .btn-status { border-radius: 8px; font-weight: 500; transition: all 0.2s; }
+        .bg-light-hover:hover { background-color: #f8f9fa; }
+
+        /* Soft Badges */
+        .bg-primary-soft { background-color: rgba(13, 110, 253, 0.1); }
+        .bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+        .bg-info-soft { background-color: rgba(13, 202, 240, 0.1); }
+        .bg-danger-soft { background-color: rgba(220, 53, 69, 0.1); }
+        .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+        
+        .btn-xs {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+        }
+        .ultra-small { font-size: 0.7rem; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar d-none d-md-block">
+                <div class="text-center mb-4 px-2">
+                    <a class="navbar-brand d-flex align-items-center justify-content-center text-white text-decoration-none mb-3" href="{% url 'dashboard:home' %}">
+                        <i class="bi bi-intersect me-2 text-primary fs-4"></i>
+                        <span class="fw-bold fs-5">Q-TRACE</span>
+                    </a>
+
+                    <div class="text-start bg-dark bg-opacity-50 p-3 rounded-3 border border-secondary border-opacity-25">
+                        <div class="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                            <small class="text-white-50 d-block text-uppercase" style="font-size: 0.7rem;">Предприятие</small>
+                            <div class="fw-bold text-truncate text-white" title="{{ request.tenant.name }}">
+                                {{ request.tenant.name|default:"Система" }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <small class="text-white-50 d-block text-uppercase" style="font-size: 0.7rem;">Пользователь</small>
+                            <div class="fw-bold text-truncate text-white mb-2" title="{{ request.user.get_full_name|default:request.user.username }}">
+                                {{ request.user.get_full_name|default:request.user.username }}
+                            </div>
+                            
+                            <div class="badge bg-secondary text-white border border-light border-opacity-25 rounded-pill fw-normal px-2 py-1">
+                                {% if request.user.is_superuser %}
+                                    {% if request.user.profile %}
+                                        {{ request.user.profile.get_role_display }}
+                                    {% else %}
+                                        Суперпользователь
+                                    {% endif %}
+                                {% else %}
+                                    {% if request.user.is_staff %}
+                                        Администратор
+                                    {% else %}
+                                        {% if request.user.position %}
+                                            {{ request.user.position.name }}
+                                        {% else %}
+                                            {% if request.user.role == 'WORKER' %}
+                                                Сотрудник
+                                            {% else %}
+                                                {{ request.user.get_role_display|default:"Сотрудник" }}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <nav>
+                    <a href="{% url 'dashboard:home' %}" class="sidebar-link {% if request.resolver_match.view_name == 'dashboard:home' %}active{% endif %}">
+                        <i class="bi bi-speedometer2 me-2"></i> Главная
+                    </a>
+                    <a href="{% url 'dashboard:task_list' %}" class="sidebar-link">
+                        <i class="bi bi-list-check me-2"></i> Задачи
+                    </a>
+                    <a href="{% url 'dashboard:media_list' %}" class="sidebar-link {% if 'media' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-folder me-2"></i> Файлы
+                    </a>
+                    <a href="{% url 'dashboard:help' %}" class="sidebar-link {% if request.resolver_match.view_name == 'dashboard:help' %}active{% endif %}">
+                        <i class="bi bi-question-circle me-2"></i> Помощь
+                    </a>
+
+                    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+                    <a href="{% url 'dashboard:employee_list' %}" class="sidebar-link {% if 'employee' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-people me-2"></i> Сотрудники
+                    </a>
+                    <a href="{% url 'dashboard:department_list' %}" class="sidebar-link {% if 'department' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-diagram-3 me-2"></i> Подразделения
+                    </a>
+                    <a href="{% url 'dashboard:position_list' %}" class="sidebar-link {% if 'position' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-briefcase me-2"></i> Должности
+                    </a>
+                    {% endif %}
+                    
+                    {% if request.user.is_superuser %}
+                    <hr>
+                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
+                    <a href="/admin/" target="_blank" class="sidebar-link">
+                        <i class="bi bi-database-fill me-2"></i> Вход в базу
+                    </a>
+                    {% endif %}
+                    
+                    <hr>
+                    <form action="{% url 'dashboard:logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="sidebar-link">
+                            <i class="bi bi-box-arrow-right me-2"></i> Выход
+                        </button>
+                    </form>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <!-- Mobile Toggle -->
+                <div class="d-md-none mb-3">
+                    <button class="btn btn-dark" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile">
+                        <i class="bi bi-list"></i> Меню
+                    </button>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Offcanvas -->
+    <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="sidebarMobile">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">
+                <i class="bi bi-intersect me-2 text-primary"></i>
+                Q-TRACE
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <nav class="nav flex-column">
+                <a href="{% url 'dashboard:home' %}" class="nav-link text-white">Главная</a>
+                <a href="{% url 'dashboard:task_list' %}" class="nav-link text-white">Задачи</a>
+                <a href="{% url 'dashboard:media_list' %}" class="nav-link text-white">Файлы</a>
+                <a href="{% url 'dashboard:help' %}" class="nav-link text-white">Помощь</a>
+                {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+                <a href="{% url 'dashboard:employee_list' %}" class="nav-link text-white">Сотрудники</a>
+                <a href="{% url 'dashboard:department_list' %}" class="nav-link text-white">Подразделения</a>
+                <a href="{% url 'dashboard:position_list' %}" class="nav-link text-white">Должности</a>
+                {% endif %}
+                {% if request.user.is_superuser %}
+                <hr>
+                <a href="/admin/" class="nav-link text-white" target="_blank">Вход в базу</a>
+                {% endif %}
+                <form action="{% url 'dashboard:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link text-white bg-transparent border-0 w-100 text-start">Выход</button>
+                </form>
+            </nav>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% include 'ai_app/ai_widget.html' %}
+    <script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function toggleStage(stageId) {
+        const url = `/dashboard/stages/${stageId}/toggle-ajax/`;
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const stageElements = document.querySelectorAll(`[id="stage-${stageId}"]`);
+                stageElements.forEach(stageElement => {
+                    const checkbox = stageElement.querySelector('.stage-checkbox i');
+                    const text = stageElement.querySelector('.stage-info .fw-medium');
+                    
+                    if (data.is_completed) {
+                        checkbox.className = 'bi bi-check-circle-fill text-success fs-5';
+                        if (text) text.classList.add('text-decoration-line-through', 'text-muted');
+                    } else {
+                        checkbox.className = 'bi bi-circle fs-5 text-muted';
+                        if (text) text.classList.remove('text-decoration-line-through', 'text-muted');
+                    }
+
+                    // Update status label and buttons if the detail form is open
+                    const label = document.querySelector(`.stage-status-label-${stageId}`);
+                    if (label) {
+                        label.innerText = data.stage_status_display;
+                        label.className = `stage-status-label-${stageId} badge px-2 `;
+                        if (data.stage_status === 'COMPLETED') label.classList.add('bg-success-soft', 'text-success');
+                        else if (data.stage_status === 'IN_PROGRESS') label.classList.add('bg-primary-soft', 'text-primary');
+                        else if (data.stage_status === 'FAILED') label.classList.add('bg-danger-soft', 'text-danger');
+                        else label.classList.add('bg-light', 'text-muted');
+                    }
+
+                    const buttons = document.querySelectorAll(`.status-btn-PENDING-${stageId}, .status-btn-IN_PROGRESS-${stageId}, .status-btn-COMPLETED-${stageId}, .status-btn-FAILED-${stageId}`);
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    const activeBtn = document.querySelector(`.status-btn-${data.stage_status}-${stageId}`);
+                    if (activeBtn) activeBtn.classList.add('active');
+                    
+                    // Update task status badge if needed
+                    updateTaskBadges(stageId, data);
+                });
+            }
+        });
+    }
+
+    function showAddStageForm(taskId) {
+        document.getElementById(`add-stage-form-${taskId}`).classList.remove('d-none');
+    }
+
+    function hideAddStageForm(taskId) {
+        document.getElementById(`add-stage-form-${taskId}`).classList.add('d-none');
+        document.getElementById(`new-stage-name-${taskId}`).value = '';
+    }
+
+    function addNewStage(taskId) {
+        const nameInput = document.getElementById(`new-stage-name-${taskId}`);
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        const url = `/dashboard/tasks/${taskId}/stages/create-ajax/`;
+        const formData = new FormData();
+        formData.append('name', name);
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        });
+    }
+
+    function toggleStageForm(stageId) {
+        const form = document.getElementById(`stage-form-${stageId}`);
+        const allForms = document.querySelectorAll('.stage-detail-form');
+        
+        // Hide others
+        allForms.forEach(f => {
+            if (f.id !== `stage-form-${stageId}`) f.classList.add('d-none');
+        });
+        
+        // Toggle current
+        form.classList.toggle('d-none');
+        
+        // Rotate chevron
+        const stageItem = document.getElementById(`stage-${stageId}`);
+        const chevron = stageItem.querySelector('.bi-chevron-down');
+        if (form.classList.contains('d-none')) {
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    function updateStageStatus(stageId, status) {
+        const url = `/dashboard/stages/${stageId}/status-update-ajax/`;
+        const formData = new FormData();
+        formData.append('status', status);
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update status label
+                const label = document.querySelector(`.stage-status-label-${stageId}`);
+                if (label) {
+                    label.innerText = data.stage_status_display;
+                    label.className = `stage-status-label-${stageId} badge px-2 `;
+                    if (data.stage_status === 'COMPLETED') label.classList.add('bg-success-soft', 'text-success');
+                    else if (data.stage_status === 'IN_PROGRESS') label.classList.add('bg-primary-soft', 'text-primary');
+                    else if (data.stage_status === 'FAILED') label.classList.add('bg-danger-soft', 'text-danger');
+                    else label.classList.add('bg-light', 'text-muted');
+                }
+
+                // Update active button
+                const buttons = document.querySelectorAll(`.status-btn-PENDING-${stageId}, .status-btn-IN_PROGRESS-${stageId}, .status-btn-COMPLETED-${stageId}, .status-btn-FAILED-${stageId}`);
+                buttons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.querySelector(`.status-btn-${status}-${stageId}`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Update checkbox and text if completed
+                const stageItem = document.getElementById(`stage-${stageId}`);
+                if (stageItem) {
+                    const checkbox = stageItem.querySelector('.stage-checkbox i');
+                    const text = stageItem.querySelector('.stage-info .fw-medium');
+                    if (data.is_completed) {
+                        checkbox.className = 'bi bi-check-circle-fill text-success fs-5';
+                        text.classList.add('text-decoration-line-through', 'text-muted');
+                    } else {
+                        checkbox.className = 'bi bi-circle text-muted fs-5';
+                        text.classList.remove('text-decoration-line-through', 'text-muted');
+                    }
+                }
+                
+                // Update task status if it changed
+                updateTaskBadges(stageId, data);
+            }
+        });
+    }
+
+    function updateTaskBadges(stageId, data) {
+        const stageElement = document.getElementById(`stage-${stageId}`);
+        if (!stageElement) return;
+        
+        const taskRow = stageElement.closest('tr').previousElementSibling;
+        if (taskRow && taskRow.classList.contains('task-row')) {
+            const badge = taskRow.querySelector('.task-status-badge .badge');
+            if (badge) {
+                const colors = {
+                    'OPEN': 'bg-primary-soft text-primary border border-primary-subtle',
+                    'PAUSE': 'bg-warning-soft text-warning-emphasis border border-warning-subtle',
+                    'CONTINUE': 'bg-info-soft text-info-emphasis border border-info-subtle',
+                    'IMPORTANT': 'bg-danger-soft text-danger border border-danger-subtle',
+                    'CLOSE': 'bg-success-soft text-success border border-success-subtle'
+                };
+                badge.className = `badge ${colors[data.task_status]} px-3 rounded-pill`;
+                
+                // Display text map
+                const displays = {
+                    'OPEN': 'Открыта',
+                    'PAUSE': 'Пауза',
+                    'CONTINUE': 'В работе',
+                    'IMPORTANT': 'Важно',
+                    'CLOSE': 'Закрыта'
+                };
+                badge.innerText = displays[data.task_status] || data.task_status;
+            }
+        }
+    }
+
+    // Media Upload Logic
+    let currentStageId = null;
+    const mediaInput = document.createElement('input');
+    mediaInput.type = 'file';
+    mediaInput.style.display = 'none';
+    document.body.appendChild(mediaInput);
+
+    function triggerMediaUpload(stageId, accept) {
+        currentStageId = stageId;
+        mediaInput.accept = accept;
+        if (accept.includes('video')) {
+            mediaInput.setAttribute('capture', 'environment');
+        } else {
+            mediaInput.removeAttribute('capture');
+        }
+        mediaInput.click();
+    }
+
+    mediaInput.addEventListener('change', function() {
+        if (!this.files.length || !currentStageId) return;
+        
+        const file = this.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const url = `/dashboard/stages/${currentStageId}/media-upload-ajax/`;
+        
+        const stageItem = document.getElementById(`stage-${currentStageId}`);
+        if (stageItem) stageItem.style.opacity = '0.5';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (stageItem) stageItem.style.opacity = '1';
+            if (data.status === 'success') {
+                // Добавляем превью нового файла в список
+                const mediaList = document.getElementById(`stage-media-list-${currentStageId}`);
+                if (mediaList) {
+                    // Убираем текст "Нет файлов", если он есть
+                    const noMediaText = mediaList.querySelector(`.no-media-text-${currentStageId}`);
+                    if (noMediaText) noMediaText.remove();
+
+                    const isVideo = data.media_url.match(/\.(mp4|mov|avi)$/i);
+                    const mediaHtml = `
+                        <div class="media-preview-container position-relative">
+                            <a href="${data.media_url}" target="_blank" class="d-block border rounded overflow-hidden shadow-sm hover-opacity transition-200" title="${data.media_title}">
+                                ${isVideo ? `
+                                    <div class="bg-dark d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-play-btn-fill text-white fs-4"></i>
+                                    </div>
+                                ` : `
+                                    <img src="${data.media_url}" alt="${data.media_title}" style="width: 60px; height: 60px; object-fit: cover;">
+                                `}
+                            </a>
+                        </div>
+                    `;
+                    mediaList.insertAdjacentHTML('beforeend', mediaHtml);
+                }
+
+                // Показываем уведомление
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.style.zIndex = '1050';
+                toast.innerHTML = `
+                    <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="bi bi-check-circle me-2"></i> Файл "${data.media_title}" загружен
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            } else {
+                alert('Ошибка загрузки: ' + (data.message || 'Неизвестная ошибка'));
+            }
+            this.value = '';
+        })
+        .catch(error => {
+            if (stageItem) stageItem.style.opacity = '1';
+            alert('Ошибка сети: ' + error);
+            this.value = '';
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-status')) {
+            const btn = e.target.closest('.btn-status');
+            const taskId = btn.dataset.taskId;
+            const status = btn.dataset.status;
+            const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
+            
+            const formData = new FormData();
+            formData.append('status', status);
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update all possible elements (list and detail views)
+                    const taskStatusBadges = document.querySelectorAll(`.task-status-badge[data-task-id="${taskId}"], tr:has([data-task-id="${taskId}"]) .task-status-badge, #task-details-${taskId} .task-status-badge`);
+                    
+                    // Special handling for the new table structure
+                    const detailRow = document.getElementById(`task-details-${taskId}`)?.closest('tr');
+                    const mainRow = detailRow?.previousElementSibling;
+                    const badgesToUpdate = [];
+                    
+                    if (mainRow && mainRow.classList.contains('task-row')) {
+                        const b = mainRow.querySelector('.task-status-badge .badge');
+                        if (b) badgesToUpdate.push(b);
+                    }
+                    
+                    // Fallback for home page and other views
+                    document.querySelectorAll(`#task-${taskId} .task-status-badge .badge`).forEach(b => badgesToUpdate.push(b));
+
+                    const colors = {
+                        'OPEN': 'bg-primary-soft text-primary border border-primary-subtle',
+                        'PAUSE': 'bg-warning-soft text-warning-emphasis border border-warning-subtle',
+                        'CONTINUE': 'bg-info-soft text-info-emphasis border border-info-subtle',
+                        'IMPORTANT': 'bg-danger-soft text-danger border border-danger-subtle',
+                        'CLOSE': 'bg-success-soft text-success border border-success-subtle'
+                    };
+
+                    badgesToUpdate.forEach(badge => {
+                        badge.innerText = data.task_status_display;
+                        badge.className = `badge ${colors[data.task_status]} px-3 rounded-pill`;
+                    });
+                }
+            });
+        }
+    });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

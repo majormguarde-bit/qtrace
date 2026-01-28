@@ -1,0 +1,429 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">Панель управления</h2>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Stats Cards -->
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:task_list' %}" class="text-decoration-none">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">{% if user_role == 'ADMIN' %}Задачи предприятия{% else %}Мои задачи{% endif %}</h6>
+                            <h2 class="display-5 mb-0">{{ tasks_count }}</h2>
+                        </div>
+                        <i class="bi bi-list-check fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small opacity-75">
+                            <span>Подписка активна</span>
+                            <span>{% if subscription_end_date %}{{ subscription_end_date|date:"d.m.Y" }}{% else %}Бессрочно{% endif %}</span>
+                        </div>
+                        {% if days_left is not none %}
+                        <div class="small mt-1 {% if days_left < 7 %}text-warning fw-bold{% endif %}">
+                            Осталось дней: {{ days_left }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:media_list' %}" class="text-decoration-none">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">{% if user_role == 'ADMIN' %}Медиатека предприятия{% else %}Мои файлы{% endif %}</h6>
+                            <h2 class="display-5 mb-0">{{ media_count }}</h2>
+                        </div>
+                        <i class="bi bi-folder fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Хранилище</span>
+                            <span>{{ storage_used_mb }} МБ / {{ storage_limit_gb }} ГБ</span>
+                        </div>
+                        <div class="progress" style="height: 5px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ storage_percent }}%" aria-valuenow="{{ storage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+
+    {% if user_role == 'ADMIN' %}
+    <div class="col-md-4">
+        <a href="{% url 'dashboard:employee_list' %}" class="text-decoration-none">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="card-title mb-0">Сотрудники</h6>
+                            <h2 class="display-5 mb-0">{{ employees_count }}</h2>
+                        </div>
+                        <i class="bi bi-people fs-1 opacity-50"></i>
+                    </div>
+                    {% if tenant.subscription_plan %}
+                    <div class="mt-2 pt-2 border-top border-white border-opacity-25">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Лимит аккаунтов</span>
+                            <span>{{ employees_count }} / {{ users_limit }}</span>
+                        </div>
+                        <div class="progress" style="height: 5px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ users_percent }}%" aria-valuenow="{{ users_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Kanban Board -->
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0">Канбан-доска задач</h3>
+            <a href="{% url 'dashboard:task_create' %}" class="btn btn-primary btn-sm rounded-pill px-3">
+                <i class="bi bi-plus-lg me-1"></i> Новая задача
+            </a>
+        </div>
+        
+        <div class="kanban-container pb-4">
+            <div class="kanban-board d-flex gap-4 overflow-auto">
+                <!-- OPEN / IMPORTANT -->
+                <div class="kanban-column bg-light-subtle rounded-4 border p-3" style="min-width: 300px; max-width: 350px;">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-primary me-2">{{ kanban_tasks.OPEN.count|add:kanban_tasks.IMPORTANT.count }}</span>
+                        <h6 class="fw-bold mb-0 text-uppercase small text-muted">К выполнению</h6>
+                    </div>
+                    <div class="kanban-tasks-list d-flex flex-column gap-3" id="tasks-todo" data-status="OPEN">
+                        {% for task in kanban_tasks.IMPORTANT %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% endfor %}
+                        {% for task in kanban_tasks.OPEN %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- CONTINUE -->
+                <div class="kanban-column bg-light-subtle rounded-4 border p-3" style="min-width: 300px; max-width: 350px;">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-info me-2">{{ kanban_tasks.CONTINUE.count }}</span>
+                        <h6 class="fw-bold mb-0 text-uppercase small text-muted">В работе</h6>
+                    </div>
+                    <div class="kanban-tasks-list d-flex flex-column gap-3" id="tasks-inprogress" data-status="CONTINUE">
+                        {% for task in kanban_tasks.CONTINUE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PAUSE -->
+                <div class="kanban-column bg-light-subtle rounded-4 border p-3" style="min-width: 300px; max-width: 350px;">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-warning me-2">{{ kanban_tasks.PAUSE.count }}</span>
+                        <h6 class="fw-bold mb-0 text-uppercase small text-muted">На паузе</h6>
+                    </div>
+                    <div class="kanban-tasks-list d-flex flex-column gap-3" id="tasks-onhold" data-status="PAUSE">
+                        {% for task in kanban_tasks.PAUSE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- CLOSE -->
+                <div class="kanban-column bg-light-subtle rounded-4 border p-3" style="min-width: 300px; max-width: 350px;">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-success me-2">{{ kanban_tasks.CLOSE.count }}</span>
+                        <h6 class="fw-bold mb-0 text-uppercase small text-muted">Завершено</h6>
+                    </div>
+                    <div class="kanban-tasks-list d-flex flex-column gap-3" id="tasks-done" data-status="CLOSE">
+                        {% for task in kanban_tasks.CLOSE %}
+                            {% include 'dashboard/includes/kanban_card.html' with task=task %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">Текущие задачи</h5>
+                <a href="{% url 'dashboard:task_list' %}" class="btn btn-sm btn-outline-primary">Все задачи</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4" style="width: 40px;"></th>
+                                <th>Задача</th>
+                                <th>Статус</th>
+                                <th class="pe-4 text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for task in recent_tasks %}
+                            <!-- Main Row -->
+                            <tr class="task-row cursor-pointer" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
+                                <td class="ps-4">
+                                    <i class="bi bi-chevron-right chevron-icon transition-300"></i>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ task.title }}</div>
+                                    <div class="text-muted small text-truncate" style="max-width: 250px;">{{ task.description|truncatechars:50 }}</div>
+                                </td>
+                                <td class="task-status-badge">
+                                    {% if task.status == 'OPEN' %}
+                                    <span class="badge bg-primary-soft text-primary border border-primary-subtle px-3 rounded-pill">Открыта</span>
+                                    {% elif task.status == 'PAUSE' %}
+                                    <span class="badge bg-warning-soft text-warning-emphasis border border-warning-subtle px-3 rounded-pill">Пауза</span>
+                                    {% elif task.status == 'CONTINUE' %}
+                                    <span class="badge bg-info-soft text-info-emphasis border border-info-subtle px-3 rounded-pill">В работе</span>
+                                    {% elif task.status == 'IMPORTANT' %}
+                                    <span class="badge bg-danger-soft text-danger border border-danger-subtle px-3 rounded-pill">Важно</span>
+                                    {% elif task.status == 'CLOSE' %}
+                                    <span class="badge bg-success-soft text-success border border-success-subtle px-3 rounded-pill">Закрыта</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pe-4 text-end">
+                                    <span class="text-muted small">{{ task.created_at|date:"d.m" }}</span>
+                                </td>
+                            </tr>
+                            
+                            <!-- Details Row (Accordion) -->
+                            <tr class="collapse-row">
+                                <td colspan="4" class="p-0 border-0">
+                                    <div class="collapse" id="task-details-{{ task.id }}">
+                                        <div class="p-4 bg-light-subtle border-bottom">
+                                            <div class="row">
+                                                <div class="col-lg-7">
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-2">Описание</h6>
+                                                    <div class="text-dark mb-4 small">{{ task.description|linebreaks|default:"Нет описания" }}</div>
+                                                    
+                                                    <!-- Task Control Buttons -->
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-2">Управление</h6>
+                                                    <div class="task-controls d-flex flex-wrap gap-2">
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="PAUSE">
+                                                            <i class="bi bi-pause-fill text-warning"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="CONTINUE">
+                                                            <i class="bi bi-play-fill text-info"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="IMPORTANT">
+                                                            <i class="bi bi-exclamation-triangle text-danger"></i>
+                                                        </button>
+                                                        <button class="btn btn-white btn-sm btn-status border shadow-sm px-2 py-1" 
+                                                                data-task-id="{{ task.id }}" data-status="CLOSE">
+                                                            <i class="bi bi-check-lg text-success"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-lg-5 border-start">
+                                                    {% if task.stages.all %}
+                                                    <h6 class="text-muted ultra-small text-uppercase fw-bold mb-3">Этапы</h6>
+                                                    <div class="task-stages">
+                                                        {% for stage in task.stages.all %}
+                                                        <div class="stage-item d-flex align-items-center p-2 mb-2 rounded border bg-white shadow-sm" 
+                                                             id="stage-{{ stage.id }}" 
+                                                             onclick="toggleStage({{ stage.id }})" 
+                                                             style="cursor: pointer;">
+                                                            <div class="stage-checkbox me-2">
+                                                                {% if stage.is_completed %}
+                                                                <i class="bi bi-check-circle-fill text-success small"></i>
+                                                                {% else %}
+                                                                <i class="bi bi-circle text-muted small"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="stage-info flex-grow-1">
+                                                                <div class="{% if stage.is_completed %}text-decoration-line-through text-muted{% endif %} ultra-small fw-medium">
+                                                                    {{ stage.name }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="stage-fixation-actions d-flex gap-1 ms-1">
+                                                                <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1" 
+                                                                        onclick="event.stopPropagation(); triggerMediaUpload({{ stage.id }}, 'image/*')" 
+                                                                        title="Фотофиксация">
+                                                                    <i class="bi bi-camera text-primary ultra-small"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1" 
+                                                                        onclick="event.stopPropagation(); triggerMediaUpload({{ stage.id }}, 'video/*')" 
+                                                                        title="Видеофиксация">
+                                                                    <i class="bi bi-video text-danger ultra-small"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-clipboard-x display-4 d-block mb-3"></i>
+                    Нет активных задач
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .transition-300 { transition: all 0.3s ease; }
+    .task-row[aria-expanded="true"] .chevron-icon {
+        transform: rotate(90deg);
+        color: var(--bs-primary);
+    }
+    .task-row:hover { background-color: rgba(var(--bs-primary-rgb), 0.02) !important; }
+    .ultra-small { font-size: 0.7rem; }
+    .btn-white { background: #fff; border-color: #dee2e6; }
+    .btn-white:hover { background: #f8f9fa; border-color: #c1c9d0; }
+    
+    .kanban-container {
+        overflow-x: auto;
+    }
+    .kanban-board {
+        min-height: 500px;
+    }
+    .kanban-column {
+        transition: background-color 0.2s;
+    }
+    .kanban-column.sortable-ghost {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+        border-color: #0d6efd !important;
+    }
+    .kanban-tasks-list {
+        min-height: 400px;
+    }
+    .sortable-drag {
+        opacity: 0;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const columns = document.querySelectorAll('.kanban-tasks-list');
+    
+    columns.forEach(column => {
+        new Sortable(column, {
+            group: 'kanban',
+            animation: 150,
+            ghostClass: 'bg-light',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.dataset.status;
+                const oldStatus = evt.from.dataset.status;
+                
+                if (newStatus !== oldStatus) {
+                    updateTaskStatus(taskId, newStatus, evt.item);
+                }
+            }
+        });
+    });
+
+    function updateTaskStatus(taskId, status, item) {
+        const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
+        const formData = new FormData();
+        formData.append('status', status);
+        
+        // Показываем индикатор загрузки на карточке
+        item.style.opacity = '0.5';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            item.style.opacity = '1';
+            if (data.status === 'success') {
+                // Обновляем бейдж статуса на карточке
+                const badge = item.querySelector('.badge');
+                if (badge) {
+                    badge.innerText = data.task_status_display;
+                    
+                    // Обновляем цвет бейджа
+                    const colors = {
+                        'OPEN': 'bg-primary',
+                        'PAUSE': 'bg-warning',
+                        'CONTINUE': 'bg-info',
+                        'IMPORTANT': 'bg-danger',
+                        'CLOSE': 'bg-success'
+                    };
+                    
+                    badge.className = `badge ${colors[data.task_status]} rounded-pill small`;
+                }
+                
+                // Обновляем счетчики колонок
+                updateColumnCounters();
+            } else {
+                alert('Ошибка при обновлении статуса: ' + (data.errors ? JSON.stringify(data.errors) : 'Неизвестная ошибка'));
+                location.reload(); // Перезагружаем страницу в случае ошибки, чтобы вернуть карточку на место
+            }
+        })
+        .catch(error => {
+            item.style.opacity = '1';
+            console.error('Error:', error);
+            alert('Ошибка сети при обновлении статуса');
+            location.reload();
+        });
+    }
+
+    function updateColumnCounters() {
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            const count = column.querySelectorAll('.kanban-card').length;
+            const badge = column.querySelector('.badge');
+            if (badge) {
+                badge.innerText = count;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

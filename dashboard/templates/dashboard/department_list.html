@@ -1,0 +1,77 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Структура подразделений{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-diagram-3 me-2"></i> Структура подразделений</h2>
+    <a href="{% url 'dashboard:department_create' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-plus-lg me-1"></i> Добавить подразделение
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="department-tree">
+            {% for dept in departments %}
+                {% with department=dept level=0 %}
+                    {% include 'dashboard/includes/department_node.html' %}
+                {% endwith %}
+            {% empty %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-diagram-3 display-4 d-block mb-3 opacity-25"></i>
+                    Структура организации еще не создана
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .dept-node {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .dept-node::before {
+        content: "";
+        position: absolute;
+        left: 0.75rem;
+        top: -0.5rem;
+        bottom: 50%;
+        width: 1px;
+        background: #dee2e6;
+    }
+    .dept-node::after {
+        content: "";
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        width: 1rem;
+        height: 1px;
+        background: #dee2e6;
+    }
+    .dept-root > .dept-node::before, 
+    .dept-root > .dept-node::after {
+        display: none;
+    }
+    .dept-root > .dept-node {
+        padding-left: 0;
+    }
+    .dept-card {
+        background: #fff;
+        border: 1px solid #f0f0f0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .dept-card:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}

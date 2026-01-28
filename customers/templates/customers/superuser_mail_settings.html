@@ -1,0 +1,111 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Настройки почты{% endblock %}
+{% block header_title %}Настройки почтового сервера{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-table shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-envelope-at me-2 text-primary"></i>Конфигурация SMTP</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">SMTP сервер</label>
+                            <input type="text" name="email_host" class="form-control" value="{{ settings.email_host }}" placeholder="например, smtp.gmail.com">
+                            <div class="form-text">Адрес вашего почтового сервера.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Порт</label>
+                            <input type="number" name="email_port" class="form-control" value="{{ settings.email_port }}" placeholder="587">
+                            <div class="form-text">Обычно 587 или 465.</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Пользователь (Email)</label>
+                            <input type="text" name="email_host_user" class="form-control" value="{{ settings.email_host_user }}" placeholder="user@example.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Пароль</label>
+                            <div class="input-group">
+                                <input type="password" name="email_host_password" id="smtpPassword" class="form-control" value="{{ settings.email_host_password }}">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
+                                    <i class="bi bi-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Email отправителя по умолчанию</label>
+                            <input type="email" name="default_from_email" class="form-control" value="{{ settings.default_from_email }}" placeholder="noreply@q-trace.ru">
+                            <div class="form-text">Будет отображаться в поле "От кого".</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="email_use_tls" id="useTLS" {% if settings.email_use_tls %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="useTLS">Использовать TLS</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="email_use_ssl" id="useSSL" {% if settings.email_use_ssl %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="useSSL">Использовать SSL</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 opacity-25">
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i> Эти настройки будут использоваться для всех системных уведомлений.
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-2"></i> Сохранить настройки
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Справка по настройке</h6>
+                <ul class="small text-muted ps-3 mb-0">
+                    <li class="mb-2">Для <b>Gmail</b> используйте smtp.gmail.com, порт 587 и включите TLS. Не забудьте создать "Пароль приложения".</li>
+                    <li class="mb-2">Для <b>Yandex</b> используйте smtp.yandex.ru, порт 465 и включите SSL.</li>
+                    <li class="mb-2">Для <b>Mail.ru</b> используйте smtp.mail.ru, порт 465 и включите SSL.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    const pwd = document.getElementById('smtpPassword');
+    const icon = document.getElementById('toggleIcon');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        pwd.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+}
+</script>
+{% endblock %}

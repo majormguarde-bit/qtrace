@@ -1,0 +1,132 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}{% if is_create %}Новый администратор{% else %}Редактирование администратора{% endif %} - Панель управления{% endblock %}
+{% block header_title %}{% if is_create %}Добавление нового администратора{% else %}Редактирование пользователя: {{ edit_user.username }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2 text-primary"></i>{% if is_create %}Новый профиль{% else %}Настройки профиля{% endif %}</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Имя пользователя (Login)</label>
+                            {% if is_create %}
+                            <input type="text" name="username" class="form-control" required placeholder="Например: admin_ivan">
+                            {% else %}
+                            <input type="text" class="form-control bg-light" value="{{ edit_user.username }}" readonly>
+                            <div class="form-text">Имя пользователя изменить нельзя.</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Email адрес</label>
+                            <input type="email" name="email" class="form-control" value="{{ edit_user.email }}" required placeholder="email@example.com">
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Имя</label>
+                            <input type="text" name="first_name" class="form-control" value="{{ edit_user.first_name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Фамилия</label>
+                            <input type="text" name="last_name" class="form-control" value="{{ edit_user.last_name }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Предприятие (Организация)</label>
+                        {% if is_tenant_user %}
+                        <input type="text" class="form-control bg-light" value="{{ tenant.name }} ({{ tenant.schema_name }})" readonly>
+                        <div class="form-text">Этот пользователь является локальным администратором данного предприятия.</div>
+                        {% else %}
+                        <select name="tenant" class="form-select">
+                            <option value="">-- Без привязки к предприятию --</option>
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant.id }}" {% if edit_user.profile.tenant_id == tenant.id %}selected{% endif %}>
+                                {{ tenant.name }} ({{ tenant.schema_name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Выберите предприятие, за которым закреплен данный администратор.</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4 opacity-25">
+
+                    <div class="mb-4">
+                        <label class="form-label fw-medium {% if is_create %}text-primary{% else %}text-danger{% endif %}"><i class="bi bi-key me-1"></i> {% if is_create %}Пароль{% else %}Смена пароля{% endif %}</label>
+                        <input type="password" name="password" class="form-control" {% if is_create %}required{% endif %} placeholder="{% if is_create %}Придумайте надежный пароль{% else %}Оставьте пустым, чтобы не менять{% endif %}">
+                        {% if not is_create %}<div class="form-text">Если вы хотите изменить пароль, введите новый здесь.</div>{% endif %}
+                    </div>
+
+                    {% if is_tenant_user %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Телефон</label>
+                            <input type="text" name="phone" class="form-control" value="{{ edit_user.phone }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Роль в системе</label>
+                            <select name="role" class="form-select">
+                                <option value="ADMIN" {% if edit_user.role == 'ADMIN' %}selected{% endif %}>Администратор</option>
+                                <option value="WORKER" {% if edit_user.role == 'WORKER' %}selected{% endif %}>Работник</option>
+                            </select>
+                            <div class="form-text">Внимание: при смене роли на "Работник", пользователь перестанет отображаться в этом списке.</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-4 opacity-25">
+
+                    <div class="mb-4">
+                        <label class="form-label d-block fw-medium mb-3">Права и статус</label>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-switch form-check-input" type="checkbox" name="is_active" id="isActive" {% if is_create or edit_user.is_active %}checked{% endif %} {% if not is_create and edit_user.username == 'admin' %}disabled{% endif %}>
+                            <label class="form-check-label" for="isActive">Активный аккаунт</label>
+                            <div class="small text-muted">Позволяет пользователю входить в систему.</div>
+                        </div>
+
+                        {% if not is_tenant_user %}
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-switch form-check-input" type="checkbox" name="is_superuser" id="isSuperuser" {% if edit_user.is_superuser %}checked{% endif %} {% if not is_create and edit_user.username == 'admin' %}disabled{% endif %}>
+                            <label class="form-check-label" for="isSuperuser">Суперпользователь (SuperUser)</label>
+                            <div class="small text-muted">Дает полный доступ ко всем функциям платформы.</div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-switch form-check-input" type="checkbox" name="is_staff" id="isStaff" {% if is_create or edit_user.is_staff %}checked{% endif %} {% if not is_create and edit_user.username == 'admin' %}disabled{% endif %}>
+                            <label class="form-check-label" for="isStaff">Доступ в админку (Admin)</label>
+                            <div class="small text-muted">Позволяет пользователю входить в стандартную административную панель.</div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-switch form-check-input" type="checkbox" name="can_delete_media" id="canDeleteMedia" {% if edit_user.profile.can_delete_media %}checked{% endif %}>
+                            <label class="form-check-label text-danger fw-bold" for="canDeleteMedia">Разрешить удаление файлов из медиатеки</label>
+                            <div class="small text-muted">Дает право удалять загруженные медиафайлы в рамках закрепленного предприятия.</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-5">
+                        <a href="{% url 'superuser_admins' %}" class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-arrow-left me-1"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary px-5">
+                            <i class="bi bi-check2-circle me-1"></i> {% if is_create %}Создать администратора{% else %}Сохранить изменения{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

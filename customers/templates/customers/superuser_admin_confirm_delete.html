@@ -1,0 +1,37 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Удаление администратора - Панель управления{% endblock %}
+{% block header_title %}Подтверждение удаления{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Вы уверены?</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="mb-4">
+                    Вы собираетесь удалить администратора <strong>{{ object.username }}</strong> 
+                    {% if tenant %}из предприятия <strong>{{ tenant.name }}</strong>{% else %}платформы{% endif %}.
+                </p>
+                <div class="alert alert-warning small">
+                    Это действие нельзя будет отменить. Пользователь потеряет доступ к системе.
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'superuser_admins' %}" class="btn btn-outline-secondary px-4">
+                            Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            Да, удалить пользователя
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

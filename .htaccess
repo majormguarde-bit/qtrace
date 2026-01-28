@@ -1,0 +1,17 @@
+SetHandler passenger-app
+<IfModule mod_passenger.c>
+	# Включаем Passenger
+	PassengerEnabled on
+
+	# Указываем корень приложения
+	PassengerAppRoot /home/s1147486/domains/qtrace.ru
+
+	# Указываем, что это Python-приложение
+	PassengerAppType python
+
+	# Файл, с которого всё начинается
+	PassengerStartupFile passenger_wsgi.py
+
+	# Путь к интерпретатору вашего виртуального окружения
+	PassengerPython /home/s1147486/domains/qtrace.ru/venv/bin/python
+</IfModule>

@@ -1,0 +1,163 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Настройки AI - Панель управления{% endblock %}
+{% block header_title %}Интеграция с Искусственным Интеллектом{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-robot text-primary me-2"></i>Глобальные параметры AI
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_enabled" id="is_enabled" {% if settings.is_enabled %}checked{% endif %}>
+                            <label class="form-check-label fw-bold" for="is_enabled">Включить функции AI на платформе</label>
+                        </div>
+                        <div class="small text-muted mt-1">При отключении все AI-виджеты и кнопки анализа станут недоступны пользователям.</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Выбор модели ИИ</label>
+                        <select class="form-select form-select-lg" name="active_model" id="active_model">
+                            {% for code, name in model_choices %}
+                                <option value="{{ code }}" {% if settings.active_model == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-2 small">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Бесплатные:</span> DeepSeek, Qwen, Z.AI, Gemini (free tier), Haiku.
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-2">Платные:</span> GPT-4, Opus, GPT-4o.
+                        </div>
+                    </div>
+
+                    <div class="mb-4" id="api_key_group">
+                        <label class="form-label fw-bold">API Ключ провайдера</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
+                            <input type="password" class="form-control" name="provider_api_key" id="provider_api_key" value="" placeholder="sk-...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="small text-muted mt-1">Ключ будет использоваться для всех запросов к выбранной модели.</div>
+                    </div>
+
+                    <div class="mb-4" id="api_base_url_group">
+                        <label class="form-label fw-bold">Base URL (необязательно)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-link-45deg"></i></span>
+                            <input type="url" class="form-control" name="api_base_url" id="api_base_url" value="" placeholder="https://api.deepseek.com">
+                        </div>
+                        <div class="small text-muted mt-1">Для DeepSeek используйте <code>https://api.deepseek.com</code>. Для OpenAI оставьте пустым.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold">Температура (Креативность)</label>
+                            <input type="range" class="form-range" min="0" max="1" step="0.1" name="temperature" value="{{ settings.temperature }}">
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>Точный (0.0)</span>
+                                <span>Творческий (1.0)</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold">Лимит токенов</label>
+                            <input type="number" class="form-control" name="max_tokens" value="{{ settings.max_tokens }}">
+                            <div class="small text-muted mt-1">Максимальная длина ответа.</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+                        <div>
+                            <strong>Важно:</strong> При использовании платных моделей убедитесь, что на вашем балансе у провайдера (OpenAI/Anthropic) достаточно средств. SKKP не несет ответственности за расходы по API.
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-5">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                            <i class="bi bi-save me-2"></i>Сохранить конфигурацию AI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(btn) {
+    const input = btn.parentElement.querySelector('input');
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+    } else {
+        input.type = 'password';
+        btn.innerHTML = '<i class="bi bi-eye"></i>';
+    }
+}
+
+// Хранилище данных из базы (теперь из новой таблицы)
+const savedData = {
+    {% for code, data in model_configs.items %}
+    '{{ code }}': {
+        'key': '{{ data.key|default:'' }}',
+        'url': '{{ data.url|default:'' }}'
+    },
+    {% endfor %}
+};
+
+function updateFields(model) {
+    console.log("Switching to model:", model);
+    const keyGroup = document.getElementById('api_key_group');
+    const urlGroup = document.getElementById('api_base_url_group');
+    const urlInput = urlGroup.querySelector('input');
+    const keyInput = keyGroup.querySelector('input');
+
+    if (model === 'mock') {
+        [keyGroup, urlGroup].forEach(group => {
+            group.style.opacity = '0.5';
+            group.querySelector('input').disabled = true;
+        });
+        keyInput.value = '';
+        urlInput.value = '';
+    } else {
+        [keyGroup, urlGroup].forEach(group => {
+            group.style.opacity = '1';
+            group.querySelector('input').disabled = false;
+        });
+
+        // Берем данные конкретно для этой модели
+        const config = savedData[model] || { 'key': '', 'url': '' };
+        
+        console.log(`Setting fields for ${model}:`, config);
+        
+        keyInput.value = config.key || '';
+        urlInput.value = config.url || '';
+
+        // Умная подсказка URL для DeepSeek-совместимых, ТОЛЬКО если в базе реально пусто
+        if (!config.url && (model.includes('deepseek') || model.includes('qwen') || model.includes('chat-z-ai'))) {
+            urlInput.value = 'https://api.deepseek.com/v1';
+        }
+    }
+}
+
+document.getElementById('active_model').addEventListener('change', function() {
+    updateFields(this.value);
+});
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    updateFields(document.getElementById('active_model').value);
+});
+</script>
+{% endblock %}

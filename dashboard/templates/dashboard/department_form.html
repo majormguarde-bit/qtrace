@@ -1,0 +1,62 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+    {% if object %}Редактировать подразделение{% else %}Новое подразделение{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">
+                <i class="bi bi-diagram-3 me-2"></i>
+                {% if object %}Редактировать: {{ object.name }}{% else %}Новое подразделение{% endif %}
+            </h2>
+            <a href="{% url 'dashboard:department_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-left me-1"></i> К списку
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.name.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Название подразделения</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.parent.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Головное подразделение (для иерархии)</label>
+                        {{ form.parent }}
+                        <div class="form-text">Оставьте пустым, если это подразделение верхнего уровня.</div>
+                        {% if form.parent.errors %}
+                            <div class="text-danger small mt-1">{{ form.parent.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.description.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Описание</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4 opacity-10">
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5">
+                            <i class="bi bi-check-lg me-1"></i> Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

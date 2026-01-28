@@ -1,0 +1,119 @@
+{% extends 'customers/base.html' %}
+{% load humanize %}
+
+{% block extra_css %}
+    .tariffs-container {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 1.5rem;
+        justify-content: flex-start;
+        padding: 1rem 2rem 3rem 2rem;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        min-height: min-content;
+        width: 100%;
+    }
+    @media (min-width: 1200px) {
+        .tariffs-container {
+            justify-content: center;
+        }
+    }
+    .tariffs-container::-webkit-scrollbar {
+        display: none;
+    }
+    .tariff-card {
+        flex: 0 0 300px !important;
+        flex-shrink: 0 !important;
+        position: relative;
+        overflow: hidden;
+        height: auto;
+    }
+    .text-nowrap-custom {
+        white-space: nowrap;
+    }
+    /* Ribbon styles */
+    .ribbon-wrapper {
+        width: 150px;
+        height: 150px;
+        overflow: hidden;
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        z-index: 10;
+    }
+    .ribbon {
+        font: bold 12px 'Inter', sans-serif;
+        color: #fff;
+        text-align: center;
+        text-transform: uppercase;
+        transform: rotate(45deg);
+        position: relative;
+        padding: 7px 0;
+        left: 20px;
+        top: 30px;
+        width: 200px;
+        background-color: var(--accent-blue);
+        background-image: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+{% endblock %}
+
+{% block content_class %}container-fluid py-5 position-relative{% endblock %}
+
+{% block content %}
+    <div class="container mb-5">
+        <div class="text-center">
+            <h1 class="display-4 fw-bold">Тарифные планы</h1>
+            <p class="lead" style="color: var(--text-muted);">Выберите подходящий вариант для вашего бизнеса</p>
+        </div>
+    </div>
+
+    <div class="tariffs-container px-4">
+        {% for plan in plans %}
+        <div class="tariff-card glass-card">
+            {% if plan.name == 'Базовый' %}
+            <div class="ribbon-wrapper">
+                <div class="ribbon">популярный</div>
+            </div>
+            {% endif %}
+            <div class="card-body p-4 d-flex flex-column h-100">
+                <div class="text-center mb-3">
+                    <h3 class="fw-bold text-nowrap-custom text-white">{{ plan.name }}</h3>
+                    {% if plan.name == 'Договорной' %}
+                        <div class="h3 fw-bold my-3 text-nowrap-custom text-white">Индивидуально</div>
+                    {% else %}
+                        <div class="h3 fw-bold my-3 text-nowrap-custom text-white">{{ plan.price_month|floatformat:0|intcomma }} <span class="fs-6" style="color: var(--text-muted);">₽/мес</span></div>
+                        <div class="small text-nowrap-custom" style="color: var(--text-muted);">{{ plan.price_year|floatformat:0|intcomma }} ₽ в год</div>
+                    {% endif %}
+                </div>
+                
+                <ul class="list-unstyled mb-4 flex-grow-1">
+                    <li class="mb-2 text-nowrap-custom text-white"><i class="bi bi-people me-2" style="color: var(--accent-cyan);"></i> До {{ plan.max_users }} пользователей</li>
+                    <li class="mb-2 text-nowrap-custom text-white"><i class="bi bi-hdd me-2" style="color: var(--accent-cyan);"></i> {{ plan.storage_gb }} ГБ хранилища</li>
+                    <li class="mb-2 text-nowrap-custom text-white"><i class="bi bi-calendar-check me-2" style="color: var(--accent-cyan);"></i> {{ plan.work_days_limit }} дней хранения</li>
+                    {% if plan.has_mobile_app %}
+                    <li class="mb-2 text-nowrap-custom text-white"><i class="bi bi-phone me-2" style="color: var(--accent-cyan);"></i> Мобильное приложение</li>
+                    {% endif %}
+                </ul>
+
+                <div class="text-center mt-auto">
+                    {% if plan.name == 'Договорной' %}
+                        <a href="{% url 'home' %}#register?plan={{ plan.id }}" class="btn btn-outline-primary btn-lg w-100 rounded-pill">Связаться с нами</a>
+                    {% else %}
+                        <a href="{% url 'home' %}?plan={{ plan.id }}#register" class="btn btn-primary btn-lg w-100 rounded-pill">Выбрать тариф</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="container mt-5 text-center">
+        <a href="{% url 'home' %}" class="btn btn-link text-decoration-none text-main">
+            <i class="bi bi-arrow-left me-2"></i> Вернуться на главную
+        </a>
+    </div>
+{% endblock %}

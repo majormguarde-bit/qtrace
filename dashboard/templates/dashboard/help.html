@@ -1,0 +1,157 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Инструкция пользователя{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="display-5 fw-bold mb-2">Руководство пользователя Q-TRACE</h1>
+                    <p class="lead mb-0">Добро пожаловать в систему управления задачами и медиа-отчетностью.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Вход и доступ -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Вход и доступ
+                    </h3>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item px-0 py-3">
+                            <strong>Доступ из сети:</strong> Для работы со смартфона или другого компьютера в вашей сети используйте адрес текущего сайта.
+                        </li>
+                        <li class="list-group-item px-0 py-3">
+                            <strong>Ваш кабинет:</strong> У каждого предприятия есть свой поддомен на базе основного домена платформы.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Управление задачами -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+                        <i class="bi bi-list-check me-2"></i> Работа с задачами
+                    </h3>
+                    <p class="text-muted small">Вы можете управлять задачами прямо с главной страницы или в разделе «Задачи».</p>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-warning text-dark p-2">Пауза</span>
+                        <span class="badge bg-info p-2">Работа</span>
+                        <span class="badge bg-danger p-2">Важно</span>
+                        <span class="badge bg-success p-2">Закрыть</span>
+                    </div>
+                    <ul class="list-group list-group-flush small">
+                        <li class="list-group-item px-0"><strong>Этапы:</strong> Нажимайте на название этапа, чтобы отметить его выполнение.</li>
+                        <li class="list-group-item px-0"><strong>Автоматизация:</strong> Задача закроется автоматически, когда вы отметите ВСЕ этапы.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Медиатека -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+                        <i class="bi bi-camera-video me-2"></i> Медиатека и отчеты
+                    </h3>
+                    <p>Система позволяет фиксировать процесс работы с помощью фото и видео.</p>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-camera-fill me-2 text-success"></i>
+                            <span><strong>Запись видео:</strong> Специальный режим для фиксации этапов.</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-upload me-2 text-primary"></i>
+                            <span><strong>Загрузка:</strong> Можно выбрать готовые файлы из галереи смартфона.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Роли и права -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title h5 fw-bold text-primary mb-3">
+                        <i class="bi bi-shield-lock me-2"></i> Роли в системе
+                    </h3>
+                    <div class="accordion accordion-flush" id="rolesAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleAdmin">
+                                    Администратор
+                                </button>
+                            </h2>
+                            <div id="roleAdmin" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
+                                <div class="accordion-body px-0 small">
+                                    Полный доступ ко всем задачам и файлам предприятия. Управление сотрудниками, подразделениями и должностями.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleWorker">
+                                    Сотрудник (Исполнитель)
+                                </button>
+                            </h2>
+                            <div id="roleWorker" class="accordion-collapse collapse" data-bs-parent="#rolesAccordion">
+                                <div class="accordion-body px-0 small">
+                                    Видит только назначенные ему задачи и свои загруженные файлы. Может менять статусы и отмечать этапы.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Мобильные советы -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 bg-light shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="h5 fw-bold mb-3"><i class="bi bi-phone me-2"></i> Советы для смартфонов</h4>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+                                    <i class="bi bi-hand-index-thumb fs-4 text-primary"></i>
+                                </div>
+                                <span>Используйте долгое нажатие для выбора нескольких файлов.</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+                                    <i class="bi bi-layout-sidebar-inset fs-4 text-primary"></i>
+                                </div>
+                                <span>Свайп вправо открывает боковое меню.</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white p-2 rounded shadow-sm me-3">
+                                    <i class="bi bi-arrow-clockwise fs-4 text-primary"></i>
+                                </div>
+                                <span>Тяните список вниз для обновления данных.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

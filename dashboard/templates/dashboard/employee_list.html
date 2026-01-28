@@ -1,0 +1,111 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Сотрудники{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-people me-2"></i> Сотрудники</h2>
+    <a href="{% url 'dashboard:employee_create' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-person-plus me-1"></i> Добавить сотрудника
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Пользователь</th>
+                        <th>Должность</th>
+                        <th>Телефон</th>
+                        <th>Подразделение</th>
+                        <th>Роль</th>
+                        <th>Статус</th>
+                        <th class="text-end pe-4">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary-subtle text-primary rounded-circle me-3 d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                                    {{ employee.username|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ employee.get_full_name }}</div>
+                                    <div class="text-muted small">@{{ employee.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if employee.position %}
+                                <span class="text-dark">{{ employee.position }}</span>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.phone %}
+                                <a href="tel:{{ employee.phone }}" class="text-decoration-none">
+                                    <i class="bi bi-telephone me-1 small"></i> {{ employee.phone }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.department %}
+                                <span class="badge bg-light text-dark border rounded-pill fw-normal">
+                                    <i class="bi bi-diagram-3 me-1 small text-primary"></i> {{ employee.department.name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.role == 'ADMIN' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Администратор</span>
+                            {% else %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Работник</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.is_active %}
+                                <span class="badge bg-success rounded-circle p-1" title="Активен">
+                                    <span class="visually-hidden">Активен</span>
+                                </span>
+                                <span class="ms-1 small">Активен</span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-circle p-1" title="Неактивен">
+                                    <span class="visually-hidden">Неактивен</span>
+                                </span>
+                                <span class="ms-1 small text-muted">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                <a href="{% url 'dashboard:employee_edit' employee.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-2">
+                                    <i class="bi bi-pencil me-1"></i> Правка
+                                </a>
+                                <a href="{% url 'dashboard:employee_delete' employee.pk %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                    <i class="bi bi-trash me-1"></i> Удалить
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-people display-4 d-block mb-3 opacity-25"></i>
+                            Сотрудники не найдены
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

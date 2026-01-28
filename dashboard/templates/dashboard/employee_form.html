@@ -1,0 +1,208 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}
+    {% if object %}Редактировать сотрудника{% else %}Новый сотрудник{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">
+                <i class="bi bi-person-{% if object %}gear{% else %}plus{% endif %} me-2"></i>
+                {% if object %}Редактировать: {{ object.username }}{% else %}Новый сотрудник{% endif %}
+            </h2>
+            <a href="{% url 'dashboard:employee_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-left me-1"></i> К списку
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="{{ form.username.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Логин</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.password.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">
+                                {% if object %}Пароль (оставьте пустым, чтобы не менять){% else %}Пароль{% endif %}
+                            </label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Имя</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Фамилия</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Телефон</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="{{ form.position.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Должность</label>
+                            <div class="input-group">
+                                {{ form.position }}
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addPositionModal">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            {% if form.position.errors %}
+                                <div class="text-danger small mt-1">{{ form.position.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="{{ form.department.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Подразделение</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                                <div class="text-danger small mt-1">{{ form.department.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="{{ form.role.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">Роль</label>
+                            {{ form.role }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check form-switch mt-4">
+                                {{ form.is_active }}
+                                <label class="form-check-label fw-bold small text-uppercase text-muted ms-2" for="{{ form.is_active.id_for_label }}">
+                                    Пользователь активен
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 opacity-10">
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5">
+                            <i class="bi bi-check2-circle me-1"></i>
+                            {% if object %}Сохранить изменения{% else %}Создать сотрудника{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding new position -->
+<div class="modal fade" id="addPositionModal" tabindex="-1" aria-labelledby="addPositionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="addPositionModalLabel">Новая должность</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPositionForm">
+                    <div class="mb-3">
+                        <label for="new_position_name" class="form-label small text-uppercase text-muted fw-bold">Название должности</label>
+                        <input type="text" class="form-control" id="new_position_name" required>
+                        <div id="position_error" class="text-danger small mt-1" style="display: none;"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="savePositionBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const saveBtn = document.getElementById('savePositionBtn');
+    const nameInput = document.getElementById('new_position_name');
+    const errorDiv = document.getElementById('position_error');
+    const positionSelect = document.querySelector('select[name="position"]');
+    const modalElement = document.getElementById('addPositionModal');
+    const modal = new bootstrap.Modal(modalElement);
+
+    saveBtn.addEventListener('click', function() {
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        errorDiv.style.display = 'none';
+        
+        fetch('{% url "dashboard:position_create_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `name=${encodeURIComponent(name)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Add new option to select
+                const option = new Option(data.name, data.id, true, true);
+                positionSelect.add(option);
+                
+                // Clear and close
+                nameInput.value = '';
+                modal.hide();
+            } else {
+                let errorMsg = 'Ошибка при сохранении';
+                if (data.errors && data.errors.name) {
+                    errorMsg = data.errors.name[0];
+                }
+                errorDiv.textContent = errorMsg;
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Произошла сетевая ошибка';
+            errorDiv.style.display = 'block';
+        });
+    });
+
+    // Reset error when typing
+    nameInput.addEventListener('input', () => {
+        errorDiv.style.display = 'none';
+    });
+});
+</script>
+{% endblock %}

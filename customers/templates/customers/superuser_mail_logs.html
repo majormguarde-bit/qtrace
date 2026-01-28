@@ -1,0 +1,206 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Логи почты{% endblock %}
+{% block header_title %}История сообщений обратной связи{% endblock %}
+
+{% block content %}
+<div class="card card-table shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Дата</th>
+                        <th>Отправитель</th>
+                        <th>Контакты</th>
+                        <th>Сообщение</th>
+                        <th>Статус</th>
+                        <th class="text-end pe-4">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in page_obj %}
+                    <tr>
+                        <td class="ps-4 small">{{ msg.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <div class="fw-bold">{{ msg.name }}</div>
+                            <div class="small text-muted">IP: {{ msg.ip_address }}</div>
+                        </td>
+                        <td>
+                            <div><i class="bi bi-envelope me-1"></i>{{ msg.email }}</div>
+                            {% if msg.phone %}
+                            <div class="small"><i class="bi bi-telephone me-1"></i>{{ msg.phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 300px;" title="{{ msg.message }}">
+                                {{ msg.message }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if msg.is_sent %}
+                            <span class="badge bg-success">Отправлено</span>
+                            {% else %}
+                            <span class="badge bg-danger" title="{{ msg.error_log }}">Ошибка</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#msgModal{{ msg.id }}" title="Править">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <a href="mailto:{{ msg.email }}?subject=Re: Сообщение с сайта Q-TRACE" class="btn btn-sm btn-outline-success" title="Ответить">
+                                    <i class="bi bi-reply"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteMessage({{ msg.id }})" title="Удалить">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Modal for message details/editing -->
+                    <div class="modal fade" id="msgModal{{ msg.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content border-0">
+                                <form onsubmit="saveMessage(event, {{ msg.id }})">
+                                    <div class="modal-header border-0 bg-light">
+                                        <h5 class="modal-title fw-bold">Редактирование лога #{{ msg.id }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted text-uppercase">Имя отправителя</label>
+                                                <input type="text" name="name" class="form-control" value="{{ msg.name }}" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted text-uppercase">Email</label>
+                                                <input type="email" name="email" class="form-control" value="{{ msg.email }}" required>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label class="form-label small text-muted text-uppercase">Телефон</label>
+                                                <input type="text" name="phone" class="form-control" value="{{ msg.phone|default:'' }}">
+                                            </div>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="form-label small text-muted text-uppercase">Сообщение</label>
+                                            <textarea name="message" class="form-control" rows="5" required>{{ msg.message }}</textarea>
+                                        </div>
+                                        
+                                        <hr class="opacity-25">
+                                        
+                                        <div class="row small text-muted mb-3">
+                                            <div class="col-md-4">
+                                                <p class="mb-0">IP: {{ msg.ip_address }}</p>
+                                            </div>
+                                            <div class="col-md-8">
+                                                <p class="mb-0 text-truncate">UA: {{ msg.user_agent }}</p>
+                                            </div>
+                                        </div>
+
+                                        {% if msg.error_log %}
+                                        <div class="mb-4 p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded">
+                                            <p class="mb-1 small text-danger fw-bold">ОШИБКА ОТПРАВКИ:</p>
+                                            <code class="text-danger">{{ msg.error_log }}</code>
+                                        </div>
+                                        {% endif %}
+
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                                <i class="bi bi-save me-2"></i>Сохранить изменения
+                                            </button>
+                                            <a href="mailto:{{ msg.email }}?subject=Re: Сообщение с сайта Q-TRACE" class="btn btn-outline-success">
+                                                <i class="bi bi-reply me-2"></i>Ответить
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" onclick="deleteMessage({{ msg.id }})">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">Сообщений пока нет</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div class="p-4 border-top">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a></li>
+                    {% endif %}
+                    
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span></li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function saveMessage(event, id) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    fetch(`/superuser/mail-logs/${id}/edit/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Ошибка при сохранении: ' + (data.error || 'неизвестная ошибка'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при выполнении запроса');
+    });
+}
+
+function deleteMessage(id) {
+    if (confirm('Вы уверены, что хотите удалить эту запись из логов?')) {
+        fetch(`/superuser/mail-logs/${id}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при удалении: ' + (data.error || 'неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при выполнении запроса');
+        });
+    }
+}
+</script>
+{% endblock %}

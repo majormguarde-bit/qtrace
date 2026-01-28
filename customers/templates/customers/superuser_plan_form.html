@@ -1,0 +1,68 @@
+{% extends 'customers/superuser_base.html' %}
+{% load l10n %}
+
+{% block title %}{% if is_create %}Новый тариф{% else %}Редактирование тарифа{% endif %} - Панель управления{% endblock %}
+{% block header_title %}{% if is_create %}Создание тарифного плана{% else %}Редактирование тарифа: {{ plan.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Основная информация</h5>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-semibold">Название тарифа</label>
+                            <input type="text" name="name" class="form-control" value="{{ plan.name|default:'' }}" required placeholder="Например: Базовый, Профи, Бизнес">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Цена в месяц (₽)</label>
+                            <input type="number" step="0.01" name="price_month" class="form-control" value="{{ plan.price_month|unlocalize }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Цена в год (₽)</label>
+                            <input type="number" step="0.01" name="price_year" class="form-control" value="{{ plan.price_year|unlocalize }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Лимиты и возможности</h5>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Пользователей</label>
+                            <input type="number" name="max_users" class="form-control" value="{{ plan.max_users|unlocalize }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Хранилище (ГБ)</label>
+                            <input type="number" name="storage_gb" class="form-control" value="{{ plan.storage_gb|unlocalize }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Дней работы</label>
+                            <input type="number" name="work_days_limit" class="form-control" value="{{ plan.work_days_limit|unlocalize }}" required>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="has_mobile_app" id="mobileSwitch" {% if plan.has_mobile_app or is_create %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="mobileSwitch">Доступ к мобильному приложению</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'superuser_plans' %}" class="btn btn-outline-secondary px-4">Отмена</a>
+                        <button type="submit" class="btn btn-primary px-5">
+                            <i class="bi bi-check-circle me-1"></i> {% if is_create %}Создать тариф{% else %}Сохранить изменения{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

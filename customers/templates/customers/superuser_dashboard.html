@@ -1,0 +1,157 @@
+{% extends 'customers/superuser_base.html' %}
+
+{% block title %}Главная - Панель управления{% endblock %}
+{% block header_title %}Обзор платформы{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card stat-card bg-primary p-4 h-100">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="opacity-75">Всего организаций</h6>
+                    <h2 class="display-6 fw-bold">{{ tenants_count }}</h2>
+                </div>
+                <i class="bi bi-building fs-1 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card bg-success p-4 h-100">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="opacity-75">Активные</h6>
+                    <h2 class="display-6 fw-bold">{{ active_tenants }}</h2>
+                </div>
+                <i class="bi bi-check-circle fs-1 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card bg-danger p-4 h-100">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="opacity-75">Ожидают активации</h6>
+                    <h2 class="display-6 fw-bold">{{ blocked_tenants }}</h2>
+                </div>
+                <i class="bi bi-slash-circle fs-1 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analytics Section -->
+<div class="card card-table shadow-sm mb-5 border-0" style="background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); color: white;">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="fw-bold mb-2"><i class="bi bi-magic me-2"></i>AI Аналитика платформы</h4>
+                <p class="mb-0 opacity-75">Используйте искусственный интеллект для анализа активности тенантов, прогнозирования нагрузки и выявления аномалий в реальном времени.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <button class="btn btn-light btn-lg rounded-pill px-4 fw-bold" onclick="runAIAnalytics()">
+                    <i class="bi bi-play-fill me-1"></i>Запустить анализ
+                </button>
+            </div>
+        </div>
+        <div id="ai-analysis-result" class="mt-4 p-3 rounded bg-white text-dark d-none" style="--bs-bg-opacity: .9;">
+            <div class="d-flex align-items-center mb-2">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span class="fw-bold">AI анализирует данные...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function runAIAnalytics() {
+    const resultDiv = document.getElementById('ai-analysis-result');
+    resultDiv.classList.remove('d-none');
+    resultDiv.innerHTML = `
+        <div class="d-flex align-items-center mb-2">
+            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+            <span class="fw-bold">AI анализирует данные...</span>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/ai/api/chat/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                prompt: "Проведи глубокий анализ активности платформы за последний месяц.", 
+                context: "superuser_analytics" 
+            })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            resultDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="fw-bold text-primary mb-0"><i class="bi bi-check2-circle me-1"></i>Результат анализа:</h6>
+                    <button class="btn-close btn-sm" onclick="this.parentElement.parentElement.classList.add('d-none')"></button>
+                </div>
+                <div class="small lh-base">${data.response}</div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = '<div class="text-danger">Ошибка при получении аналитики.</div>';
+    }
+}
+</script>
+
+<!-- Tables -->
+<div class="row">
+    <div class="col-12">
+        <!-- Organizations Table (Recent) -->
+        <div class="card card-table shadow-sm mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Последние регистрации</h5>
+                <a href="{% url 'superuser_tenants' %}" class="btn btn-sm btn-primary px-3 rounded-pill">Все организации</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Название</th>
+                                <th>Контакты</th>
+                                <th>Статус</th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tenant in recent_tenants %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold">{{ tenant.name }}</div>
+                                    <div class="small text-muted">{{ tenant.schema_name }}</div>
+                                </td>
+                                <td>
+                                    {% if tenant.phone %}<div class="small"><i class="bi bi-telephone me-1"></i> {{ tenant.phone }}</div>{% endif %}
+                                    {% if tenant.email %}<div class="small"><i class="bi bi-envelope me-1"></i> {{ tenant.email }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {% if tenant.is_active %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">Активен</span>
+                                    {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3">Ожидает активации</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="/admin/customers/client/{{ tenant.id }}/change/" class="btn btn-sm btn-outline-primary border-0">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Нет данных</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
