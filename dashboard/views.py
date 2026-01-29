@@ -1238,15 +1238,36 @@ class TemplateDetailAjaxView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/template_detail_ajax.html'
     
     def get_context_data(self, **kwargs):
+        import json
         context = super().get_context_data(**kwargs)
         template_id = self.kwargs.get('pk')
         
         try:
             template = TaskTemplate.objects.prefetch_related('stages', 'activity_category').get(pk=template_id)
             context['template'] = template
-            context['stages'] = template.stages.all().order_by('sequence_number')
+            stages = template.stages.all().order_by('sequence_number')
+            context['stages'] = stages
+            
+            # Подготавливаем JSON данные для диаграммы
+            stages_data = []
+            for stage in stages:
+                stage_data = {
+                    'id': stage.id,
+                    'sequence_number': stage.sequence_number,
+                    'name': stage.name,
+                    'position': stage.position.name if stage.position else None,
+                    'duration_from': stage.duration_from,
+                    'duration_to': stage.duration_to,
+                    'duration_unit': stage.duration_unit.name if stage.duration_unit else None,
+                    'parent_stage_id': stage.parent_stage_id,
+                    'leads_to_stop': stage.leads_to_stop
+                }
+                stages_data.append(stage_data)
+            
+            context['stages_json'] = json.dumps(stages_data)
         except TaskTemplate.DoesNotExist:
             context['error'] = 'Шаблон не найден'
+            context['stages_json'] = '[]'
         
         return context
 
