@@ -4,6 +4,8 @@
 
 {% block header_title %}{% if is_create %}Добавить новый материал{% else %}Редактировать материал: {{ material.name }}{% endif %}{% endblock %}
 
+{% block action_buttons %}{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
@@ -22,7 +24,12 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.code.id_for_label }}" class="form-label">{{ form.code.label }}</label>
-                        {{ form.code }}
+                        <div class="input-group">
+                            {{ form.code }}
+                            <button type="button" class="btn btn-outline-secondary" id="generateCodeBtn">
+                                <i class="bi bi-lightning-fill me-1"></i> Генерировать
+                            </button>
+                        </div>
                         {% if form.code.errors %}
                         <div class="invalid-feedback d-block">{{ form.code.errors.0 }}</div>
                         {% endif %}
@@ -104,4 +111,71 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unitSelect = document.querySelector('select[name="unit"]');
+    const generateCodeBtn = document.getElementById('generateCodeBtn');
+    const codeInput = document.querySelector('input[name="code"]');
+    const nameField = document.querySelector('input[name="name"]');
+    
+    // Загружаем единицы измерения
+    if (unitSelect && unitSelect.options.length <= 1) {
+        fetch('/api/customers/units-of-measure/')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Units loaded:', data);
+                
+                while (unitSelect.options.length > 1) {
+                    unitSelect.remove(1);
+                }
+                
+                data.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = unit.name + ' (' + unit.abbreviation + ')';
+                    unitSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading units:', error));
+    }
+    
+    // Обработчик кнопки "Генерировать" для кода материала
+    if (generateCodeBtn) {
+        generateCodeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const name = nameField.value.trim();
+            const unitId = unitSelect.value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите название материала');
+                return;
+            }
+            
+            if (!unitId) {
+                alert('Пожалуйста, выберите единицу измерения');
+                return;
+            }
+            
+            // Берём первые 3 буквы названия
+            const namePart = name.substring(0, 3).toUpperCase().replace(/\s/g, '');
+            
+            // Получаем текст выбранной опции (единица измерения)
+            const selectedOption = unitSelect.options[unitSelect.selectedIndex];
+            const unitText = selectedOption.text;
+            
+            // Извлекаем сокращение из текста (оно в скобках)
+            const match = unitText.match(/\(([^)]+)\)/);
+            const unitPart = match ? match[1].toUpperCase() : 'UN';
+            
+            // Генерируем код
+            const baseCode = namePart + '-' + unitPart;
+            codeInput.value = baseCode;
+            
+            console.log('Generated code:', baseCode);
+        });
+    }
+});
+</script>
 {% endblock %}

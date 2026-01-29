@@ -128,8 +128,6 @@ MIDDLEWARE = [
 
     'django_tenants.middleware.main.TenantMainMiddleware',
 
-    'customers.middleware.TenantStatusMiddleware',
-
     'django.middleware.security.SecurityMiddleware',
 
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -139,6 +137,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
 
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    'customers.middleware.TenantStatusMiddleware',
 
     'django.contrib.messages.middleware.MessageMiddleware',
 
@@ -338,9 +338,9 @@ DEFAULT_FILE_STORAGE = 'django_tenants.storage.TenantFileSystemStorage'
 
 # Login settings
 
-LOGIN_URL = '/login/'
+LOGIN_URL = '/admin/login/'
 
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/superuser/'
 
 LOGOUT_REDIRECT_URL = '/login/'
 

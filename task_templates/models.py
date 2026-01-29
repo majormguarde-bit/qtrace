@@ -210,17 +210,13 @@ class TaskTemplateStage(models.Model):
     )
     
     # Длительность - диапазон (от и до) + единица времени
-    duration_from = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+    duration_from = models.IntegerField(
+        validators=[MinValueValidator(1)],
         verbose_name='Длительность от',
         default=1
     )
-    duration_to = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+    duration_to = models.IntegerField(
+        validators=[MinValueValidator(1)],
         verbose_name='Длительность до',
         default=1
     )

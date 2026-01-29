@@ -25,6 +25,44 @@
     #rightSidebar .form-select-sm {
         font-size: 0.85rem;
     }
+    
+    /* Print styles */
+    @media print {
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .row {
+            height: auto !important;
+        }
+        .col-lg-4 {
+            display: none !important;
+        }
+        .col-lg-8 {
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-header {
+            display: none !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+        #cy {
+            border: none !important;
+            background: white !important;
+            height: 973px !important;
+            width: 644px !important;
+            margin: 20mm !important;
+        }
+        #statusMessage {
+            display: none !important;
+        }
+    }
 </style>
 <div class="row" style="height: calc(100vh - 200px);">
     <!-- Левая колонка: Диаграмма -->
@@ -70,43 +108,8 @@
             </div>
         </div>
         
-        <!-- Управление диаграммой -->
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">Управление</h6>
-            </div>
-            <div class="card-body">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="editModeToggle">
-                    <label class="form-check-label" for="editModeToggle">
-                        <small>Режим редактирования связей</small>
-                    </label>
-                </div>
-                
-                <div id="editModeInfo" class="text-muted" style="display: none;">
-                    <small>
-                        <strong>Активен режим:</strong><br>
-                        • Shift+Клик на блок - начать связь<br>
-                        • Shift+Клик на целевой блок - завершить связь<br>
-                        • Escape - отмена
-                    </small>
-                </div>
-                
-                <hr class="my-2">
-                
-                <small class="text-muted d-block">
-                    <strong>Горячие клавиши:</strong><br>
-                    • Колесо мыши - масштабирование<br>
-                    • Перетаскивание - панорама<br>
-                    • Клик на блок - выбрать<br>
-                    • Delete - удалить связь<br>
-                    • Ctrl+R - сбросить вид
-                </small>
-            </div>
-        </div>
-        
         <!-- Управление этапом -->
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header bg-light">
                 <h6 class="mb-0">Управление этапом</h6>
             </div>
@@ -141,11 +144,32 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <button type="submit" name="action" value="set_parent" class="btn btn-primary btn-sm w-100">
+                        <label class="form-label">Время (часов):</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="number" class="form-control form-control-sm" id="durationMin" placeholder="Мин" min="1" value="1">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="form-control form-control-sm" id="durationMax" placeholder="Макс" min="1" value="1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" id="submitStageForm">
                             <i class="bi bi-check-circle me-1"></i> Сохранить
                         </button>
                     </div>
                 </form>
+                
+                <!-- Кнопки для добавления/удаления этапов -->
+                <div class="mt-3 pt-3 border-top">
+                    <button type="button" class="btn btn-success btn-sm w-100 mb-2" id="addStageBtn">
+                        <i class="bi bi-plus-circle me-1"></i> Добавить этап
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm w-100" id="deleteStageBtn" disabled>
+                        <i class="bi bi-trash me-1"></i> Удалить этап
+                    </button>
+                </div>
                 
                 <!-- Сохранение связи к Stop -->
                 <div id="saveConnectionToStop" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
@@ -157,6 +181,50 @@
                         <i class="bi bi-x-circle me-1"></i> Отмена
                     </button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Кнопка печати -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <button type="button" class="btn btn-primary btn-sm w-100" id="printDiagramBtn">
+                    <i class="bi bi-printer me-1"></i> Печать диаграммы
+                </button>
+            </div>
+        </div>
+        
+        <!-- Управление связями -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Управление связями</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="editModeToggle">
+                    <label class="form-check-label" for="editModeToggle">
+                        <small>Режим редактирования связей</small>
+                    </label>
+                </div>
+                
+                <div id="editModeInfo" class="text-muted" style="display: none;">
+                    <small>
+                        <strong>Активен режим:</strong><br>
+                        • Shift+Клик на блок - начать связь<br>
+                        • Shift+Клик на целевой блок - завершить связь<br>
+                        • Escape - отмена
+                    </small>
+                </div>
+                
+                <hr class="my-2">
+                
+                <small class="text-muted d-block">
+                    <strong>Горячие клавиши:</strong><br>
+                    • Колесо мыши - масштабирование<br>
+                    • Перетаскивание - панорама<br>
+                    • Клик на блок - выбрать<br>
+                    • Delete - удалить связь<br>
+                    • Ctrl+R - сбросить вид
+                </small>
             </div>
         </div>
     </div>
@@ -184,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isDrawing = false;
     let sourceNode = null;
     let tempEdge = null;
-    let pendingConnectionToStop = null; // Для сохранения связи к Stop
+    let pendingConnections = []; // Массив для отслеживания всех новых связей
     
     // Подготавливаем элементы для Cytoscape
     const elements = [];
@@ -199,10 +267,19 @@ document.addEventListener('DOMContentLoaded', function() {
     stagesData.forEach(stage => {
         const stageName = stage.sequence_number + '. ' + stage.name;
         const position = stage.position || 'Не указана';
-        const duration = stage.duration || 'Не указана';
+        
+        // Форматируем длительность: "Длительность от X до Y единица"
+        let durationText = 'Не указана';
+        if (stage.duration_from && stage.duration_to) {
+            if (stage.duration_from === stage.duration_to) {
+                durationText = 'Длительность: ' + stage.duration_from + ' ' + (stage.duration_unit || '');
+            } else {
+                durationText = 'Длительность: ' + stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
+            }
+        }
         
         // Форматируем метку с временем
-        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position + '\n⏱ ' + duration;
+        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position + '\n' + durationText;
         
         elements.push({
             data: {
@@ -210,9 +287,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: label,
                 stageName: stageName,
                 position: position,
-                duration: duration
+                duration: durationText
             }
         });
+        
+        // Если есть материалы, добавляем узел с материалами рядом
+        if (stage.materials && stage.materials.length > 0) {
+            const materialsLabel = stage.materials.map(m => m.quantity + ' ' + m.unit + ' ' + m.name).join('\n');
+            elements.push({
+                data: {
+                    id: 'materials_' + stage.id,
+                    label: 'Материалы:\n' + materialsLabel
+                },
+                classes: 'materials'
+            });
+            
+            // Добавляем связь между материалами и этапом (пунктирная стрелка к этапу)
+            elements.push({
+                data: {
+                    id: 'edge_stage_materials_' + stage.id,
+                    source: 'materials_' + stage.id,
+                    target: 'stage_' + stage.id
+                },
+                classes: 'materials-edge'
+            });
+        }
     });
     
     // Добавляем узел "Стоп"
@@ -290,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
         elements: elements,
         style: [
             {
-                selector: 'node',
+                selector: 'node:not(:parent)',
                 style: {
                     'background-color': '#2d5016',
                     'label': 'data(label)',
@@ -303,10 +402,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     'border-color': '#1a3009',
                     'padding': '20px',
                     'text-wrap': 'wrap',
-                    'text-max-width': '220px',
+                    'text-max-width': '260px',
                     'shape': 'rectangle',
-                    'width': '280px',
-                    'height': '160px',
+                    'width': '336px',
+                    'height': '220px',
                     'line-height': 1.2
                 }
             },
@@ -379,6 +478,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     'width': 4,
                     'opacity': 1
                 }
+            },
+            {
+                selector: 'node.materials',
+                style: {
+                    'background-color': '#f0f0f0',
+                    'border-color': '#666',
+                    'border-width': 3,
+                    'color': '#333',
+                    'font-size': 12,
+                    'font-weight': 'normal',
+                    'padding': '15px',
+                    'text-max-width': '200px',
+                    'width': '220px',
+                    'height': 'auto',
+                    'min-height': '120px',
+                    'text-wrap': 'wrap',
+                    'line-height': 1.3
+                }
+            },
+            {
+                selector: 'edge.materials-edge',
+                style: {
+                    'line-color': '#999',
+                    'target-arrow-color': '#999',
+                    'target-arrow-shape': 'triangle',
+                    'line-style': 'dashed',
+                    'width': 2,
+                    'opacity': 0.7,
+                    'arrow-scale': 1.5
+                }
             }
         ],
         layout: {
@@ -388,7 +517,39 @@ document.addEventListener('DOMContentLoaded', function() {
             animationDuration: 500,
             spacingFactor: 1.5,
             roots: '#start'
+        },
+        wheelSensitivity: 0.1,
+        minZoom: 0.1,
+        maxZoom: 3
+    });
+    
+    // Загружаем сохранённые позиции блоков
+    const savedPositions = localStorage.getItem('diagramPositions_' + templateId);
+    if (savedPositions) {
+        try {
+            const positions = JSON.parse(savedPositions);
+            cy.nodes().forEach(node => {
+                if (positions[node.id()]) {
+                    node.position(positions[node.id()]);
+                }
+            });
+            console.log('Positions restored from localStorage');
+        } catch (e) {
+            console.error('Error loading saved positions:', e);
         }
+    } else {
+        // Если нет сохранённых позиций, запускаем layout
+        cy.layout({ name: 'breadthfirst', directed: true, animate: true, animationDuration: 500, spacingFactor: 1.5, roots: '#start' }).run();
+    }
+    
+    // Сохраняем позиции при перемещении узлов
+    cy.on('free', 'node', function(evt) {
+        const positions = {};
+        cy.nodes().forEach(node => {
+            positions[node.id()] = node.position();
+        });
+        localStorage.setItem('diagramPositions_' + templateId, JSON.stringify(positions));
+        console.log('Positions saved');
     });
     
     // Обработчик клика на узел для редактирования подчиненности
@@ -396,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const target = evt.target;
         
         // Проверяем, что это узел
-        if (!target.isNode()) {
+        if (!target || !target.isNode || !target.isNode()) {
             return;
         }
         
@@ -429,55 +590,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Если целевой узел - это Stop
-                if (targetId === 'stop') {
-                    console.log('Target is Stop node');
-                    // Извлекаем ID исходного этапа
-                    const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
-                    const edgeId = 'edge_' + sourceStageId + '_stop';
-                    const existingEdge = cy.$('#' + edgeId);
+                // Извлекаем ID исходного и целевого этапов
+                const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
+                const targetStageId = targetId === 'stop' ? 'stop' : targetId.replace('stage_', '');
+                
+                // Создаём ID для новой связи
+                const newEdgeId = 'edge_' + sourceStageId + '_' + targetStageId;
+                const existingEdge = cy.$('#' + newEdgeId);
+                
+                // Если такой связи ещё нет, добавляем её
+                if (existingEdge.length === 0) {
+                    cy.add({
+                        data: {
+                            id: newEdgeId,
+                            source: sourceId,
+                            target: targetId
+                        }
+                    });
                     
-                    console.log('Edge ID:', edgeId, 'Exists:', existingEdge.length > 0);
+                    console.log('Edge added:', newEdgeId);
                     
-                    if (existingEdge.length === 0) {
-                        // Добавляем новую связь к Stop
-                        cy.add({
-                            data: {
-                                id: edgeId,
-                                source: sourceId,
-                                target: 'stop'
-                            }
-                        });
-                        
-                        console.log('Edge added:', edgeId);
-                        
-                        // Подсвечиваем новую связь
-                        cy.$('#' + edgeId).style('line-color', '#0056b3');
-                        cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
-                        cy.$('#' + edgeId).style('width', 4);
-                        
-                        // Сохраняем информацию о связи для последующего сохранения
-                        pendingConnectionToStop = {
-                            sourceId: sourceId,
-                            sourceStageId: sourceStageId,
-                            edgeId: edgeId
-                        };
-                        
-                        // Показываем кнопку сохранения
-                        document.getElementById('saveConnectionToStop').style.display = 'block';
-                    }
+                    // Добавляем в массив ожидающих связей
+                    pendingConnections.push({
+                        sourceId: sourceId,
+                        sourceStageId: sourceStageId,
+                        targetId: targetId,
+                        targetStageId: targetStageId,
+                        edgeId: newEdgeId
+                    });
                     
-                    showStatus('Связь к Стоп создана. Нажмите "Сохранить связь" для сохранения', 'success');
+                    // Показываем кнопку сохранения
+                    document.getElementById('saveConnectionToStop').style.display = 'block';
+                    
+                    showStatus('Связь создана (' + pendingConnections.length + '). Нажмите "Сохранить связь" для сохранения', 'success');
                 } else {
-                    // Если это обычный этап
-                    const targetStageId = targetId.replace('stage_', '');
-                    const sourceStageId = sourceId === 'start' ? 'start' : sourceId.replace('stage_', '');
-                    
-                    // Устанавливаем форму для создания связи
-                    document.getElementById('stageSelect').value = targetStageId;
-                    document.getElementById('parentSelect').value = sourceStageId === 'start' ? '' : sourceStageId;
-                    
-                    showStatus('Связь создана. Нажмите "Сохранить" для сохранения', 'success');
+                    showStatus('Такая связь уже существует', 'warning');
                 }
                 
                 cancelDrawing();
@@ -527,6 +674,10 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 document.getElementById('positionSelect').value = '';
             }
+            
+            // Заполняем поля времени
+            document.getElementById('durationMin').value = stage.duration_from || 1;
+            document.getElementById('durationMax').value = stage.duration_to || 1;
         }
         
         showStatus('Этап выбран. Отредактируйте параметры и нажмите "Сохранить"', 'info');
@@ -634,101 +785,381 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик отправки формы
     const form = document.querySelector('form');
     if (form) {
-        form.addEventListener('submit', function(e) {
+        // Обработчик для кнопки "Сохранить"
+        document.getElementById('submitStageForm').addEventListener('click', function(e) {
+            e.preventDefault();
+            
             const stageId = document.getElementById('stageSelect').value;
             const parentId = document.getElementById('parentSelect').value;
+            const positionId = document.getElementById('positionSelect').value;
+            const durationMin = document.getElementById('durationMin').value;
+            const durationMax = document.getElementById('durationMax').value;
             
             if (!stageId) {
-                e.preventDefault();
                 showStatus('Пожалуйста, выберите этап', 'error');
                 return;
             }
             
-            // Добавляем новую связь на диаграмму визуально
-            const targetNodeId = 'stage_' + stageId;
-            const sourceNodeId = parentId ? 'stage_' + parentId : 'start';
-            const edgeId = 'edge_' + (parentId || 'start') + '_' + stageId;
+            const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
             
-            // Проверяем, существует ли уже такая связь
-            const existingEdge = cy.$('#' + edgeId);
-            if (existingEdge.length === 0) {
-                // Добавляем новую связь
-                cy.add({
-                    data: {
-                        id: edgeId,
-                        source: sourceNodeId,
-                        target: targetNodeId
-                    }
-                });
+            // Сначала сохраняем время этапа если оно изменилось
+            if (durationMin || durationMax) {
+                const durationFormData = new FormData();
+                if (durationMin) durationFormData.append('duration_min', durationMin);
+                if (durationMax) durationFormData.append('duration_max', durationMax);
+                durationFormData.append('csrfmiddlewaretoken', csrfToken);
                 
-                // Подсвечиваем новую связь
-                cy.$('#' + edgeId).style('line-color', '#0056b3');
-                cy.$('#' + edgeId).style('target-arrow-color', '#0056b3');
-                cy.$('#' + edgeId).style('width', 4);
+                const durationUrl = '/superuser/templates/' + templateId + '/update-duration/' + stageId + '/';
                 
-                showStatus('Связь добавлена на диаграмму. Сохранение...', 'success');
+                fetch(durationUrl, {
+                    method: 'POST',
+                    body: durationFormData,
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .catch(error => console.error('Duration update error:', error));
             }
             
-            // Показываем сообщение об успехе после отправки
-            setTimeout(() => {
-                showStatus('Подчиненность обновлена. Перезагрузка...', 'success');
-                setTimeout(() => location.reload(), 1500);
-            }, 500);
+            // Используем fetch API для отправки на endpoint
+            const formData = new FormData();
+            formData.append('stage_id', stageId);
+            formData.append('parent_stage_id', parentId || '');
+            formData.append('position_id', positionId || '');
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
+            const apiUrl = '/superuser/templates/' + templateId + '/save-stage/';
+            
+            showStatus('Сохранение...', 'info');
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response URL:', response.url);
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Error response:', text);
+                        throw new Error('HTTP ' + response.status + ': ' + text.substring(0, 100));
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Обновляем диаграмму визуально
+                    const targetNodeId = 'stage_' + stageId;
+                    const sourceNodeId = parentId ? 'stage_' + parentId : 'start';
+                    
+                    // Удаляем все входящие ребра к этому узлу (кроме связей к Stop)
+                    const incomingEdges = cy.edges().filter(edge => {
+                        return edge.target().id() === targetNodeId && edge.source().id() !== 'stop';
+                    });
+                    cy.remove(incomingEdges);
+                    
+                    // Добавляем новую связь
+                    const edgeId = 'edge_' + (parentId || 'start') + '_' + stageId;
+                    const existingEdge = cy.$('#' + edgeId);
+                    
+                    if (existingEdge.length === 0) {
+                        cy.add({
+                            data: {
+                                id: edgeId,
+                                source: sourceNodeId,
+                                target: targetNodeId
+                            }
+                        });
+                    }
+                    
+                    showStatus('Этап успешно сохранен!', 'success');
+                    
+                    // Перезагружаем страницу через 1 секунду
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showStatus('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showStatus('Ошибка при отправке: ' + error.message, 'error');
+            });
         });
     }
     
-    // Обработчик сохранения связи к Stop
-    document.getElementById('confirmSaveConnection').addEventListener('click', function() {
-        if (!pendingConnectionToStop) {
-            showStatus('Нет связи для сохранения', 'error');
+    // Обработчик выбора этапа - включаем кнопку удаления
+    const stageSelectElement = document.getElementById('stageSelect');
+    console.log('stageSelect element:', stageSelectElement);
+    
+    if (stageSelectElement) {
+        stageSelectElement.addEventListener('change', function() {
+            console.log('Change event fired!');
+            const deleteBtn = document.getElementById('deleteStageBtn');
+            deleteBtn.disabled = !this.value;
+            
+            // Заполняем поля времени при выборе этапа
+            if (this.value) {
+                const stage = stagesData.find(s => s.id == this.value);
+                console.log('Selected stage:', stage);
+                if (stage) {
+                    console.log('Duration from:', stage.duration_from, 'Duration to:', stage.duration_to);
+                    document.getElementById('durationMin').value = stage.duration_from || 1;
+                    document.getElementById('durationMax').value = stage.duration_to || 1;
+                    console.log('Fields updated:', document.getElementById('durationMin').value, document.getElementById('durationMax').value);
+                }
+            }
+        });
+    } else {
+        console.error('stageSelect element not found!');
+    }
+    
+    // Обработчик добавления нового этапа
+    document.getElementById('addStageBtn').addEventListener('click', function() {
+        const stageName = prompt('Введите название нового этапа:');
+        if (!stageName || !stageName.trim()) {
+            showStatus('Название этапа не может быть пустым', 'error');
             return;
         }
         
-        const conn = pendingConnectionToStop;
+        const form = document.querySelector('form');
+        const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
         
-        // Если источник - это обычный этап, сохраняем его как финальный этап
-        if (conn.sourceStageId !== 'start') {
-            // Устанавливаем значения в форму
-            document.getElementById('stageSelect').value = conn.sourceStageId;
-            document.getElementById('parentSelect').value = '';
-            document.getElementById('positionSelect').value = '';
-            
-            // Создаём скрытое поле для leads_to_stop
-            const form = document.querySelector('form');
-            let leadsToStopInput = form.querySelector('input[name="leads_to_stop"]');
-            if (!leadsToStopInput) {
-                leadsToStopInput = document.createElement('input');
-                leadsToStopInput.type = 'hidden';
-                leadsToStopInput.name = 'leads_to_stop';
-                form.appendChild(leadsToStopInput);
+        const formData = new FormData();
+        formData.append('stage_name', stageName.trim());
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        
+        const apiUrl = '/superuser/templates/' + templateId + '/add-stage/';
+        
+        showStatus('Добавление этапа...', 'info');
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error('HTTP ' + response.status);
+                });
             }
-            leadsToStopInput.value = 'true';
-            
-            // Добавляем обработчик для отслеживания отправки
-            showStatus('Сохранение связи...', 'info');
-            
-            // Отправляем форму с небольшой задержкой для гарантии сохранения сессии
-            setTimeout(function() {
-                form.submit();
-            }, 100);
-        } else {
-            showStatus('Нельзя сохранить связь от Старта', 'error');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showStatus('Этап успешно добавлен! Перезагрузка...', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showStatus('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showStatus('Ошибка при добавлении: ' + error.message, 'error');
+        });
+    });
+    
+    // Обработчик удаления этапа
+    document.getElementById('deleteStageBtn').addEventListener('click', function() {
+        const stageId = document.getElementById('stageSelect').value;
+        if (!stageId) {
+            showStatus('Пожалуйста, выберите этап для удаления', 'error');
+            return;
         }
         
-        pendingConnectionToStop = null;
+        const stageName = document.getElementById('stageSelect').options[document.getElementById('stageSelect').selectedIndex].text;
+        
+        if (!confirm('Вы уверены, что хотите удалить этап "' + stageName + '"? Это действие нельзя отменить.')) {
+            return;
+        }
+        
+        const form = document.querySelector('form');
+        const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+        
+        const apiUrl = '/superuser/templates/' + templateId + '/delete-stage/' + stageId + '/';
+        
+        showStatus('Удаление этапа...', 'info');
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error('HTTP ' + response.status);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showStatus('Этап успешно удален! Перезагрузка...', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showStatus('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showStatus('Ошибка при удалении: ' + error.message, 'error');
+        });
+    });
+    
+    // Обработчик сохранения связей
+    const confirmButton = document.getElementById('confirmSaveConnection');
+    console.log('DEBUG: confirmSaveConnection button found:', confirmButton);
+    
+    if (confirmButton) {
+        confirmButton.addEventListener('click', function(e) {
+            console.log('DEBUG: confirmSaveConnection clicked!');
+            e.preventDefault();
+            
+            if (pendingConnections.length === 0) {
+                showStatus('Нет связей для сохранения', 'error');
+                return;
+            }
+            
+            const form = document.querySelector('form');
+            const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+            
+            showStatus('Сохранение ' + pendingConnections.length + ' связей...', 'info');
+            
+            // Сохраняем каждую связь
+            let savedCount = 0;
+            let errorCount = 0;
+            
+            pendingConnections.forEach((conn, index) => {
+                console.log('DEBUG: Saving connection', index + 1, ':', conn);
+                
+                const formData = new FormData();
+                formData.append('source_stage_id', conn.sourceStageId === 'start' ? 'start' : conn.sourceStageId);
+                formData.append('target_stage_id', conn.targetStageId === 'stop' ? 'stop' : conn.targetStageId);
+                formData.append('csrfmiddlewaretoken', csrfToken);
+                
+                const apiUrl = '/superuser/templates/' + templateId + '/save-connection/';
+                
+                fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('DEBUG: Response data:', data);
+                    
+                    if (data.success) {
+                        savedCount++;
+                    } else {
+                        errorCount++;
+                        console.error('ERROR: Failed to save connection:', data.error);
+                    }
+                    
+                    // Если это последняя связь, показываем результат
+                    if (savedCount + errorCount === pendingConnections.length) {
+                        if (errorCount === 0) {
+                            showStatus('Все ' + savedCount + ' связей успешно сохранены!', 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showStatus('Сохранено: ' + savedCount + ', ошибок: ' + errorCount, 'warning');
+                        }
+                    }
+                })
+                .catch(error => {
+                    errorCount++;
+                    console.error('DEBUG: Fetch error:', error);
+                });
+            });
+            
+            pendingConnections = [];
+            document.getElementById('saveConnectionToStop').style.display = 'none';
+        });
+    } else {
+        console.error('ERROR: confirmSaveConnection button not found!');
+    }
+    
+    // Обработчик отмены сохранения связей
+    document.getElementById('cancelSaveConnection').addEventListener('click', function() {
+        if (pendingConnections.length > 0) {
+            // Удаляем все связи с диаграммы
+            pendingConnections.forEach(conn => {
+                cy.remove('#' + conn.edgeId);
+            });
+            showStatus(pendingConnections.length + ' связей отменены', 'info');
+        }
+        
+        pendingConnections = [];
         document.getElementById('saveConnectionToStop').style.display = 'none';
     });
     
-    // Обработчик отмены сохранения связи к Stop
-    document.getElementById('cancelSaveConnection').addEventListener('click', function() {
-        if (pendingConnectionToStop) {
-            // Удаляем связь с диаграммы
-            cy.remove('#' + pendingConnectionToStop.edgeId);
-            showStatus('Связь отменена', 'info');
-        }
+    // Обработчик печати диаграммы
+    document.getElementById('printDiagramBtn').addEventListener('click', function() {
+        // Сохраняем текущий zoom и pan
+        const currentZoom = cy.zoom();
+        const currentPan = cy.pan();
         
-        pendingConnectionToStop = null;
-        document.getElementById('saveConnectionToStop').style.display = 'none';
+        // Получаем bounding box всех элементов
+        const bb = cy.elements().boundingBox();
+        
+        // A4 размеры в пикселях с учетом полей (20mm = ~75px с каждой стороны)
+        // A4: 210mm x 297mm = 794px x 1123px
+        // С полями: 644px x 973px
+        const pageWidth = 644;
+        const pageHeight = 973;
+        
+        // Вычисляем масштаб для подгонки всей диаграммы на одну страницу
+        const diagramWidth = bb.w + 60; // +60 для отступов
+        const diagramHeight = bb.h + 60;
+        
+        const scaleX = pageWidth / diagramWidth;
+        const scaleY = pageHeight / diagramHeight;
+        const scale = Math.min(scaleX, scaleY); // Используем меньший масштаб, чтобы всё влезло
+        
+        // Вычисляем центр для центрирования диаграммы
+        const centerX = (pageWidth - diagramWidth * scale) / 2;
+        const centerY = (pageHeight - diagramHeight * scale) / 2;
+        
+        // Применяем масштаб и центрируем
+        cy.animate({
+            zoom: scale,
+            pan: {
+                x: centerX - bb.x1 * scale,
+                y: centerY - bb.y1 * scale
+            }
+        }, {
+            duration: 300
+        });
+        
+        // После анимации печатаем
+        setTimeout(() => {
+            window.print();
+            
+            // Восстанавливаем исходный zoom и pan
+            setTimeout(() => {
+                cy.animate({
+                    zoom: currentZoom,
+                    pan: currentPan
+                }, {
+                    duration: 300
+                });
+            }, 500);
+        }, 400);
     });
     
     // Функция для показа сообщений

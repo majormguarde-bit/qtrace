@@ -1040,7 +1040,7 @@ class TemplateDetailView(LoginRequiredMixin, TemplateView):
         try:
             template = TaskTemplate.objects.prefetch_related('stages').get(pk=template_id)
             context['template'] = template
-            context['stages'] = template.stages.all().order_by('order')
+            context['stages'] = template.stages.all().order_by('sequence_number')
         except TaskTemplate.DoesNotExist:
             context['error'] = 'Шаблон не найден'
         return context
@@ -1063,7 +1063,7 @@ class TemplateDetailView(LoginRequiredMixin, TemplateView):
 # --- Task Templates (Local) ---
 
 class LocalTemplateListView(LoginRequiredMixin, ListView):
-    """Список локальных шаблонов тенанта"""
+    """Список локальных и глобальных шаблонов с переключателем"""
     model = TaskTemplate
     template_name = 'dashboard/local_template_list.html'
     context_object_name = 'templates'
@@ -1071,22 +1071,27 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
     
     def dispatch(self, request, *args, **kwargs):
         user = request.user
-        # Только администратор тенанта может видеть локальные шаблоны
+        # Только администратор тенанта может видеть шаблоны
         if not (hasattr(user, 'role') and user.role == 'ADMIN'):
             messages.error(request, 'У вас нет доступа к этой странице.')
             return redirect('dashboard:home')
         return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
-        queryset = TaskTemplate.objects.filter(template_type='local').prefetch_related('stages', 'activity_category')
-        
-        # Фильтрация по категории
+        # Получаем фильтры
         category_id = self.request.GET.get('category')
+        search = self.request.GET.get('search', '')
+        template_type = self.request.GET.get('type', 'global')  # По умолчанию показываем глобальные
+        
+        # Определяем, какие шаблоны показывать
+        if template_type == 'local':
+            queryset = TaskTemplate.objects.filter(template_type='local').prefetch_related('stages', 'activity_category')
+        else:
+            queryset = TaskTemplate.objects.filter(template_type='global').prefetch_related('stages', 'activity_category')
+        
+        # Применяем фильтры
         if category_id:
             queryset = queryset.filter(activity_category_id=category_id)
-        
-        # Поиск по названию
-        search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
         
@@ -1094,9 +1099,23 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Получаем фильтры
+        category_id = self.request.GET.get('category')
+        search = self.request.GET.get('search', '')
+        template_type = self.request.GET.get('type', 'global')  # По умолчанию показываем глобальные
+        
+        # Определяем заголовок
+        if template_type == 'local':
+            context['page_title'] = 'Локальные шаблоны'
+        else:
+            context['page_title'] = 'Глобальные шаблоны задач'
+        
         context['categories'] = ActivityCategory.objects.all()
-        context['selected_category'] = self.request.GET.get('category')
-        context['search_query'] = self.request.GET.get('search', '')
+        context['selected_category'] = category_id
+        context['search_query'] = search
+        context['template_type'] = template_type
+        
         return context
 
 
@@ -1214,6 +1233,24 @@ class LocalTemplateDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+class TemplateDetailAjaxView(LoginRequiredMixin, TemplateView):
+    """AJAX представление для деталей шаблона"""
+    template_name = 'dashboard/template_detail_ajax.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        template_id = self.kwargs.get('pk')
+        
+        try:
+            template = TaskTemplate.objects.prefetch_related('stages', 'activity_category').get(pk=template_id)
+            context['template'] = template
+            context['stages'] = template.stages.all().order_by('sequence_number')
+        except TaskTemplate.DoesNotExist:
+            context['error'] = 'Шаблон не найден'
+        
+        return context
+
+
 # --- Template Proposals ---
 
 class MyProposalsView(LoginRequiredMixin, ListView):
@@ -1232,7 +1269,7 @@ class MyProposalsView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = TemplateProposal.objects.filter(proposed_by=user).prefetch_related('template')
+        queryset = TemplateProposal.objects.filter(proposed_by_id=user.id).prefetch_related('local_template', 'approved_global_template')
         
         # Фильтрация по статусу
         status = self.request.GET.get('status')
@@ -1243,7 +1280,7 @@ class MyProposalsView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['statuses'] = TemplateProposal.PROPOSAL_STATUS_CHOICES
+        context['statuses'] = TemplateProposal.STATUS_CHOICES
         context['selected_status'] = self.request.GET.get('status')
         return context
 
@@ -1274,7 +1311,7 @@ class AllProposalsView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['statuses'] = TemplateProposal.PROPOSAL_STATUS_CHOICES
+        context['statuses'] = TemplateProposal.STATUS_CHOICES
         context['selected_status'] = self.request.GET.get('status')
         return context
 
@@ -1333,7 +1370,7 @@ def withdraw_proposal(request, pk):
         return redirect('dashboard:home')
     
     try:
-        proposal = TemplateProposal.objects.get(pk=pk, proposed_by=user)
+        proposal = TemplateProposal.objects.get(pk=pk, proposed_by_id=user.id)
         proposal.withdraw()
         messages.success(request, 'Предложение успешно отозвано.')
     except TemplateProposal.DoesNotExist:

@@ -52,7 +52,6 @@ urlpatterns = [
     path('templates/create/', views.TemplateCreateView.as_view(), name='template_create'),
     path('templates/<int:pk>/edit/', views.TemplateEditView.as_view(), name='template_edit'),
     path('templates/<int:pk>/delete/', views.TemplateDeleteView.as_view(), name='template_delete'),
-    path('templates/<int:pk>/detail/', views.TemplateDetailView.as_view(), name='template_detail'),
     path('template/<int:pk>/stages/', views.get_template_stages, name='get_template_stages'),
     
     # Task Templates (Local)
@@ -60,6 +59,7 @@ urlpatterns = [
     path('my-templates/create/', views.LocalTemplateCreateView.as_view(), name='local_template_create'),
     path('my-templates/<int:pk>/edit/', views.LocalTemplateEditView.as_view(), name='local_template_edit'),
     path('my-templates/<int:pk>/delete/', views.LocalTemplateDeleteView.as_view(), name='local_template_delete'),
+    path('templates/<int:pk>/detail/', views.TemplateDetailAjaxView.as_view(), name='template_detail_ajax'),
     
     # Template Proposals
     path('my-proposals/', views.MyProposalsView.as_view(), name='my_proposals'),

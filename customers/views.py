@@ -1420,6 +1420,254 @@ def superuser_template_create(request):
     })
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_save_stage(request, template_id):
+    """API endpoint для сохранения изменений этапа"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage, Position
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    stage_id = request.POST.get('stage_id')
+    parent_stage_id = request.POST.get('parent_stage_id') or None
+    position_id = request.POST.get('position_id') or None
+    
+    try:
+        stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
+        
+        # Обновляем родительский этап
+        if parent_stage_id:
+            parent_stage = TaskTemplateStage.objects.get(id=parent_stage_id, template=template)
+            stage.parent_stage = parent_stage
+        else:
+            stage.parent_stage = None
+        
+        # Обновляем должность
+        if position_id:
+            try:
+                position = Position.objects.get(id=position_id)
+                stage.position = position
+            except Position.DoesNotExist:
+                stage.position = None
+        else:
+            stage.position = None
+        
+        stage.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Этап успешно обновлен'
+        })
+    except TaskTemplateStage.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Этап не найден'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_save_connection(request, template_id):
+    """API endpoint для сохранения связей между этапами"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    # Новый формат: source_stage_id и target_stage_id
+    source_stage_id = request.POST.get('source_stage_id')
+    target_stage_id = request.POST.get('target_stage_id')
+    
+    # Старый формат для обратной совместимости
+    stage_id = request.POST.get('stage_id')
+    leads_to_stop = request.POST.get('leads_to_stop') == 'true'
+    
+    try:
+        # Если используется новый формат
+        if source_stage_id and target_stage_id:
+            # Если целевой этап - это Stop
+            if target_stage_id == 'stop':
+                # Находим исходный этап и устанавливаем флаг leads_to_stop
+                source_stage = TaskTemplateStage.objects.get(id=source_stage_id, template=template)
+                source_stage.leads_to_stop = True
+                source_stage.save()
+            else:
+                # Если это обычная связь между этапами
+                target_stage = TaskTemplateStage.objects.get(id=target_stage_id, template=template)
+                source_stage = TaskTemplateStage.objects.get(id=source_stage_id, template=template)
+                
+                # Устанавливаем родителя для целевого этапа
+                target_stage.parent_stage = source_stage
+                target_stage.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Связь успешно сохранена'
+            })
+        
+        # Если используется старый формат
+        elif stage_id:
+            stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
+            stage.leads_to_stop = leads_to_stop
+            stage.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Связь успешно сохранена'
+            })
+        
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указаны параметры связи'
+            }, status=400)
+            
+    except TaskTemplateStage.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Этап не найден'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_add_stage(request, template_id):
+    """API endpoint для добавления нового этапа"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    stage_name = request.POST.get('stage_name', '').strip()
+    
+    if not stage_name:
+        return JsonResponse({
+            'success': False,
+            'error': 'Название этапа не может быть пустым'
+        }, status=400)
+    
+    try:
+        # Получаем максимальный номер последовательности
+        max_sequence = TaskTemplateStage.objects.filter(template=template).aggregate(
+            max_seq=Max('sequence_number')
+        )['max_seq'] or 0
+        
+        # Создаём новый этап
+        stage = TaskTemplateStage.objects.create(
+            template=template,
+            name=stage_name,
+            sequence_number=max_sequence + 1,
+            duration_from=1,
+            duration_to=1
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Этап успешно добавлен',
+            'stage': {
+                'id': stage.id,
+                'name': stage.name,
+                'sequence_number': stage.sequence_number,
+                'duration_min': stage.duration_min,
+                'duration_max': stage.duration_max
+            }
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_delete_stage(request, template_id, stage_id):
+    """API endpoint для удаления этапа"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    try:
+        stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
+        stage_name = stage.name
+        stage.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Этап "{stage_name}" успешно удален'
+        })
+    except TaskTemplateStage.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Этап не найден'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_update_duration(request, template_id, stage_id):
+    """API endpoint для обновления времени этапа"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    try:
+        stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
+        
+        duration_min = request.POST.get('duration_min')
+        duration_max = request.POST.get('duration_max')
+        
+        if duration_min:
+            stage.duration_from = float(duration_min)
+        if duration_max:
+            stage.duration_to = float(duration_max)
+        
+        stage.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Время этапа успешно обновлено',
+            'stage': {
+                'id': stage.id,
+                'duration_min': stage.duration_from,
+                'duration_max': stage.duration_to
+            }
+        })
+    except TaskTemplateStage.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Этап не найден'
+        }, status=404)
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Неверный формат времени'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_edit(request, template_id):
     """Редактирование глобального шаблона"""
     from task_templates.models import TaskTemplate, TaskTemplateStage, Material, StageMaterial
@@ -1453,6 +1701,8 @@ def superuser_template_edit(request, template_id):
             leads_to_stop = request.POST.get('leads_to_stop') == 'true'
             
             print(f"DEBUG: set_parent action - stage_id={stage_id}, parent_stage_id={parent_stage_id}, position_id={position_id}, leads_to_stop={leads_to_stop}")
+            print(f"DEBUG: User authenticated: {request.user.is_authenticated}, User: {request.user}")
+            print(f"DEBUG: Session key: {request.session.session_key}")
             
             try:
                 stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
@@ -1483,7 +1733,15 @@ def superuser_template_edit(request, template_id):
                 print(f"DEBUG: Stage not found - stage_id={stage_id}")
                 messages.error(request, 'Этап не найден.')
             
-            return redirect('superuser_template_diagram', template_id=template.id)
+            # Явно сохраняем сессию перед редиректом
+            print(f"DEBUG: Before session save - Session key: {request.session.session_key}")
+            request.session.modified = True
+            request.session.save()
+            print(f"DEBUG: After session save - Session key: {request.session.session_key}")
+            
+            response = redirect('superuser_template_diagram', template_id=template.id)
+            print(f"DEBUG: Redirect response created: {response.status_code}")
+            return response
         
         # Обычное редактирование шаблона
         form = TemplateForm(request.POST, instance=template)
@@ -1613,6 +1871,12 @@ def api_duration_units(request):
     return JsonResponse(list(units), safe=False)
 
 
+def api_units_of_measure(request):
+    """API endpoint для получения единиц измерения (доступен всем)"""
+    units = UnitOfMeasure.objects.filter(is_active=True).values('id', 'name', 'abbreviation')
+    return JsonResponse(list(units), safe=False)
+
+
 def api_materials(request):
     """API endpoint для получения материалов (доступен всем)"""
     materials = Material.objects.filter(is_active=True).select_related('unit').values(
@@ -1735,8 +1999,29 @@ def superuser_material_create(request):
     if request.method == 'POST':
         form = MaterialForm(request.POST)
         if form.is_valid():
-            material = form.save()
-            messages.success(request, f'Материал "{material.name}" успешно создан.')
+            material = form.save(commit=False)
+            
+            # Если код не заполнен, генерируем его из названия и единицы измерения
+            if not material.code or material.code.strip() == '':
+                # Берём первые 3 буквы названия (в верхнем регистре)
+                name_part = material.name[:3].upper().replace(' ', '')
+                # Берём сокращение единицы измерения
+                unit_part = material.unit.abbreviation.upper() if material.unit else 'UN'
+                # Генерируем код
+                base_code = f"{name_part}-{unit_part}"
+                
+                # Проверяем уникальность и добавляем номер если нужно
+                code = base_code
+                counter = 1
+                while Material.objects.filter(code=code).exists():
+                    code = f"{base_code}-{counter}"
+                    counter += 1
+                
+                material.code = code
+                print(f"Generated code: {material.code}")
+            
+            material.save()
+            messages.success(request, f'Материал "{material.name}" успешно создан. Код: {material.code}')
             return redirect('superuser_materials')
     else:
         form = MaterialForm()
@@ -1778,7 +2063,27 @@ def superuser_material_edit(request, material_id):
     if request.method == 'POST':
         form = MaterialForm(request.POST, instance=material)
         if form.is_valid():
-            material = form.save()
+            material = form.save(commit=False)
+            
+            # Если код не заполнен, генерируем его из названия и единицы измерения
+            if not material.code or material.code.strip() == '':
+                # Берём первые 3 буквы названия (в верхнем регистре)
+                name_part = material.name[:3].upper().replace(' ', '')
+                # Берём сокращение единицы измерения
+                unit_part = material.unit.abbreviation.upper() if material.unit else 'UN'
+                # Генерируем код
+                base_code = f"{name_part}-{unit_part}"
+                
+                # Проверяем уникальность и добавляем номер если нужно
+                code = base_code
+                counter = 1
+                while Material.objects.filter(code=code).exclude(id=material.id).exists():
+                    code = f"{base_code}-{counter}"
+                    counter += 1
+                
+                material.code = code
+            
+            material.save()
             messages.success(request, f'Материал "{material.name}" успешно обновлен.')
             return redirect('superuser_materials')
     else:
@@ -2101,7 +2406,18 @@ def superuser_template_diagram(request, template_id):
             'position': position_name,
             'position_id': stage.position_id if stage.position else None,
             'duration': duration_str,
+            'duration_from': float(stage.duration_from) if stage.duration_from else 1,
+            'duration_to': float(stage.duration_to) if stage.duration_to else 1,
+            'duration_unit': stage.duration_unit.abbreviation if stage.duration_unit else '',
             'leads_to_stop': stage.leads_to_stop,
+            'materials': [
+                {
+                    'name': m.material.name,
+                    'quantity': float(m.quantity),
+                    'unit': m.material.unit.abbreviation if m.material.unit else 'шт'
+                }
+                for m in stage.materials.all()
+            ]
         })
     
     context = {

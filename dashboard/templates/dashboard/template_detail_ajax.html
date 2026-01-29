@@ -1,0 +1,52 @@
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
+<div class="template-detail">
+    <h6 class="mb-3">{{ template.name }}</h6>
+    
+    {% if template.description %}
+    <div class="mb-3">
+        <strong>Описание:</strong>
+        <p class="text-muted">{{ template.description }}</p>
+    </div>
+    {% endif %}
+    
+    {% if template.activity_category %}
+    <div class="mb-3">
+        <strong>Категория:</strong>
+        <span class="badge bg-light text-dark border">{{ template.activity_category.name }}</span>
+    </div>
+    {% endif %}
+    
+    <div class="mb-3">
+        <strong>Этапы ({{ stages.count }}):</strong>
+        <div class="mt-2">
+            {% for stage in stages %}
+            <div class="card card-sm mb-2">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ stage.sequence_number }}. {{ stage.name }}</strong>
+                            {% if stage.position %}
+                            <br><small class="text-muted">Должность: {{ stage.position.name }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">
+                                {% if stage.duration_from == stage.duration_to %}
+                                    {{ stage.duration_from }} {{ stage.duration_unit.name|default:"" }}
+                                {% else %}
+                                    {{ stage.duration_from }}-{{ stage.duration_to }} {{ stage.duration_unit.name|default:"" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">Этапы не добавлены</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

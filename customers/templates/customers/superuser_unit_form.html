@@ -30,6 +30,14 @@
                         <small class="text-muted d-block mt-1">Краткое обозначение (например: кг, м, шт)</small>
                     </div>
                     
+                    {% if is_create %}
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-info btn-sm w-100" id="fillDefaultsBtn">
+                            <i class="bi bi-lightning-fill me-1"></i> Заполнить основными значениями
+                        </button>
+                    </div>
+                    {% endif %}
+                    
                     <div class="mb-3 form-check">
                         {{ form.is_active }}
                         <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
@@ -82,4 +90,101 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fillBtn = document.getElementById('fillDefaultsBtn');
+    const nameInput = document.querySelector('input[name="name"]');
+    const abbrevInput = document.querySelector('input[name="abbreviation"]');
+    
+    if (fillBtn && nameInput && abbrevInput) {
+        fillBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Основные единицы измерения
+            const commonUnits = [
+                { name: 'Миллиметр', abbrev: 'мм' },
+                { name: 'Сантиметр', abbrev: 'см' },
+                { name: 'Метр', abbrev: 'м' },
+                { name: 'Километр', abbrev: 'км' },
+                { name: 'Грамм', abbrev: 'г' },
+                { name: 'Килограмм', abbrev: 'кг' },
+                { name: 'Тонна', abbrev: 'т' },
+                { name: 'Миллилитр', abbrev: 'мл' },
+                { name: 'Литр', abbrev: 'л' },
+                { name: 'Штука', abbrev: 'шт' },
+                { name: 'Пара', abbrev: 'пр' },
+                { name: 'Дюжина', abbrev: 'дз' },
+                { name: 'Упаковка', abbrev: 'уп' },
+                { name: 'Рулон', abbrev: 'рул' },
+                { name: 'Лист', abbrev: 'л' },
+                { name: 'Секунда', abbrev: 'сек' },
+                { name: 'Минута', abbrev: 'мин' },
+                { name: 'Час', abbrev: 'ч' },
+                { name: 'День', abbrev: 'дн' },
+            ];
+            
+            // Создаём опции
+            const options = commonUnits.map((unit, index) => 
+                `<option value="${index}">${unit.name} (${unit.abbrev})</option>`
+            ).join('');
+            
+            // Создаём модальное окно
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'unitSelectModal';
+            modal.setAttribute('tabindex', '-1');
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Выберите основную единицу измерения</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <label class="form-label">Единица:</label>
+                            <select class="form-select" id="unitSelect">
+                                <option value="">-- Выберите единицу --</option>
+                                ${options}
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                            <button type="button" class="btn btn-primary" id="confirmSelectBtn">Выбрать</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            const confirmBtn = document.getElementById('confirmSelectBtn');
+            const unitSelect = document.getElementById('unitSelect');
+            
+            confirmBtn.addEventListener('click', function() {
+                const selectedIndex = unitSelect.value;
+                console.log('Selected index:', selectedIndex);
+                
+                if (selectedIndex !== '') {
+                    const unit = commonUnits[parseInt(selectedIndex)];
+                    console.log('Selected unit:', unit);
+                    
+                    nameInput.value = unit.name;
+                    abbrevInput.value = unit.abbrev;
+                    
+                    console.log('Name input value:', nameInput.value);
+                    console.log('Abbrev input value:', abbrevInput.value);
+                    
+                    bsModal.hide();
+                    setTimeout(() => modal.remove(), 500);
+                }
+            });
+        });
+    } else {
+        console.error('Elements not found:', { fillBtn, nameInput, abbrevInput });
+    }
+});
+</script>
 {% endblock %}

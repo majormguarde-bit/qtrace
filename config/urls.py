@@ -48,6 +48,8 @@ from customers.views import (
     
     superuser_templates, superuser_proposals, superuser_template_create,
     superuser_template_edit, superuser_template_delete, superuser_template_diagram,
+    superuser_template_save_connection, superuser_template_save_stage,
+    superuser_template_add_stage, superuser_template_delete_stage, superuser_template_update_duration,
     
     superuser_materials, superuser_material_create, superuser_material_edit,
     superuser_material_delete, superuser_units, superuser_unit_create,
@@ -204,6 +206,11 @@ urlpatterns = [
     path('superuser/templates/<int:template_id>/edit/', superuser_template_edit, name='superuser_template_edit'),
     path('superuser/templates/<int:template_id>/delete/', superuser_template_delete, name='superuser_template_delete'),
     path('superuser/templates/<int:template_id>/diagram/', superuser_template_diagram, name='superuser_template_diagram'),
+    path('superuser/templates/<int:template_id>/save-connection/', superuser_template_save_connection, name='superuser_template_save_connection'),
+    path('superuser/templates/<int:template_id>/save-stage/', superuser_template_save_stage, name='superuser_template_save_stage'),
+    path('superuser/templates/<int:template_id>/add-stage/', superuser_template_add_stage, name='superuser_template_add_stage'),
+    path('superuser/templates/<int:template_id>/delete-stage/<int:stage_id>/', superuser_template_delete_stage, name='superuser_template_delete_stage'),
+    path('superuser/templates/<int:template_id>/update-duration/<int:stage_id>/', superuser_template_update_duration, name='superuser_template_update_duration'),
     path('superuser/proposals/', superuser_proposals, name='superuser_proposals'),
     
     # Справочники: Материалы
@@ -231,6 +238,8 @@ urlpatterns = [
     path('ai/', include('ai_app.urls')),
     
     path('api/task-templates/', include('task_templates.urls')),
+    
+    path('', include('dashboard.urls')),
 
     
 

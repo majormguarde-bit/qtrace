@@ -14,6 +14,12 @@ class TenantStatusMiddleware:
         # request.tenant устанавливается TenantMainMiddleware, который идет ПЕРЕД этим middleware
         tenant = getattr(request, 'tenant', None)
         
+        # Если это публичная схема (администраторская панель), обновляем сессию
+        if tenant and tenant.schema_name == 'public':
+            # Обновляем время жизни сессии для администраторов
+            if hasattr(request, 'user') and request.user.is_authenticated:
+                request.session.modified = True
+        
         # Если это не публичная схема
         if tenant and tenant.schema_name != 'public':
             # Проверка флага активности
