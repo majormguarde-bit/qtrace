@@ -187,8 +187,11 @@
         <!-- Кнопка печати -->
         <div class="card mb-3">
             <div class="card-body">
-                <button type="button" class="btn btn-primary btn-sm w-100" id="printDiagramBtn">
+                <button type="button" class="btn btn-primary btn-sm w-100 mb-2" id="printDiagramBtn">
                     <i class="bi bi-printer me-1"></i> Печать диаграммы
+                </button>
+                <button type="button" class="btn btn-success btn-sm w-100" id="saveDiagramBtn">
+                    <i class="bi bi-download me-1"></i> Сохранить диаграмму
                 </button>
             </div>
         </div>
@@ -1160,6 +1163,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }, 500);
         }, 400);
+    });
+    
+    // Обработчик сохранения диаграммы
+    document.getElementById('saveDiagramBtn').addEventListener('click', function() {
+        try {
+            // Получаем SVG из Cytoscape
+            const svgString = cy.svg({
+                full: true,
+                scale: 1,
+                maxWidth: 1000,
+                maxHeight: 1000
+            });
+            
+            // Отправляем SVG на сервер
+            const formData = new FormData();
+            formData.append('svg_data', svgString);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            const templateId = parseInt('{{ template.id }}');
+            const apiUrl = '/superuser/templates/' + templateId + '/save-diagram/';
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Диаграмма успешно сохранена!', 'success');
+                } else {
+                    showStatus('Ошибка при сохранении диаграммы: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showStatus('Ошибка при сохранении диаграммы', 'error');
+            });
+        } catch (error) {
+            console.error('Error generating SVG:', error);
+            showStatus('Ошибка при генерации SVG: ' + error.message, 'error');
+        }
     });
     
     // Функция для показа сообщений

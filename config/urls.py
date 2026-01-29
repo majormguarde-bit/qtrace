@@ -50,6 +50,7 @@ from customers.views import (
     superuser_template_edit, superuser_template_delete, superuser_template_diagram,
     superuser_template_save_connection, superuser_template_save_stage,
     superuser_template_add_stage, superuser_template_delete_stage, superuser_template_update_duration,
+    superuser_template_save_diagram,
     
     superuser_materials, superuser_material_create, superuser_material_edit,
     superuser_material_delete, superuser_units, superuser_unit_create,
@@ -211,6 +212,7 @@ urlpatterns = [
     path('superuser/templates/<int:template_id>/add-stage/', superuser_template_add_stage, name='superuser_template_add_stage'),
     path('superuser/templates/<int:template_id>/delete-stage/<int:stage_id>/', superuser_template_delete_stage, name='superuser_template_delete_stage'),
     path('superuser/templates/<int:template_id>/update-duration/<int:stage_id>/', superuser_template_update_duration, name='superuser_template_update_duration'),
+    path('superuser/templates/<int:template_id>/save-diagram/', superuser_template_save_diagram, name='superuser_template_save_diagram'),
     path('superuser/proposals/', superuser_proposals, name='superuser_proposals'),
     
     # Справочники: Материалы

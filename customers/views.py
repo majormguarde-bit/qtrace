@@ -1668,6 +1668,39 @@ def superuser_template_update_duration(request, template_id, stage_id):
         }, status=500)
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_save_diagram(request, template_id):
+    """API endpoint для сохранения SVG диаграммы"""
+    from task_templates.models import TaskTemplate
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    
+    try:
+        svg_data = request.POST.get('svg_data', '')
+        
+        if not svg_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'SVG данные не предоставлены'
+            }, status=400)
+        
+        # Сохраняем SVG в базу
+        template.diagram_svg = svg_data
+        template.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Диаграмма успешно сохранена'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_edit(request, template_id):
     """Редактирование глобального шаблона"""
     from task_templates.models import TaskTemplate, TaskTemplateStage, Material, StageMaterial

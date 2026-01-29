@@ -167,6 +167,9 @@ class TaskTemplate(models.Model):
     version = models.IntegerField(default=1, verbose_name='Версия')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     
+    # SVG диаграмма (сохраняется при редактировании диаграммы)
+    diagram_svg = models.TextField(blank=True, null=True, verbose_name='SVG диаграмма')
+    
     # Аудит - используем User вместо TenantUser для public schema
     created_by_id = models.IntegerField(null=True, blank=True, verbose_name='Создан (ID)')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')

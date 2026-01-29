@@ -49,9 +49,14 @@
         </div>
     </div>
     
-    <!-- Кнопка для открытия диаграммы в отдельном окне -->
-    <div class="mt-3 pt-3 border-top">
-        <p class="small text-muted mb-2">Диаграмма доступна в редакторе шаблона</p>
+    <!-- Сохраненная диаграмма -->
+    {% if template.diagram_svg %}
+    <div class="mt-4 pt-4 border-top">
+        <strong>Диаграмма:</strong>
+        <div class="mt-2" style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f8f9fa; overflow-x: auto;">
+            {{ template.diagram_svg|safe }}
+        </div>
     </div>
+    {% endif %}
 </div>
 {% endif %}
