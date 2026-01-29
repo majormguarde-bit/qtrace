@@ -76,6 +76,8 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
 <script>
 // Инициализируем диаграмму при переключении на вкладку
 document.getElementById('diagram-tab').addEventListener('shown.bs.tab', function() {
@@ -83,188 +85,201 @@ document.getElementById('diagram-tab').addEventListener('shown.bs.tab', function
 });
 
 function initTemplateDiagram() {
-    const stagesData = {{ stages_json|safe }};
-    const templateId = {{ template.id }};
-    
-    // Подготавливаем элементы для Cytoscape
-    const elements = [];
-    
-    // Добавляем узел "Старт"
-    elements.push({
-        data: { id: 'start', label: '🟢 Старт' },
-        classes: 'start'
-    });
-    
-    // Добавляем узлы этапов
-    stagesData.forEach(stage => {
-        const stageName = stage.sequence_number + '. ' + stage.name;
-        const position = stage.position || 'Не указана';
+    try {
+        const stagesJsonStr = '{{ stages_json|escapejs }}';
+        const stagesData = stagesJsonStr ? JSON.parse(stagesJsonStr) : [];
+        const templateId = {{ template.id }};
         
-        // Форматируем длительность
-        let durationText = 'Не указана';
-        if (stage.duration_from && stage.duration_to) {
-            if (stage.duration_from === stage.duration_to) {
-                durationText = 'Длительность: ' + stage.duration_from + ' ' + (stage.duration_unit || '');
-            } else {
-                durationText = 'Длительность: ' + stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
-            }
-        }
+        console.log('Stages data:', stagesData);
         
-        const label = stageName + '\n' + position + '\n' + durationText;
+        // Подготавливаем элементы для Cytoscape
+        const elements = [];
         
+        // Добавляем узел "Старт"
         elements.push({
-            data: {
-                id: 'stage_' + stage.id,
-                label: label,
-                stageName: stageName,
-                position: position,
-                duration: durationText
-            }
+            data: { id: 'start', label: '🟢 Старт' },
+            classes: 'start'
         });
-    });
-    
-    // Добавляем узел "Стоп"
-    elements.push({
-        data: { id: 'stop', label: '🔴 Стоп' },
-        classes: 'stop'
-    });
-    
-    // Добавляем ребра (связи)
-    // От Старта к первому этапу
-    if (stagesData.length > 0) {
-        elements.push({
-            data: {
-                id: 'edge_start_' + stagesData[0].id,
-                source: 'start',
-                target: 'stage_' + stagesData[0].id
+        
+        // Добавляем узлы этапов
+        stagesData.forEach(stage => {
+            const stageName = stage.sequence_number + '. ' + stage.name;
+            const position = stage.position || 'Не указана';
+            
+            // Форматируем длительность
+            let durationText = 'Не указана';
+            if (stage.duration_from && stage.duration_to) {
+                if (stage.duration_from === stage.duration_to) {
+                    durationText = 'Длительность: ' + stage.duration_from + ' ' + (stage.duration_unit || '');
+                } else {
+                    durationText = 'Длительность: ' + stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
+                }
             }
-        });
-    } else {
-        // Если нет этапов, соединяем Старт со Стопом
-        elements.push({
-            data: {
-                id: 'edge_start_stop',
-                source: 'start',
-                target: 'stop'
-            }
-        });
-    }
-    
-    // Добавляем ребра для подчиненности
-    stagesData.forEach(stage => {
-        if (stage.parent_stage_id) {
+            
+            const label = stageName + '\n' + position + '\n' + durationText;
+            
             elements.push({
                 data: {
-                    id: 'edge_' + stage.parent_stage_id + '_' + stage.id,
-                    source: 'stage_' + stage.parent_stage_id,
-                    target: 'stage_' + stage.id
+                    id: 'stage_' + stage.id,
+                    label: label,
+                    stageName: stageName,
+                    position: position,
+                    duration: durationText
+                }
+            });
+        });
+        
+        // Добавляем узел "Стоп"
+        elements.push({
+            data: { id: 'stop', label: '🔴 Стоп' },
+            classes: 'stop'
+        });
+        
+        // Добавляем ребра (связи)
+        // От Старта к первому этапу
+        if (stagesData.length > 0) {
+            elements.push({
+                data: {
+                    id: 'edge_start_' + stagesData[0].id,
+                    source: 'start',
+                    target: 'stage_' + stagesData[0].id
+                }
+            });
+        } else {
+            // Если нет этапов, соединяем Старт со Стопом
+            elements.push({
+                data: {
+                    id: 'edge_start_stop',
+                    source: 'start',
+                    target: 'stop'
                 }
             });
         }
-    });
-    
-    // От последнего этапа к Стопу
-    if (stagesData.length > 0) {
-        const lastStage = stagesData[stagesData.length - 1];
-        elements.push({
-            data: {
-                id: 'edge_' + lastStage.id + '_stop',
-                source: 'stage_' + lastStage.id,
-                target: 'stop'
-            }
-        });
-    }
-    
-    // Добавляем связи к Stop для этапов, которые ведут к Stop
-    stagesData.forEach(stage => {
-        if (stage.leads_to_stop) {
-            const edgeId = 'edge_' + stage.id + '_stop';
-            if (!elements.find(el => el.data && el.data.id === edgeId)) {
+        
+        // Добавляем ребра для подчиненности
+        stagesData.forEach(stage => {
+            if (stage.parent_stage_id) {
                 elements.push({
                     data: {
-                        id: edgeId,
-                        source: 'stage_' + stage.id,
-                        target: 'stop'
+                        id: 'edge_' + stage.parent_stage_id + '_' + stage.id,
+                        source: 'stage_' + stage.parent_stage_id,
+                        target: 'stage_' + stage.id
                     }
                 });
             }
+        });
+        
+        // От последнего этапа к Стопу
+        if (stagesData.length > 0) {
+            const lastStage = stagesData[stagesData.length - 1];
+            elements.push({
+                data: {
+                    id: 'edge_' + lastStage.id + '_stop',
+                    source: 'stage_' + lastStage.id,
+                    target: 'stop'
+                }
+            });
         }
-    });
-    
-    // Инициализируем Cytoscape
-    const cy = cytoscape({
-        container: document.getElementById('templateDiagram'),
-        elements: elements,
-        style: [
-            {
-                selector: 'node:not(:parent)',
-                style: {
-                    'background-color': '#2d5016',
-                    'label': 'data(label)',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'font-size': 14,
-                    'font-weight': 'bold',
-                    'color': 'white',
-                    'border-width': 2,
-                    'border-color': '#1a3009',
-                    'padding': '10px',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '150px',
-                    'shape': 'rectangle',
-                    'width': '180px',
-                    'height': '120px',
-                    'line-height': 1.2
-                }
-            },
-            {
-                selector: 'node.start',
-                style: {
-                    'background-color': '#28a745',
-                    'border-color': '#1e7e34',
-                    'shape': 'ellipse',
-                    'width': 80,
-                    'height': 80,
-                    'font-size': 14,
-                    'font-weight': 'bold'
-                }
-            },
-            {
-                selector: 'node.stop',
-                style: {
-                    'background-color': '#155724',
-                    'border-color': '#0d3818',
-                    'shape': 'ellipse',
-                    'width': 80,
-                    'height': 80,
-                    'font-size': 14,
-                    'font-weight': 'bold'
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'line-color': '#0056b3',
-                    'target-arrow-color': '#0056b3',
-                    'target-arrow-shape': 'triangle',
-                    'arrow-scale': 1.5,
-                    'width': 2,
-                    'curve-style': 'bezier',
-                    'opacity': 0.8
+        
+        // Добавляем связи к Stop для этапов, которые ведут к Stop
+        stagesData.forEach(stage => {
+            if (stage.leads_to_stop) {
+                const edgeId = 'edge_' + stage.id + '_stop';
+                if (!elements.find(el => el.data && el.data.id === edgeId)) {
+                    elements.push({
+                        data: {
+                            id: edgeId,
+                            source: 'stage_' + stage.id,
+                            target: 'stop'
+                        }
+                    });
                 }
             }
-        ],
-        layout: {
-            name: 'dagre',
-            rankDir: 'LR',
-            nodeSep: 50,
-            rankSep: 100,
-            animate: false
-        }
-    });
-    
-    // Автоматически подгоняем вид
-    cy.fit();
+        });
+        
+        console.log('Elements:', elements);
+        
+        // Инициализируем Cytoscape
+        const cy = cytoscape({
+            container: document.getElementById('templateDiagram'),
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#2d5016',
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': 12,
+                        'font-weight': 'bold',
+                        'color': 'white',
+                        'border-width': 2,
+                        'border-color': '#1a3009',
+                        'padding': '10px',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '150px',
+                        'shape': 'rectangle',
+                        'width': '180px',
+                        'height': '120px',
+                        'line-height': 1.2
+                    }
+                },
+                {
+                    selector: 'node.start',
+                    style: {
+                        'background-color': '#28a745',
+                        'border-color': '#1e7e34',
+                        'shape': 'ellipse',
+                        'width': 80,
+                        'height': 80,
+                        'font-size': 14,
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: 'node.stop',
+                    style: {
+                        'background-color': '#155724',
+                        'border-color': '#0d3818',
+                        'shape': 'ellipse',
+                        'width': 80,
+                        'height': 80,
+                        'font-size': 14,
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'line-color': '#0056b3',
+                        'target-arrow-color': '#0056b3',
+                        'target-arrow-shape': 'triangle',
+                        'arrow-scale': 1.5,
+                        'width': 2,
+                        'curve-style': 'bezier',
+                        'opacity': 0.8
+                    }
+                }
+            ],
+            layout: {
+                name: 'dagre',
+                rankDir: 'LR',
+                nodeSep: 50,
+                rankSep: 100,
+                animate: false
+            }
+        });
+        
+        // Автоматически подгоняем вид
+        setTimeout(() => {
+            cy.fit();
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error initializing diagram:', error);
+        document.getElementById('templateDiagram').innerHTML = '<div class="alert alert-danger">Ошибка при загрузке диаграммы: ' + error.message + '</div>';
+    }
 }
 </script>
 {% endif %}
