@@ -70,25 +70,36 @@
         
         <!-- Вкладка с диаграммой -->
         <div class="tab-pane fade" id="diagram-content" role="tabpanel">
-            <div id="templateDiagram" style="height: 400px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;"></div>
+            <div id="templateDiagram" style="width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;"></div>
         </div>
     </div>
+    
+    <!-- Скрытый контейнер с JSON данными -->
+    <script type="application/json" id="stagesData">
+{{ stages_json|safe }}
+    </script>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+
 <script>
+let diagramInitialized = false;
+
 // Инициализируем диаграмму при переключении на вкладку
 document.getElementById('diagram-tab').addEventListener('shown.bs.tab', function() {
-    initTemplateDiagram();
+    if (!diagramInitialized) {
+        initTemplateDiagram();
+        diagramInitialized = true;
+    }
 });
 
 function initTemplateDiagram() {
     try {
-        const stagesJsonStr = '{{ stages_json|escapejs }}';
-        const stagesData = stagesJsonStr ? JSON.parse(stagesJsonStr) : [];
-        const templateId = {{ template.id }};
+        // Получаем JSON данные из скрытого контейнера
+        const stagesJsonElement = document.getElementById('stagesData');
+        const stagesData = JSON.parse(stagesJsonElement.textContent);
         
         console.log('Stages data:', stagesData);
         
@@ -97,7 +108,7 @@ function initTemplateDiagram() {
         
         // Добавляем узел "Старт"
         elements.push({
-            data: { id: 'start', label: '🟢 Старт' },
+            data: { id: 'start', label: 'Старт' },
             classes: 'start'
         });
         
@@ -107,12 +118,12 @@ function initTemplateDiagram() {
             const position = stage.position || 'Не указана';
             
             // Форматируем длительность
-            let durationText = 'Не указана';
+            let durationText = '';
             if (stage.duration_from && stage.duration_to) {
                 if (stage.duration_from === stage.duration_to) {
-                    durationText = 'Длительность: ' + stage.duration_from + ' ' + (stage.duration_unit || '');
+                    durationText = stage.duration_from + ' ' + (stage.duration_unit || '');
                 } else {
-                    durationText = 'Длительность: ' + stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
+                    durationText = stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
                 }
             }
             
@@ -121,17 +132,14 @@ function initTemplateDiagram() {
             elements.push({
                 data: {
                     id: 'stage_' + stage.id,
-                    label: label,
-                    stageName: stageName,
-                    position: position,
-                    duration: durationText
+                    label: label
                 }
             });
         });
         
         // Добавляем узел "Стоп"
         elements.push({
-            data: { id: 'stop', label: '🔴 Стоп' },
+            data: { id: 'stop', label: 'Стоп' },
             classes: 'stop'
         });
         
@@ -156,19 +164,6 @@ function initTemplateDiagram() {
             });
         }
         
-        // Добавляем ребра для подчиненности
-        stagesData.forEach(stage => {
-            if (stage.parent_stage_id) {
-                elements.push({
-                    data: {
-                        id: 'edge_' + stage.parent_stage_id + '_' + stage.id,
-                        source: 'stage_' + stage.parent_stage_id,
-                        target: 'stage_' + stage.id
-                    }
-                });
-            }
-        });
-        
         // От последнего этапа к Стопу
         if (stagesData.length > 0) {
             const lastStage = stagesData[stagesData.length - 1];
@@ -180,22 +175,6 @@ function initTemplateDiagram() {
                 }
             });
         }
-        
-        // Добавляем связи к Stop для этапов, которые ведут к Stop
-        stagesData.forEach(stage => {
-            if (stage.leads_to_stop) {
-                const edgeId = 'edge_' + stage.id + '_stop';
-                if (!elements.find(el => el.data && el.data.id === edgeId)) {
-                    elements.push({
-                        data: {
-                            id: edgeId,
-                            source: 'stage_' + stage.id,
-                            target: 'stop'
-                        }
-                    });
-                }
-            }
-        });
         
         console.log('Elements:', elements);
         
@@ -211,18 +190,18 @@ function initTemplateDiagram() {
                         'label': 'data(label)',
                         'text-valign': 'center',
                         'text-halign': 'center',
-                        'font-size': 12,
+                        'font-size': 11,
                         'font-weight': 'bold',
                         'color': 'white',
                         'border-width': 2,
                         'border-color': '#1a3009',
-                        'padding': '10px',
+                        'padding': '8px',
                         'text-wrap': 'wrap',
-                        'text-max-width': '150px',
+                        'text-max-width': '120px',
                         'shape': 'rectangle',
-                        'width': '180px',
-                        'height': '120px',
-                        'line-height': 1.2
+                        'width': '150px',
+                        'height': '100px',
+                        'line-height': 1.1
                     }
                 },
                 {
@@ -231,9 +210,9 @@ function initTemplateDiagram() {
                         'background-color': '#28a745',
                         'border-color': '#1e7e34',
                         'shape': 'ellipse',
-                        'width': 80,
-                        'height': 80,
-                        'font-size': 14,
+                        'width': 70,
+                        'height': 70,
+                        'font-size': 12,
                         'font-weight': 'bold'
                     }
                 },
@@ -243,9 +222,9 @@ function initTemplateDiagram() {
                         'background-color': '#155724',
                         'border-color': '#0d3818',
                         'shape': 'ellipse',
-                        'width': 80,
-                        'height': 80,
-                        'font-size': 14,
+                        'width': 70,
+                        'height': 70,
+                        'font-size': 12,
                         'font-weight': 'bold'
                     }
                 },
@@ -255,7 +234,7 @@ function initTemplateDiagram() {
                         'line-color': '#0056b3',
                         'target-arrow-color': '#0056b3',
                         'target-arrow-shape': 'triangle',
-                        'arrow-scale': 1.5,
+                        'arrow-scale': 1.2,
                         'width': 2,
                         'curve-style': 'bezier',
                         'opacity': 0.8
@@ -265,8 +244,8 @@ function initTemplateDiagram() {
             layout: {
                 name: 'dagre',
                 rankDir: 'LR',
-                nodeSep: 50,
-                rankSep: 100,
+                nodeSep: 40,
+                rankSep: 80,
                 animate: false
             }
         });
@@ -274,11 +253,15 @@ function initTemplateDiagram() {
         // Автоматически подгоняем вид
         setTimeout(() => {
             cy.fit();
-        }, 100);
+            cy.center();
+        }, 200);
+        
+        console.log('Diagram initialized successfully');
         
     } catch (error) {
         console.error('Error initializing diagram:', error);
-        document.getElementById('templateDiagram').innerHTML = '<div class="alert alert-danger">Ошибка при загрузке диаграммы: ' + error.message + '</div>';
+        const container = document.getElementById('templateDiagram');
+        container.innerHTML = '<div style="padding: 20px; color: red;">Ошибка при загрузке диаграммы: ' + error.message + '</div>';
     }
 }
 </script>
