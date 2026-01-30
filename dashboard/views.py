@@ -177,21 +177,39 @@ class TaskForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
+class TaskStageForm(forms.ModelForm):
+    """Форма для этапа задачи с опциональными полями длительности"""
+    class Meta:
+        model = TaskStage
+        fields = ['name', 'duration_value', 'duration_unit', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
+            'duration_value': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Значение', 'step': '0.01', 'min': '0'}),
+            'duration_unit': forms.Select(attrs={'class': 'form-select'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '№'}),
+            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
+            'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность', 'readonly': 'readonly'}),
+            'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность', 'readonly': 'readonly'}),
+            'materials_info': forms.HiddenInput(),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Делаем поля опциональными
+        self.fields['name'].required = False
+        self.fields['duration_value'].required = False
+        self.fields['duration_unit'].required = False
+        self.fields['order'].required = False
+        self.fields['assigned_to'].required = False
+        self.fields['position_name'].required = False
+        self.fields['duration_text'].required = False
+        self.fields['materials_info'].required = False
+
 TaskStageFormSet = inlineformset_factory(
     Task, TaskStage,
-    fields=['name', 'duration_value', 'duration_unit', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info'],
+    form=TaskStageForm,
     extra=0,
-    can_delete=True,
-    widgets={
-        'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
-        'duration_value': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Значение', 'step': '0.01', 'min': '0'}),
-        'duration_unit': forms.Select(attrs={'class': 'form-select'}),
-        'order': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '№'}),
-        'assigned_to': forms.Select(attrs={'class': 'form-select'}),
-        'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность', 'readonly': 'readonly'}),
-        'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность', 'readonly': 'readonly'}),
-        'materials_info': forms.HiddenInput(),
-    }
+    can_delete=True
 )
 
 # Formset для этапов шаблонов
@@ -276,30 +294,48 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
                 messages.error(self.request, error_msg)
                 return self.render_to_response(self.get_context_data(form=form))
             
+            # Валидируем формсет
+            if not stages.is_valid():
+                # Проверяем, есть ли реальные ошибки (не считая пустых форм)
+                has_real_errors = False
+                error_details = []
+                
+                for idx, stage_form in enumerate(stages.forms):
+                    if stage_form.errors:
+                        # Проверяем, есть ли в форме хоть какие-то данные
+                        has_data = any(
+                            stage_form.cleaned_data.get(field) 
+                            for field in ['name', 'duration_value', 'assigned_to']
+                            if hasattr(stage_form, 'cleaned_data')
+                        )
+                        
+                        if has_data:
+                            has_real_errors = True
+                            error_msg = f"Этап {idx + 1}: {', '.join([f'{k}: {v[0]}' for k, v in stage_form.errors.items()])}"
+                            error_details.append(error_msg)
+                            logger.error(f"Stage form {idx} errors: {stage_form.errors}")
+                
+                if has_real_errors:
+                    full_error = "Ошибки в этапах: " + "; ".join(error_details)
+                    logger.error(f"Stages formset validation failed: {stages.errors}")
+                    messages.error(self.request, full_error)
+                    return self.render_to_response(self.get_context_data(form=form))
+            
             # Фильтруем пустые формы в formset
             # Оставляем только те формы, которые имеют данные
             valid_forms = []
             for stage_form in stages.forms:
                 # Пропускаем пустые формы (DELETE отмечена или все поля пусты)
-                if stage_form.cleaned_data and not stage_form.cleaned_data.get('DELETE', False):
-                    valid_forms.append(stage_form)
-            
-            # Если есть ошибки в заполненных формах
-            has_errors = False
-            error_details = []
-            for idx, stage_form in enumerate(stages.forms):
-                if stage_form.cleaned_data and not stage_form.cleaned_data.get('DELETE', False):
-                    if stage_form.errors:
-                        has_errors = True
-                        error_msg = f"Этап {idx + 1}: {', '.join([f'{k}: {v[0]}' for k, v in stage_form.errors.items()])}"
-                        error_details.append(error_msg)
-                        logger.error(f"Stage form {idx} errors: {stage_form.errors}")
-            
-            if has_errors:
-                full_error = "Ошибки в этапах: " + "; ".join(error_details)
-                logger.error(f"Stages formset validation failed: {stages.errors}")
-                messages.error(self.request, full_error)
-                return self.render_to_response(self.get_context_data(form=form))
+                if hasattr(stage_form, 'cleaned_data') and stage_form.cleaned_data:
+                    # Проверяем, не отмечена ли форма на удаление
+                    if not stage_form.cleaned_data.get('DELETE', False):
+                        # Проверяем, есть ли хоть какие-то данные в форме
+                        has_data = any(
+                            stage_form.cleaned_data.get(field) 
+                            for field in ['name', 'duration_value', 'assigned_to']
+                        )
+                        if has_data:
+                            valid_forms.append(stage_form)
             
             # Сохраняем задачу
             self.object = form.save()
