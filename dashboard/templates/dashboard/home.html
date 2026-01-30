@@ -386,7 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (kanbanCard) {
             const taskId = kanbanCard.dataset.taskId;
             if (taskId) {
-                window.location.href = `/tasks/${taskId}/edit/?next=/`;
+                // Переходим в список задач с якорем на конкретную задачу
+                window.location.href = `/tasks/#task-${taskId}`;
             }
         }
     });

@@ -94,7 +94,7 @@
                 <tbody class="border-top-0">
                     {% for task in tasks %}
                     <!-- Main Row -->
-                    <tr class="task-row cursor-pointer" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
+                    <tr class="task-row cursor-pointer" id="task-{{ task.id }}" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
                         <td class="ps-4" onclick="event.stopPropagation();">
                             <input type="checkbox" class="form-check-input task-checkbox" value="{{ task.id }}" data-task-id="{{ task.id }}">
                         </td>
@@ -129,7 +129,19 @@
                                     <div class="row">
                                         <div class="col-lg-8">
                                             <h6 class="text-muted small text-uppercase fw-bold mb-2">Описание</h6>
-                                            <div class="text-dark mb-4 lead-sm">{{ task.description|linebreaks|default:"Нет описания" }}</div>
+                                            <div class="text-dark mb-3 lead-sm">{{ task.description|linebreaks|default:"Нет описания" }}</div>
+                                            
+                                            <div class="mb-4">
+                                                <span class="text-muted small">Кто контролирует:</span>
+                                                {% if task.supervisor %}
+                                                    <span class="fw-medium">{{ task.supervisor.get_full_name }}</span>
+                                                    {% if task.supervisor.position %}
+                                                        <span class="text-muted small">({{ task.supervisor.position.name }})</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted fst-italic">Не назначен</span>
+                                                {% endif %}
+                                            </div>
                                             
                                             <!-- Task Control Buttons -->
                                             <h6 class="text-muted small text-uppercase fw-bold mb-2">Управление статусом</h6>
@@ -428,6 +440,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         updateBulkActionsPanel();
     });
+    
+    // Автоматическое раскрытие аккордеона при переходе по якорю
+    if (window.location.hash) {
+        const taskId = window.location.hash.substring(1); // Убираем #
+        const taskRow = document.getElementById(taskId);
+        
+        if (taskRow) {
+            // Прокручиваем к задаче
+            taskRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Раскрываем аккордеон
+            const collapseTarget = taskRow.getAttribute('data-bs-target');
+            if (collapseTarget) {
+                const collapseElement = document.querySelector(collapseTarget);
+                if (collapseElement) {
+                    // Используем Bootstrap Collapse API
+                    const bsCollapse = new bootstrap.Collapse(collapseElement, {
+                        toggle: true
+                    });
+                    
+                    // Обновляем aria-expanded
+                    taskRow.setAttribute('aria-expanded', 'true');
+                    
+                    // Подсвечиваем строку
+                    taskRow.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+                    setTimeout(() => {
+                        taskRow.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }
+        }
+    }
 });
 </script>
 {% endblock %}

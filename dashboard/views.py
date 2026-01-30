@@ -266,11 +266,11 @@ class TaskListView(LoginRequiredMixin, ListView):
         user = self.request.user
         if hasattr(user, 'role'):
             if user.role == 'ADMIN':
-                queryset = Task.objects.all().prefetch_related('stages__media')
+                queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media')
             else:
-                queryset = Task.objects.filter(assigned_to=user).prefetch_related('stages__media')
+                queryset = Task.objects.filter(assigned_to=user).select_related('supervisor__position').prefetch_related('stages__media')
         elif getattr(user, 'is_superuser', False):
-            queryset = Task.objects.all().prefetch_related('stages__media')
+            queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media')
         else:
             return Task.objects.none()
         
