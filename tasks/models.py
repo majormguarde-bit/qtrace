@@ -37,10 +37,19 @@ class TaskStage(models.Model):
         ('COMPLETED', 'Завершен'),
         ('FAILED', 'Проблема'),
     ]
+    
+    DURATION_UNIT_CHOICES = [
+        ('second', 'Секунда'),
+        ('minute', 'Минута'),
+        ('hour', 'Час'),
+        ('day', 'День'),
+    ]
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stages', verbose_name='Задача')
     name = models.CharField(max_length=200, verbose_name='Название этапа')
-    duration_minutes = models.PositiveIntegerField(default=0, verbose_name='Длительность (мин)')
+    duration_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Длительность (значение)')
+    duration_unit = models.CharField(max_length=10, choices=DURATION_UNIT_CHOICES, default='minute', verbose_name='Единица времени')
+    duration_minutes = models.PositiveIntegerField(default=0, verbose_name='Длительность (мин, для совместимости)')
     order = models.PositiveIntegerField(default=0, verbose_name='Порядок')
     is_completed = models.BooleanField(default=False, verbose_name='Завершен')
     status = models.CharField(max_length=20, choices=STAGE_STATUS_CHOICES, default='PENDING', verbose_name='Статус этапа')

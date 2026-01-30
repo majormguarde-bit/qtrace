@@ -178,16 +178,17 @@ class TaskForm(forms.ModelForm):
 
 TaskStageFormSet = inlineformset_factory(
     Task, TaskStage,
-    fields=['name', 'duration_minutes', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info'],
+    fields=['name', 'duration_value', 'duration_unit', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info'],
     extra=1,
     can_delete=True,
     widgets={
         'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
-        'duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Мин'}),
+        'duration_value': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Значение', 'step': '0.01', 'min': '0'}),
+        'duration_unit': forms.Select(attrs={'class': 'form-select'}),
         'order': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '№'}),
         'assigned_to': forms.Select(attrs={'class': 'form-select'}),
-        'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность'}),
-        'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность'}),
+        'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность', 'readonly': 'readonly'}),
+        'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность', 'readonly': 'readonly'}),
         'materials_info': forms.HiddenInput(),
     }
 )

@@ -80,11 +80,11 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label small text-muted">Мин</label>
-                                    {{ stage_form.duration_minutes }}
-                                    {% if stage_form.duration_minutes.errors %}
-                                    <div class="text-danger small">{{ stage_form.duration_minutes.errors.0 }}</div>
-                                    {% endif %}
+                                    <label class="form-label small text-muted">Длительность</label>
+                                    <div class="input-group">
+                                        {{ stage_form.duration_value }}
+                                        {{ stage_form.duration_unit }}
+                                    </div>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Исполнитель</label>
