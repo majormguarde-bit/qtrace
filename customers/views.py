@@ -2468,3 +2468,71 @@ def superuser_template_diagram(request, template_id):
     }
     return render(request, 'customers/superuser_template_diagram.html', context)
 
+
+
+# --- Template Export/Import для суперпользователя ---
+
+from task_templates.export_import import TemplateExporter, TemplateImporter
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_export_template(request, template_id):
+    """Экспорт шаблона суперпользователем"""
+    from task_templates.models import TaskTemplate
+    
+    template = get_object_or_404(TaskTemplate, pk=template_id, template_type='global')
+    
+    # Экспортируем шаблон
+    json_data = TemplateExporter.export_to_json(template)
+    
+    # Создаем HTTP ответ с файлом
+    response = HttpResponse(json_data, content_type='application/json')
+    filename = f"template_{template.name.replace(' ', '_')}.json"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_import_template(request):
+    """Импорт шаблона суперпользователем"""
+    if request.method != 'POST':
+        return redirect('superuser_templates')
+    
+    # Получаем файл
+    uploaded_file = request.FILES.get('template_file')
+    if not uploaded_file:
+        messages.error(request, 'Файл не выбран.')
+        return redirect('superuser_templates')
+    
+    # Проверяем расширение файла
+    if not uploaded_file.name.endswith('.json'):
+        messages.error(request, 'Неверный формат файла. Ожидается JSON.')
+        return redirect('superuser_templates')
+    
+    # Читаем содержимое файла
+    try:
+        json_string = uploaded_file.read().decode('utf-8')
+    except Exception as e:
+        messages.error(request, f'Ошибка чтения файла: {str(e)}')
+        return redirect('superuser_templates')
+    
+    # Получаем параметры импорта
+    conflict_strategy = request.POST.get('conflict_strategy', 'rename')
+    
+    # Импортируем в глобальные шаблоны
+    importer = TemplateImporter(user=request.user, tenant=None)
+    result = importer.import_from_json(json_string, 'global', conflict_strategy)
+    
+    # Показываем результат
+    if result['success']:
+        created_count = len(result['created']['templates'])
+        messages.success(request, f'Успешно импортировано шаблонов: {created_count}')
+        
+        if result['warnings']:
+            for warning in result['warnings']:
+                messages.warning(request, warning)
+    else:
+        messages.error(request, 'Ошибка импорта:')
+        for error in result['errors']:
+            messages.error(request, error)
+    
+    return redirect('superuser_templates')

@@ -8,6 +8,9 @@
 <a href="{% url 'superuser_template_create' %}" class="btn btn-sm btn-primary">
     <i class="bi bi-plus-circle me-1"></i> Создать шаблон
 </a>
+<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+    <i class="bi bi-upload me-1"></i> Импорт
+</button>
 <a href="{% url 'superuser_templates' %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-clockwise me-1"></i> Обновить
 </a>
@@ -88,6 +91,9 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <small class="text-muted d-block mb-2">Создан: {{ template.created_at|date:"d.m.Y H:i" }} | Этапов: {{ template.stages.count }}</small>
+                                <a href="{% url 'superuser_export_template' template.id %}" class="btn btn-sm btn-outline-success" title="Экспорт">
+                                    <i class="bi bi-download"></i> Экспорт
+                                </a>
                                 <a href="{% url 'superuser_template_diagram' template.id %}" class="btn btn-sm btn-outline-info" title="Диаграмма">
                                     <i class="bi bi-diagram-3"></i> Диаграмма
                                 </a>
@@ -223,4 +229,54 @@
         </div>
     </div>
 </div>
+
+<!-- Модальное окно импорта -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Импорт шаблона</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'superuser_import_template' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Файл шаблона (JSON)</label>
+                        <input type="file" name="template_file" class="form-control" accept=".json" required>
+                        <div class="form-text">Выберите JSON файл с экспортированным шаблоном</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">При конфликте имен</label>
+                        <select name="conflict_strategy" class="form-select">
+                            <option value="rename">Переименовать (добавить "копия")</option>
+                            <option value="skip">Пропустить</option>
+                            <option value="overwrite">Перезаписать</option>
+                        </select>
+                        <div class="form-text">Что делать, если шаблон с таким именем уже существует</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Что будет импортировано:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Шаблон с описанием</li>
+                            <li>Все этапы с параметрами</li>
+                            <li>Материалы и их связи</li>
+                            <li>Диаграмма (если есть)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i> Импортировать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

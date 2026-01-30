@@ -82,4 +82,8 @@ urlpatterns = [
     path('proposals/<int:pk>/approve/', views.approve_proposal, name='approve_proposal'),
     path('proposals/<int:pk>/reject/', views.reject_proposal, name='reject_proposal'),
     path('proposals/<int:pk>/withdraw/', views.withdraw_proposal, name='withdraw_proposal'),
+    
+    # Template Export/Import
+    path('templates/<int:pk>/export/', views.export_template, name='export_template'),
+    path('templates/import/', views.import_template, name='import_template'),
 ]

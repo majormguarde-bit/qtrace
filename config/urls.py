@@ -55,7 +55,9 @@ from customers.views import (
     superuser_materials, superuser_material_create, superuser_material_edit,
     superuser_material_delete, superuser_units, superuser_unit_create,
     superuser_unit_edit, superuser_unit_delete, superuser_positions,
-    superuser_position_create, superuser_position_edit, superuser_position_delete
+    superuser_position_create, superuser_position_edit, superuser_position_delete,
+    
+    superuser_export_template, superuser_import_template
 
 )
 
@@ -244,6 +246,10 @@ urlpatterns = [
     path('superuser/positions/create/', superuser_position_create, name='superuser_position_create'),
     path('superuser/positions/<int:position_id>/edit/', superuser_position_edit, name='superuser_position_edit'),
     path('superuser/positions/<int:position_id>/delete/', superuser_position_delete, name='superuser_position_delete'),
+    
+    # Template Export/Import для суперпользователя
+    path('superuser/templates/<int:template_id>/export/', superuser_export_template, name='superuser_export_template'),
+    path('superuser/templates/import/', superuser_import_template, name='superuser_import_template'),
 
     
 

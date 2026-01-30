@@ -1887,3 +1887,86 @@ class MaterialDeleteView(LoginRequiredMixin, DeleteView):
         if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
             return super().dispatch(request, *args, **kwargs)
         return redirect('dashboard:home')
+
+
+# --- Template Export/Import ---
+
+from django.http import HttpResponse
+from task_templates.export_import import TemplateExporter, TemplateImporter
+
+@login_required
+def export_template(request, pk):
+    """Экспорт одного шаблона в JSON"""
+    template = get_object_or_404(TaskTemplate, pk=pk)
+    
+    # Проверка прав доступа
+    user = request.user
+    if template.template_type == 'local':
+        # Локальные шаблоны может экспортировать только админ тенанта
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет прав для экспорта этого шаблона.')
+            return redirect('dashboard:local_template_list')
+    
+    # Экспортируем шаблон
+    json_data = TemplateExporter.export_to_json(template)
+    
+    # Создаем HTTP ответ с файлом
+    response = HttpResponse(json_data, content_type='application/json')
+    filename = f"template_{template.name.replace(' ', '_')}.json"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+@login_required
+def import_template(request):
+    """Импорт шаблона из JSON файла"""
+    if request.method != 'POST':
+        return redirect('dashboard:local_template_list')
+    
+    user = request.user
+    
+    # Проверка прав доступа
+    if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+        messages.error(request, 'У вас нет прав для импорта шаблонов.')
+        return redirect('dashboard:local_template_list')
+    
+    # Получаем файл
+    uploaded_file = request.FILES.get('template_file')
+    if not uploaded_file:
+        messages.error(request, 'Файл не выбран.')
+        return redirect('dashboard:local_template_list')
+    
+    # Проверяем расширение файла
+    if not uploaded_file.name.endswith('.json'):
+        messages.error(request, 'Неверный формат файла. Ожидается JSON.')
+        return redirect('dashboard:local_template_list')
+    
+    # Читаем содержимое файла
+    try:
+        json_string = uploaded_file.read().decode('utf-8')
+    except Exception as e:
+        messages.error(request, f'Ошибка чтения файла: {str(e)}')
+        return redirect('dashboard:local_template_list')
+    
+    # Получаем параметры импорта
+    template_type = request.POST.get('template_type', 'local')
+    conflict_strategy = request.POST.get('conflict_strategy', 'rename')
+    
+    # Импортируем
+    importer = TemplateImporter(user=user, tenant=getattr(request, 'tenant', None))
+    result = importer.import_from_json(json_string, template_type, conflict_strategy)
+    
+    # Показываем результат
+    if result['success']:
+        created_count = len(result['created']['templates'])
+        messages.success(request, f'Успешно импортировано шаблонов: {created_count}')
+        
+        if result['warnings']:
+            for warning in result['warnings']:
+                messages.warning(request, warning)
+    else:
+        messages.error(request, 'Ошибка импорта:')
+        for error in result['errors']:
+            messages.error(request, error)
+    
+    return redirect('dashboard:local_template_list')

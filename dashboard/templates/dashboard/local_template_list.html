@@ -5,11 +5,16 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold"><i class="bi bi-file-earmark-text me-2"></i>{{ page_title }}</h2>
-    {% if template_type == 'local' %}
-    <a href="{% url 'dashboard:local_template_create' %}" class="btn btn-primary rounded-pill px-4">
-        <i class="bi bi-plus-lg me-1"></i> Создать мой шаблон
-    </a>
-    {% endif %}
+    <div class="btn-group">
+        {% if template_type == 'local' %}
+        <a href="{% url 'dashboard:local_template_create' %}" class="btn btn-primary rounded-pill px-4">
+            <i class="bi bi-plus-lg me-1"></i> Создать мой шаблон
+        </a>
+        <button type="button" class="btn btn-outline-primary rounded-pill px-4 ms-2" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="bi bi-upload me-1"></i> Импорт
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Переключатель типа шаблонов -->
@@ -90,6 +95,9 @@
                                         onclick="loadTemplateDetail({{ template.pk }})" title="Просмотр">
                                     <i class="bi bi-eye text-dark"></i>
                                 </button>
+                                <a href="{% url 'dashboard:export_template' template.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Экспорт">
+                                    <i class="bi bi-download text-dark"></i>
+                                </a>
                                 {% if template_type == 'local' %}
                                     <a href="{% url 'dashboard:local_template_diagram' template.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Диаграмма">
                                         <i class="bi bi-diagram-3 text-dark"></i>
@@ -179,6 +187,64 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно импорта -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Импорт шаблона</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard:import_template' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Файл шаблона (JSON)</label>
+                        <input type="file" name="template_file" class="form-control" accept=".json" required>
+                        <div class="form-text">Выберите JSON файл с экспортированным шаблоном</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Тип шаблона</label>
+                        <select name="template_type" class="form-select">
+                            <option value="local">Мой шаблон</option>
+                            <option value="global">Типовой шаблон</option>
+                        </select>
+                        <div class="form-text">Куда импортировать шаблон</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">При конфликте имен</label>
+                        <select name="conflict_strategy" class="form-select">
+                            <option value="rename">Переименовать (добавить "копия")</option>
+                            <option value="skip">Пропустить</option>
+                            <option value="overwrite">Перезаписать</option>
+                        </select>
+                        <div class="form-text">Что делать, если шаблон с таким именем уже существует</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Что будет импортировано:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Шаблон с описанием</li>
+                            <li>Все этапы с параметрами</li>
+                            <li>Материалы и их связи</li>
+                            <li>Диаграмма (если есть)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i> Импортировать
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
