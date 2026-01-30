@@ -17,6 +17,7 @@ class Task(models.Model):
     description = models.TextField(blank=True, verbose_name='Описание')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', verbose_name='Статус')
     is_completed = models.BooleanField(default=False, verbose_name='Завершена')
+    assigned_to = models.ForeignKey(TenantUser, on_delete=models.SET_NULL, related_name='tasks', null=True, blank=True, verbose_name='Исполнитель')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
