@@ -247,13 +247,10 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
             data['stages'] = TaskStageFormSet()
         
         # Добавляем доступные шаблоны
-        user = self.request.user
-        if hasattr(user, 'role') and user.role == 'ADMIN':
-            # Администратор видит глобальные и локальные шаблоны
-            data['templates'] = TaskTemplate.objects.all().prefetch_related('activity_category').order_by('activity_category', 'name')
-        else:
-            # Обычный пользователь видит только глобальные шаблоны
-            data['templates'] = TaskTemplate.objects.filter(template_type='global').prefetch_related('activity_category').order_by('activity_category', 'name')
+        # В тенанте показываем только локальные шаблоны (template_type='local')
+        data['templates'] = TaskTemplate.objects.filter(
+            template_type='local'
+        ).prefetch_related('activity_category').order_by('activity_category', 'name')
         
         return data
 
@@ -297,11 +294,10 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
             data['stages'] = TaskStageFormSet(instance=self.object)
         
         # Добавляем доступные шаблоны
-        user = self.request.user
-        if hasattr(user, 'role') and user.role == 'ADMIN':
-            data['templates'] = TaskTemplate.objects.all().prefetch_related('activity_category').order_by('activity_category', 'name')
-        else:
-            data['templates'] = TaskTemplate.objects.filter(template_type='global').prefetch_related('activity_category').order_by('activity_category', 'name')
+        # В тенанте показываем только локальные шаблоны (template_type='local')
+        data['templates'] = TaskTemplate.objects.filter(
+            template_type='local'
+        ).prefetch_related('activity_category').order_by('activity_category', 'name')
         
         return data
 
