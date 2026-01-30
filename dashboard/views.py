@@ -699,20 +699,20 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Генерируем предложенный логин
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            role = self.request.POST.get('role', 'WORKER') if self.request.method == 'POST' else 'WORKER'
-            # Получаем количество сотрудников с этой ролью
-            count = TenantUser.objects.filter(role=role).count() + 1
-            # Формируем логин: Предприятие-Роль-N
-            tenant_name = tenant.name.replace(' ', '-').lower()
-            role_name = role.lower()
-            suggested_username = f"{tenant_name}-{role_name}-{count}"
-            context['suggested_username'] = suggested_username
-        return context
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Если это создание нового сотрудника, генерируем логин
+        if not self.object or not self.object.pk:
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                role = self.request.POST.get('role', 'WORKER') if self.request.method == 'POST' else 'WORKER'
+                count = TenantUser.objects.filter(role=role).count() + 1
+                tenant_name = tenant.name.replace(' ', '-').lower()
+                role_name = role.lower()
+                suggested_username = f"{tenant_name}-{role_name}-{count}".lower()
+                form.fields['username'].initial = suggested_username
+                form.fields['username'].widget.attrs['readonly'] = True
+        return form
 
     def form_valid(self, form):
         # Повторная проверка при сохранении формы (на случай одновременных запросов)
@@ -731,7 +731,7 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 count = TenantUser.objects.filter(role=role).count() + 1
                 tenant_name = tenant.name.replace(' ', '-').lower()
                 role_name = role.lower()
-                form.instance.username = f"{tenant_name}-{role_name}-{count}"
+                form.instance.username = f"{tenant_name}-{role_name}-{count}".lower()
         
         return super().form_valid(form)
 
