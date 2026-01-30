@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let positions = [];
     
     // Fetch duration units
-    fetch('/api/task-templates/duration-units/')
+    fetch('/api/duration-units/')
         .then(response => response.json())
         .then(data => {
             durationUnits = data;
@@ -390,15 +390,16 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => console.error('Error loading duration units:', error));
     
     // Fetch materials
-    fetch('/api/task-templates/materials/')
+    fetch('/api/materials/')
         .then(response => response.json())
         .then(data => {
             materials = data;
+            updateAllMaterialSelects();
         })
         .catch(error => console.error('Error loading materials:', error));
     
     // Fetch positions
-    fetch('/api/users/positions/')
+    fetch('/api/positions/')
         .then(response => response.json())
         .then(data => {
             positions = data;
@@ -415,6 +416,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateAllPositionSelects() {
         document.querySelectorAll('.stage-position').forEach(select => {
             updatePositionSelect(select);
+        });
+    }
+    
+    function updateAllMaterialSelects() {
+        document.querySelectorAll('.material-select').forEach(select => {
+            updateMaterialSelect(select);
         });
     }
     
@@ -445,6 +452,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.selected = true;
             }
             select.appendChild(option);
+        });
+    }
+    
+    function updateMaterialSelect(select) {
+        const currentValue = select.value || select.dataset.materialId;
+        select.innerHTML = '<option value="">-- Выберите материал --</option>';
+        
+        materials.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material.id;
+            option.textContent = `${material.name} (${material.code})`;
+            option.dataset.unit = material.unit_abbreviation;
+            if (material.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        // При выборе материала заполняем единицу измерения
+        select.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const materialItem = this.closest('.material-item');
+            const unitField = materialItem.querySelector('.material-unit');
+            unitField.value = selectedOption.dataset.unit || 'шт';
         });
     }
     
@@ -531,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const positionName = prompt('Введите название новой должности:');
             if (positionName && positionName.trim()) {
                 // Отправляем запрос на создание новой должности
-                fetch('/api/users/positions/create/', {
+                fetch('/api/positions/create/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -596,20 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Заполняем dropdown материалов
             const materialSelect = newMaterial.querySelector('.material-select');
-            materials.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material.id;
-                option.textContent = `${material.name} (${material.code})`;
-                option.dataset.unit = material.unit_abbreviation;
-                materialSelect.appendChild(option);
-            });
-            
-            // При выборе материала заполняем единицу измерения
-            materialSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const unitField = newMaterial.querySelector('.material-unit');
-                unitField.value = selectedOption.dataset.unit || 'шт';
-            });
+            updateMaterialSelect(materialSelect);
             
             attachMaterialListeners(newMaterial);
         });
@@ -627,28 +645,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.stage-item').forEach(stage => {
         attachStageListeners(stage);
         stage.querySelectorAll('.material-item').forEach(material => {
-            const materialSelect = material.querySelector('.material-select');
-            const materialId = materialSelect.dataset.materialId;
-            
-            // Заполняем dropdown материалов
-            materials.forEach(mat => {
-                const option = document.createElement('option');
-                option.value = mat.id;
-                option.textContent = `${mat.name} (${mat.code})`;
-                option.dataset.unit = mat.unit_abbreviation;
-                if (mat.id == materialId) {
-                    option.selected = true;
-                }
-                materialSelect.appendChild(option);
-            });
-            
-            // При выборе материала заполняем единицу измерения
-            materialSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const unitField = material.querySelector('.material-unit');
-                unitField.value = selectedOption.dataset.unit || 'шт';
-            });
-            
             attachMaterialListeners(material);
         });
     });

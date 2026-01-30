@@ -1177,18 +1177,62 @@ class LocalTemplateCreateView(LoginRequiredMixin, CreateView):
         return context
     
     def form_valid(self, form):
-        context = self.get_context_data()
-        stages = context['stages']
+        import json
+        from task_templates.models import DurationUnit, Material, StageMaterial
         
-        if stages.is_valid():
-            form.instance.template_type = 'local'
-            self.object = form.save()
-            stages.instance = self.object
-            stages.save()
-            messages.success(self.request, 'Мой шаблон успешно создан.')
-            return redirect(self.success_url)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
+        form.instance.template_type = 'local'
+        self.object = form.save()
+        
+        # Обработка этапов и материалов из JSON
+        stages_data = self.request.POST.get('stages_data')
+        if stages_data:
+            try:
+                stages = json.loads(stages_data)
+                for stage_data in stages:
+                    # Получаем duration_unit по ID или используем default (hour)
+                    duration_unit_id = stage_data.get('duration_unit_id')
+                    if not duration_unit_id:
+                        # Используем час как default
+                        duration_unit = DurationUnit.objects.filter(unit_type='hour').first()
+                        if not duration_unit:
+                            # Если нет, создаём
+                            duration_unit, _ = DurationUnit.objects.get_or_create(
+                                unit_type='hour',
+                                defaults={'name': 'Час', 'abbreviation': 'ч'}
+                            )
+                    else:
+                        duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+                    
+                    stage = TaskTemplateStage.objects.create(
+                        template=self.object,
+                        name=stage_data.get('name', ''),
+                        duration_from=float(stage_data.get('duration_from', 1)),
+                        duration_to=float(stage_data.get('duration_to', 1)),
+                        duration_unit=duration_unit,
+                        position_id=stage_data.get('position_id') or None,
+                        sequence_number=int(stage_data.get('sequence_number', 1))
+                    )
+                    
+                    # Обработка материалов для этапа
+                    materials = stage_data.get('materials', [])
+                    for material_data in materials:
+                        material_id = material_data.get('id')
+                        if material_id:
+                            try:
+                                material = Material.objects.get(id=material_id)
+                                # Создаём связь материала с этапом
+                                StageMaterial.objects.create(
+                                    stage=stage,
+                                    material=material,
+                                    quantity=float(material_data.get('quantity', 1))
+                                )
+                            except Material.DoesNotExist:
+                                pass  # Пропускаем несуществующие материалы
+            except (json.JSONDecodeError, ValueError) as e:
+                messages.warning(self.request, f'Ошибка при сохранении этапов: {e}')
+        
+        messages.success(self.request, 'Мой шаблон успешно создан.')
+        return redirect(self.success_url)
 
 
 class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
@@ -1222,17 +1266,64 @@ class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
         return context
     
     def form_valid(self, form):
-        context = self.get_context_data()
-        stages = context['stages']
+        import json
+        from task_templates.models import DurationUnit, Material, StageMaterial
         
-        if stages.is_valid():
-            self.object = form.save()
-            stages.instance = self.object
-            stages.save()
-            messages.success(self.request, 'Мой шаблон успешно обновлен.')
-            return redirect(self.success_url)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
+        self.object = form.save()
+        
+        # Удаляем старые этапы
+        self.object.stages.all().delete()
+        
+        # Обработка этапов и материалов из JSON
+        stages_data = self.request.POST.get('stages_data')
+        if stages_data:
+            try:
+                stages = json.loads(stages_data)
+                for stage_data in stages:
+                    # Получаем duration_unit по ID или используем default (hour)
+                    duration_unit_id = stage_data.get('duration_unit_id')
+                    if not duration_unit_id:
+                        # Используем час как default
+                        duration_unit = DurationUnit.objects.filter(unit_type='hour').first()
+                        if not duration_unit:
+                            # Если нет, создаём
+                            duration_unit, _ = DurationUnit.objects.get_or_create(
+                                unit_type='hour',
+                                defaults={'name': 'Час', 'abbreviation': 'ч'}
+                            )
+                    else:
+                        duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+                    
+                    stage = TaskTemplateStage.objects.create(
+                        template=self.object,
+                        name=stage_data.get('name', ''),
+                        duration_from=float(stage_data.get('duration_from', 1)),
+                        duration_to=float(stage_data.get('duration_to', 1)),
+                        duration_unit=duration_unit,
+                        position_id=stage_data.get('position_id') or None,
+                        sequence_number=int(stage_data.get('sequence_number', 1))
+                    )
+                    
+                    # Обработка материалов для этапа
+                    materials = stage_data.get('materials', [])
+                    for material_data in materials:
+                        material_id = material_data.get('id')
+                        if material_id:
+                            try:
+                                material = Material.objects.get(id=material_id)
+                                # Создаём связь материала с этапом
+                                StageMaterial.objects.create(
+                                    stage=stage,
+                                    material=material,
+                                    quantity=float(material_data.get('quantity', 1))
+                                )
+                            except Material.DoesNotExist:
+                                pass  # Пропускаем несуществующие материалы
+            except (json.JSONDecodeError, ValueError) as e:
+                messages.warning(self.request, f'Ошибка при сохранении этапов: {e}')
+        
+        messages.success(self.request, 'Мой шаблон успешно обновлен.')
+        return redirect(self.success_url)
 
 
 class LocalTemplateDeleteView(LoginRequiredMixin, DeleteView):
@@ -1891,12 +1982,84 @@ class MaterialDeleteView(LoginRequiredMixin, DeleteView):
 
 # --- Template Export/Import ---
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from task_templates.export_import import TemplateExporter, TemplateImporter
+
+@login_required
+def api_get_positions(request):
+    """API для получения списка должностей из task_templates"""
+    from task_templates.models import Position as TaskPosition
+    positions = TaskPosition.objects.all().values('id', 'name', 'description')
+    return JsonResponse(list(positions), safe=False)
+
+@login_required
+def api_get_duration_units(request):
+    """API для получения списка единиц времени"""
+    from task_templates.models import DurationUnit
+    units = DurationUnit.objects.all().values('id', 'name', 'unit_type')
+    return JsonResponse(list(units), safe=False)
+
+@login_required
+def api_get_materials(request):
+    """API для получения списка материалов"""
+    from task_templates.models import Material
+    materials = Material.objects.all().select_related('unit').values(
+        'id', 'name', 'description', 'unit__id', 'unit__name'
+    )
+    # Преобразуем в более удобный формат
+    result = []
+    for material in materials:
+        result.append({
+            'id': material['id'],
+            'name': material['name'],
+            'description': material['description'],
+            'unit': {
+                'id': material['unit__id'],
+                'name': material['unit__name']
+            } if material['unit__id'] else None
+        })
+    return JsonResponse(result, safe=False)
+
+@login_required
+def api_create_position(request):
+    """API для создания новой должности"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    import json
+    from task_templates.models import Position as TaskPosition
+    
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        
+        if not name:
+            return JsonResponse({'error': 'Название должности обязательно'}, status=400)
+        
+        # Проверяем, не существует ли уже такая должность
+        if TaskPosition.objects.filter(name=name).exists():
+            return JsonResponse({'error': 'Должность с таким названием уже существует'}, status=400)
+        
+        # Создаем новую должность
+        position = TaskPosition.objects.create(
+            name=name,
+            description=description
+        )
+        
+        return JsonResponse({
+            'id': position.id,
+            'name': position.name,
+            'description': position.description
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def export_template(request, pk):
     """Экспорт одного шаблона в JSON"""
+    from urllib.parse import quote
+    
     template = get_object_or_404(TaskTemplate, pk=pk)
     
     # Проверка прав доступа
@@ -1910,10 +2073,18 @@ def export_template(request, pk):
     # Экспортируем шаблон
     json_data = TemplateExporter.export_to_json(template)
     
+    # Формируем имя файла: категория_имя_шаблона.tpl
+    category_name = template.activity_category.name if template.activity_category else 'General'
+    # Очищаем имена от спецсимволов
+    category_clean = category_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    template_clean = template.name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    filename = f"{category_clean}_{template_clean}.tpl"
+    
     # Создаем HTTP ответ с файлом
-    response = HttpResponse(json_data, content_type='application/json')
-    filename = f"template_{template.name.replace(' ', '_')}.json"
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response = HttpResponse(json_data, content_type='application/octet-stream')
+    # Используем quote для правильного кодирования имени файла
+    encoded_filename = quote(filename.encode('utf-8'))
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
     
     return response
 
@@ -1937,8 +2108,8 @@ def import_template(request):
         return redirect('dashboard:local_template_list')
     
     # Проверяем расширение файла
-    if not uploaded_file.name.endswith('.json'):
-        messages.error(request, 'Неверный формат файла. Ожидается JSON.')
+    if not (uploaded_file.name.endswith('.tpl') or uploaded_file.name.endswith('.json')):
+        messages.error(request, 'Неверный формат файла. Ожидается .tpl или .json')
         return redirect('dashboard:local_template_list')
     
     # Читаем содержимое файла

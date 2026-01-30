@@ -86,4 +86,10 @@ urlpatterns = [
     # Template Export/Import
     path('templates/<int:pk>/export/', views.export_template, name='export_template'),
     path('templates/import/', views.import_template, name='import_template'),
+    
+    # API для справочников
+    path('api/positions/', views.api_get_positions, name='api_get_positions'),
+    path('api/positions/create/', views.api_create_position, name='api_create_position'),
+    path('api/duration-units/', views.api_get_duration_units, name='api_get_duration_units'),
+    path('api/materials/', views.api_get_materials, name='api_get_materials'),
 ]

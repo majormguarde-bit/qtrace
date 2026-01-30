@@ -2478,16 +2478,26 @@ from task_templates.export_import import TemplateExporter, TemplateImporter
 def superuser_export_template(request, template_id):
     """Экспорт шаблона суперпользователем"""
     from task_templates.models import TaskTemplate
+    from urllib.parse import quote
+    import json
     
     template = get_object_or_404(TaskTemplate, pk=template_id, template_type='global')
     
     # Экспортируем шаблон
     json_data = TemplateExporter.export_to_json(template)
     
+    # Формируем имя файла: категория_имя_шаблона.tpl
+    category_name = template.activity_category.name if template.activity_category else 'General'
+    # Очищаем имена от спецсимволов
+    category_clean = category_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    template_clean = template.name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    filename = f"{category_clean}_{template_clean}.tpl"
+    
     # Создаем HTTP ответ с файлом
-    response = HttpResponse(json_data, content_type='application/json')
-    filename = f"template_{template.name.replace(' ', '_')}.json"
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response = HttpResponse(json_data, content_type='application/octet-stream')
+    # Используем quote для правильного кодирования имени файла
+    encoded_filename = quote(filename.encode('utf-8'))
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
     
     return response
 
@@ -2504,8 +2514,8 @@ def superuser_import_template(request):
         return redirect('superuser_templates')
     
     # Проверяем расширение файла
-    if not uploaded_file.name.endswith('.json'):
-        messages.error(request, 'Неверный формат файла. Ожидается JSON.')
+    if not (uploaded_file.name.endswith('.tpl') or uploaded_file.name.endswith('.json')):
+        messages.error(request, 'Неверный формат файла. Ожидается .tpl или .json')
         return redirect('superuser_templates')
     
     # Читаем содержимое файла
@@ -2519,20 +2529,25 @@ def superuser_import_template(request):
     conflict_strategy = request.POST.get('conflict_strategy', 'rename')
     
     # Импортируем в глобальные шаблоны
-    importer = TemplateImporter(user=request.user, tenant=None)
-    result = importer.import_from_json(json_string, 'global', conflict_strategy)
-    
-    # Показываем результат
-    if result['success']:
-        created_count = len(result['created']['templates'])
-        messages.success(request, f'Успешно импортировано шаблонов: {created_count}')
+    try:
+        importer = TemplateImporter(user=request.user, tenant=None)
+        result = importer.import_from_json(json_string, 'global', conflict_strategy)
         
-        if result['warnings']:
-            for warning in result['warnings']:
-                messages.warning(request, warning)
-    else:
-        messages.error(request, 'Ошибка импорта:')
-        for error in result['errors']:
-            messages.error(request, error)
+        # Показываем результат
+        if result['success']:
+            created_count = len(result['created']['templates'])
+            messages.success(request, f'Успешно импортировано шаблонов: {created_count}')
+            
+            if result['warnings']:
+                for warning in result['warnings']:
+                    messages.warning(request, warning)
+        else:
+            messages.error(request, 'Ошибка импорта:')
+            for error in result['errors']:
+                messages.error(request, error)
+    except Exception as e:
+        messages.error(request, f'Ошибка при импорте: {str(e)}')
+        import traceback
+        print(traceback.format_exc())
     
     return redirect('superuser_templates')

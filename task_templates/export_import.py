@@ -3,8 +3,7 @@
 """
 import json
 from django.core.serializers.json import DjangoJSONEncoder
-from .models import TaskTemplate, TaskTemplateStage, ActivityCategory, Material, StageMaterial, DurationUnit
-from users_app.models import Position
+from .models import TaskTemplate, TaskTemplateStage, ActivityCategory, Material, StageMaterial, DurationUnit, Position
 
 
 class TemplateExporter:
@@ -37,7 +36,6 @@ class TemplateExporter:
         for stage in template.stages.all().order_by('sequence_number'):
             stage_data = {
                 'name': stage.name,
-                'description': stage.description,
                 'sequence_number': stage.sequence_number,
                 'duration_from': float(stage.duration_from) if stage.duration_from else None,
                 'duration_to': float(stage.duration_to) if stage.duration_to else None,
@@ -49,7 +47,7 @@ class TemplateExporter:
             }
             
             # Экспортируем материалы этапа
-            for stage_material in stage.stage_materials.all():
+            for stage_material in stage.materials.all():
                 material_data = {
                     'material_name': stage_material.material.name,
                     'quantity': float(stage_material.quantity) if stage_material.quantity else None,
@@ -228,15 +226,20 @@ class TemplateImporter:
         position = None
         position_name = stage_data.get('position')
         if position_name:
-            position, created = Position.objects.get_or_create(name=position_name)
-            if created:
+            # Ищем должность по имени (без get_or_create, чтобы избежать проблем со схемами)
+            try:
+                position = Position.objects.get(name=position_name)
+            except Position.DoesNotExist:
+                position = Position.objects.create(name=position_name)
                 self.created_objects['positions'].append(position_name)
+            except Position.MultipleObjectsReturned:
+                # Если несколько - берем первую
+                position = Position.objects.filter(name=position_name).first()
         
         # Создаем этап
         stage = TaskTemplateStage.objects.create(
             template=template,
             name=stage_data.get('name', ''),
-            description=stage_data.get('description', ''),
             sequence_number=stage_data.get('sequence_number', 0),
             duration_from=stage_data.get('duration_from'),
             duration_to=stage_data.get('duration_to'),

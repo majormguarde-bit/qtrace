@@ -242,9 +242,9 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Файл шаблона (JSON)</label>
-                        <input type="file" name="template_file" class="form-control" accept=".json" required>
-                        <div class="form-text">Выберите JSON файл с экспортированным шаблоном</div>
+                        <label class="form-label">Файл шаблона (TPL/JSON)</label>
+                        <input type="file" name="template_file" class="form-control" accept=".tpl,.json" required>
+                        <div class="form-text">Выберите TPL или JSON файл с экспортированным шаблоном</div>
                     </div>
                     
                     <div class="mb-3">

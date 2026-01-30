@@ -202,6 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             materials = data;
+            updateAllMaterialSelects();
         })
         .catch(error => console.error('Error loading materials:', error));
     
@@ -223,6 +224,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateAllPositionSelects() {
         document.querySelectorAll('.stage-position').forEach(select => {
             updatePositionSelect(select);
+        });
+    }
+    
+    function updateAllMaterialSelects() {
+        document.querySelectorAll('.material-select').forEach(select => {
+            updateMaterialSelect(select);
         });
     }
     
@@ -253,6 +260,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.selected = true;
             }
             select.appendChild(option);
+        });
+    }
+    
+    function updateMaterialSelect(select) {
+        const currentValue = select.value || select.dataset.materialId;
+        select.innerHTML = '<option value="">-- Выберите материал --</option>';
+        
+        materials.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material.id;
+            option.textContent = `${material.name} (${material.code})`;
+            option.dataset.unit = material.unit_abbreviation;
+            if (material.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        // При выборе материала заполняем единицу измерения
+        select.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const materialItem = this.closest('.material-item');
+            const unitField = materialItem.querySelector('.material-unit');
+            unitField.value = selectedOption.dataset.unit || 'шт';
         });
     }
     
@@ -404,20 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Заполняем dropdown материалов
             const materialSelect = newMaterial.querySelector('.material-select');
-            materials.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material.id;
-                option.textContent = `${material.name} (${material.code})`;
-                option.dataset.unit = material.unit_abbreviation;
-                materialSelect.appendChild(option);
-            });
-            
-            // При выборе материала заполняем единицу измерения
-            materialSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const unitField = newMaterial.querySelector('.material-unit');
-                unitField.value = selectedOption.dataset.unit || 'шт';
-            });
+            updateMaterialSelect(materialSelect);
             
             attachMaterialListeners(newMaterial);
         });
@@ -435,28 +453,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.stage-item').forEach(stage => {
         attachStageListeners(stage);
         stage.querySelectorAll('.material-item').forEach(material => {
-            const materialSelect = material.querySelector('.material-select');
-            const materialId = materialSelect.dataset.materialId;
-            
-            // Заполняем dropdown материалов
-            materials.forEach(mat => {
-                const option = document.createElement('option');
-                option.value = mat.id;
-                option.textContent = `${mat.name} (${mat.code})`;
-                option.dataset.unit = mat.unit_abbreviation;
-                if (mat.id == materialId) {
-                    option.selected = true;
-                }
-                materialSelect.appendChild(option);
-            });
-            
-            // При выборе материала заполняем единицу измерения
-            materialSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const unitField = material.querySelector('.material-unit');
-                unitField.value = selectedOption.dataset.unit || 'шт';
-            });
-            
             attachMaterialListeners(material);
         });
     });
