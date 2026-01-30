@@ -16,6 +16,7 @@ from django.db import models as django_models
 from tasks.models import Task, TaskStage
 from media_app.models import Media
 from users_app.models import TenantUser, Department, Position
+from dashboard.models import AdminPasswordLog, TaskLog
 from task_templates.models import (
     TaskTemplate, TaskTemplateStage, TemplateProposal, ActivityCategory, 
     StageMaterial, DurationUnit, Material
@@ -24,6 +25,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+
+def get_client_ip(request):
+    """Получить IP адрес клиента"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 def home(request):
     """
@@ -381,6 +391,19 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
                 stage.task = self.object
                 stage.save()
             
+            # Логируем создание задачи
+            admin_username = user.username if hasattr(user, 'username') else str(user)
+            TaskLog.objects.create(
+                admin_username=admin_username,
+                task_title=self.object.title,
+                task_id=self.object.id,
+                action='created',
+                count=1,
+                ip_address=get_client_ip(self.request),
+                user_agent=self.request.META.get('HTTP_USER_AGENT', '')[:500],
+                notes=f"Создана задача с {len(valid_forms)} этапами"
+            )
+            
             logger.info(f"Task created successfully: {self.object.id} - {self.object.title} with {len(valid_forms)} stages")
             messages.success(self.request, f"✓ Задача '{self.object.title}' успешно создана с {len(valid_forms)} этапами!")
             return redirect(self.success_url)
@@ -475,7 +498,20 @@ def delete_selected_tasks(request):
             return redirect('dashboard:task_list')
         
         count = tasks.count()
+        task_titles = list(tasks.values_list('title', flat=True))
         tasks.delete()
+        
+        # Логируем удаление задач
+        admin_username = user.username if hasattr(user, 'username') else str(user)
+        TaskLog.objects.create(
+            admin_username=admin_username,
+            task_title=', '.join(task_titles[:3]) + ('...' if len(task_titles) > 3 else ''),
+            action='bulk_deleted',
+            count=count,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            notes=f"Удалено {count} задач"
+        )
         
         logger.info(f"User {user} deleted {count} tasks")
         messages.success(request, f"✓ Удалено {count} задач")
@@ -510,6 +546,18 @@ def clear_all_tasks(request):
         
         count = tasks.count()
         tasks.delete()
+        
+        # Логируем очистку всех задач
+        admin_username = user.username if hasattr(user, 'username') else str(user)
+        TaskLog.objects.create(
+            admin_username=admin_username,
+            task_title='Все задачи',
+            action='cleared',
+            count=count,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            notes=f"Очищены все {count} задач"
+        )
         
         logger.info(f"User {user} cleared all {count} tasks")
         messages.success(request, f"✓ Очищено {count} задач")
