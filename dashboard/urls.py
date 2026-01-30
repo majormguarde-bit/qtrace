@@ -100,6 +100,7 @@ urlpatterns = [
     # Admin logging
     path('api/log-password-generation/', views.log_password_generation, name='log_password_generation'),
     path('logs/', views.admin_log_list, name='admin_log_list'),
+    path('logs/export/', views.export_admin_logs, name='export_admin_logs'),
     path('logs/clear-filtered/', views.clear_admin_logs_filtered, name='clear_admin_logs_filtered'),
     path('logs/clear-all/', views.clear_admin_logs_all, name='clear_admin_logs_all'),
 ]

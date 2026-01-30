@@ -3129,3 +3129,123 @@ def clear_admin_logs_all(request):
         logger.error(f"Error clearing all logs: {str(e)}\n{traceback.format_exc()}")
         messages.error(request, f'Ошибка при очистке журнала: {str(e)}')
         return redirect('dashboard:admin_log_list')
+
+
+@login_required
+def export_admin_logs(request):
+    """Экспорт журнала администратора в файл"""
+    from dashboard.models import AdminPasswordLog, TaskLog
+    from django.http import HttpResponse
+    import logging
+    
+    # Проверка прав доступа
+    user = request.user
+    if not ((hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)):
+        messages.error(request, 'У вас нет прав для экспорта журнала.')
+        return redirect('dashboard:admin_log_list')
+    
+    try:
+        # Получаем название предприятия (тенанта)
+        tenant = getattr(request, 'tenant', None)
+        company_name = tenant.name if tenant and hasattr(tenant, 'name') else 'Company'
+        # Очищаем название от недопустимых символов для имени файла
+        company_name = "".join(c for c in company_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        company_name = company_name.replace(' ', '_')
+        
+        # Получаем все логи
+        password_logs = list(AdminPasswordLog.objects.all().order_by('timestamp'))
+        task_logs = list(TaskLog.objects.all().order_by('timestamp'))
+        
+        # Объединяем и сортируем по времени
+        all_logs = []
+        for log in password_logs:
+            all_logs.append({
+                'timestamp': log.timestamp,
+                'type': 'password',
+                'log': log
+            })
+        for log in task_logs:
+            all_logs.append({
+                'timestamp': log.timestamp,
+                'type': 'task',
+                'log': log
+            })
+        
+        all_logs.sort(key=lambda x: x['timestamp'])
+        
+        if not all_logs:
+            messages.warning(request, 'Журнал пуст. Нечего экспортировать.')
+            return redirect('dashboard:admin_log_list')
+        
+        # Определяем даты первого и последнего события
+        first_date = all_logs[0]['timestamp'].strftime('%Y-%m-%d')
+        last_date = all_logs[-1]['timestamp'].strftime('%Y-%m-%d')
+        total_count = len(all_logs)
+        
+        # Формируем имя файла
+        filename = f"{company_name}-{first_date}-{last_date}-{total_count}.log"
+        
+        # Создаем содержимое файла
+        content = []
+        content.append(f"=" * 80)
+        content.append(f"ЖУРНАЛ АДМИНИСТРАТОРА")
+        content.append(f"Предприятие: {company_name}")
+        content.append(f"Период: {first_date} - {last_date}")
+        content.append(f"Всего записей: {total_count}")
+        content.append(f"Дата экспорта: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        content.append(f"=" * 80)
+        content.append("")
+        
+        for item in all_logs:
+            log = item['log']
+            log_type = item['type']
+            
+            content.append("-" * 80)
+            content.append(f"Время: {log.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            if log_type == 'password':
+                content.append(f"Тип: Операция с паролем")
+                content.append(f"Администратор: {log.admin_username}")
+                content.append(f"Сотрудник: {log.employee_username}")
+                content.append(f"Действие: {log.get_action_display()}")
+                content.append(f"Длина пароля: {log.password_length}")
+            else:  # task
+                content.append(f"Тип: Операция с задачей")
+                content.append(f"Администратор: {log.admin_username}")
+                content.append(f"Задача: {log.task_title}")
+                if log.task_id:
+                    content.append(f"ID задачи: {log.task_id}")
+                content.append(f"Действие: {log.get_action_display()}")
+                if log.count > 1:
+                    content.append(f"Количество: {log.count}")
+            
+            if log.ip_address:
+                content.append(f"IP адрес: {log.ip_address}")
+            if log.notes:
+                content.append(f"Примечания: {log.notes}")
+            content.append("")
+        
+        content.append("=" * 80)
+        content.append(f"КОНЕЦ ЖУРНАЛА")
+        content.append("=" * 80)
+        
+        # Создаем HTTP ответ с файлом
+        response = HttpResponse('\n'.join(content), content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # Логируем экспорт
+        logger = logging.getLogger('admin_password_log')
+        admin_username = request.user.username if hasattr(request.user, 'username') else 'unknown'
+        logger.info(
+            f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
+            f"Action: logs_exported | Records: {total_count} | Filename: {filename}"
+        )
+        
+        return response
+    
+    except Exception as e:
+        import traceback
+        logger = logging.getLogger('admin_password_log')
+        logger.error(f"Error exporting logs: {str(e)}\n{traceback.format_exc()}")
+        messages.error(request, f'Ошибка при экспорте журнала: {str(e)}')
+        return redirect('dashboard:admin_log_list')
