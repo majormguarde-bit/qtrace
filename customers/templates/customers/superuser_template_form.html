@@ -139,7 +139,9 @@
                                             </div>
                                             <div class="col-md-2">
                                                 <small class="form-text text-muted">Ед. изм.</small>
-                                                <input type="text" class="form-control form-control-sm material-unit" value="{{ material.material.unit.abbreviation }}" placeholder="шт" readonly>
+                                                <select class="form-control form-control-sm material-unit-select" data-unit-id="{{ material.material.unit.id }}">
+                                                    <option value="">-- Выберите --</option>
+                                                </select>
                                             </div>
                                             <div class="col-md-2">
                                                 <button type="button" class="btn btn-sm btn-outline-danger w-100 removeMaterialBtn">
@@ -188,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let durationUnits = [];
     let materials = [];
     let positions = [];
+    let units = [];  // Единицы измерения
     
     // Fetch duration units
     fetch('/api/customers/duration-units/')
@@ -197,6 +200,15 @@ document.addEventListener('DOMContentLoaded', function() {
             updateAllDurationUnitSelects();
         })
         .catch(error => console.error('Error loading duration units:', error));
+    
+    // Fetch units of measure
+    fetch('/api/customers/units-of-measure/')
+        .then(response => response.json())
+        .then(data => {
+            units = data;
+            updateAllUnitSelects();
+        })
+        .catch(error => console.error('Error loading units:', error));
     
     // Fetch materials
     fetch('/api/customers/materials/')
@@ -231,6 +243,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateAllMaterialSelects() {
         document.querySelectorAll('.material-select').forEach(select => {
             updateMaterialSelect(select);
+        });
+    }
+    
+    function updateAllUnitSelects() {
+        document.querySelectorAll('.material-unit-select').forEach(select => {
+            updateUnitSelect(select);
         });
     }
     
@@ -273,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = material.id;
             option.textContent = `${material.name} (${material.code})`;
-            option.dataset.unit = material.unit_abbreviation;
+            option.dataset.unitId = material.unit_id;
             if (material.id == currentValue) {
                 option.selected = true;
                 console.log('DEBUG: Selected material', material.id, material.name);  // DEBUG
@@ -285,8 +303,25 @@ document.addEventListener('DOMContentLoaded', function() {
         select.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const materialItem = this.closest('.material-item');
-            const unitField = materialItem.querySelector('.material-unit');
-            unitField.value = selectedOption.dataset.unit || 'шт';
+            const unitSelect = materialItem.querySelector('.material-unit-select');
+            if (selectedOption.dataset.unitId) {
+                unitSelect.value = selectedOption.dataset.unitId;
+            }
+        });
+    }
+    
+    function updateUnitSelect(select) {
+        const currentValue = select.value || select.dataset.unitId;
+        select.innerHTML = '<option value="">-- Выберите --</option>';
+        
+        units.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = `${unit.name} (${unit.abbreviation})`;
+            if (unit.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
         });
     }
     
@@ -424,7 +459,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-md-2">
                         <small class="form-text text-muted">Ед. изм.</small>
-                        <input type="text" class="form-control form-control-sm material-unit" placeholder="шт" readonly>
+                        <select class="form-control form-control-sm material-unit-select">
+                            <option value="">-- Выберите --</option>
+                        </select>
                     </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-sm btn-outline-danger w-100 removeMaterialBtn">
@@ -436,9 +473,11 @@ document.addEventListener('DOMContentLoaded', function() {
             materialsContainer.insertAdjacentHTML('beforeend', materialHtml);
             const newMaterial = materialsContainer.lastElementChild;
             
-            // Заполняем dropdown материалов
+            // Заполняем dropdown материалов и единиц измерения
             const materialSelect = newMaterial.querySelector('.material-select');
+            const unitSelect = newMaterial.querySelector('.material-unit-select');
             updateMaterialSelect(materialSelect);
+            updateUnitSelect(unitSelect);
             
             attachMaterialListeners(newMaterial);
         });
@@ -467,10 +506,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const materials = [];
             item.querySelectorAll('.material-item').forEach(materialItem => {
                 const materialSelect = materialItem.querySelector('.material-select');
+                const unitSelect = materialItem.querySelector('.material-unit-select');
                 if (materialSelect.value) {
                     materials.push({
                         id: materialSelect.value,
                         quantity: materialItem.querySelector('.material-quantity').value,
+                        unit_id: unitSelect.value,
                     });
                 }
             });

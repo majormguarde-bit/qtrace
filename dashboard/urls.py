@@ -92,4 +92,5 @@ urlpatterns = [
     path('api/positions/create/', views.api_create_position, name='api_create_position'),
     path('api/duration-units/', views.api_get_duration_units, name='api_get_duration_units'),
     path('api/materials/', views.api_get_materials, name='api_get_materials'),
+    path('api/units/', views.api_get_units, name='api_get_units'),
 ]

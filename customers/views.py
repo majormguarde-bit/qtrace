@@ -1923,21 +1923,19 @@ def api_units_of_measure(request):
 
 def api_materials(request):
     """API endpoint для получения материалов (доступен всем)"""
-    materials = Material.objects.filter(is_active=True).select_related('unit').values(
-        'id', 'name', 'code', 'unit__abbreviation'
-    ).annotate(unit_abbreviation=F('unit__abbreviation'))
+    from task_templates.models import Material
     
-    # Преобразуем результаты для фронтенда
-    result = []
-    for material in materials:
-        result.append({
-            'id': material['id'],
-            'name': material['name'],
-            'code': material['code'],
-            'unit_abbreviation': material['unit_abbreviation'] or 'шт',
-        })
+    materials = Material.objects.filter(is_active=True).select_related('unit')
+    data = [{
+        'id': m.id,
+        'name': m.name,
+        'code': m.code,
+        'unit_id': m.unit.id,
+        'unit_name': m.unit.name,
+        'unit_abbreviation': m.unit.abbreviation,
+    } for m in materials]
     
-    return JsonResponse(result, safe=False)
+    return JsonResponse(data, safe=False)
 
 
 def api_positions(request):

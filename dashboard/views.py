@@ -2011,22 +2011,33 @@ def api_get_duration_units(request):
 def api_get_materials(request):
     """API для получения списка материалов"""
     from task_templates.models import Material
-    materials = Material.objects.all().select_related('unit').values(
-        'id', 'name', 'description', 'unit__id', 'unit__name'
-    )
-    # Преобразуем в более удобный формат
-    result = []
-    for material in materials:
-        result.append({
-            'id': material['id'],
-            'name': material['name'],
-            'description': material['description'],
-            'unit': {
-                'id': material['unit__id'],
-                'name': material['unit__name']
-            } if material['unit__id'] else None
-        })
-    return JsonResponse(result, safe=False)
+    
+    materials = Material.objects.filter(is_active=True).select_related('unit')
+    data = [{
+        'id': m.id,
+        'name': m.name,
+        'code': m.code,
+        'unit_id': m.unit.id,
+        'unit_name': m.unit.name,
+        'unit_abbreviation': m.unit.abbreviation,
+    } for m in materials]
+    
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def api_get_units(request):
+    """API для получения списка единиц измерения"""
+    from task_templates.models import UnitOfMeasure
+    
+    units = UnitOfMeasure.objects.filter(is_active=True)
+    data = [{
+        'id': u.id,
+        'name': u.name,
+        'abbreviation': u.abbreviation,
+    } for u in units]
+    
+    return JsonResponse(data, safe=False)
 
 @login_required
 def api_create_position(request):
