@@ -27,7 +27,7 @@ from django.http import HttpResponse
 
 from django.core.mail import get_connection, send_mail
 from django.contrib.auth.hashers import make_password
-from .models import Client, Domain, Payment, SubscriptionPlan, MailSettings, ContactMessage, UserProfile
+from .models import Client, Domain, Payment, SubscriptionPlan, MailSettings, ContactMessage, UserProfile, UserFeedback
 from users_app.models import TenantUser
 from .serializers import TenantRegistrationSerializer
 from django.db.models import Sum, Max, F
@@ -2557,3 +2557,132 @@ def superuser_import_template(request):
         print(traceback.format_exc())
     
     return redirect('superuser_templates')
+
+
+# ============================================================================
+# FEEDBACK VIEWS - Журнал предложений пользователей
+# ============================================================================
+
+from django.views.generic import ListView, DetailView, UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
+from django import forms
+
+
+class SuperuserRequiredMixin(UserPassesTestMixin):
+    """Миксин для проверки, что пользователь - суперпользователь"""
+    def test_func(self):
+        return self.request.user.is_superuser
+
+
+class FeedbackListView(LoginRequiredMixin, SuperuserRequiredMixin, ListView):
+    """Журнал предложений пользователей для суперпользователя"""
+    model = UserFeedback
+    template_name = 'customers/feedback_list.html'
+    context_object_name = 'feedbacks'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = UserFeedback.objects.all().select_related('user', 'tenant')
+        
+        # Фильтр по статусу
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        # Фильтр по приоритету
+        priority = self.request.GET.get('priority')
+        if priority:
+            queryset = queryset.filter(priority__gte=int(priority))
+        
+        # Поиск по заголовку и описанию
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+        
+        # Сортировка
+        sort_by = self.request.GET.get('sort', '-created_at')
+        queryset = queryset.order_by(sort_by)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = UserFeedback.STATUS_CHOICES
+        context['current_status'] = self.request.GET.get('status', '')
+        context['current_search'] = self.request.GET.get('search', '')
+        context['current_priority'] = self.request.GET.get('priority', '')
+        context['current_sort'] = self.request.GET.get('sort', '-created_at')
+        return context
+
+
+class FeedbackDetailView(LoginRequiredMixin, SuperuserRequiredMixin, DetailView):
+    """Детальный просмотр предложения"""
+    model = UserFeedback
+    template_name = 'customers/feedback_detail.html'
+    context_object_name = 'feedback'
+
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = UserFeedback
+        fields = ['status', 'priority', 'admin_notes']
+        labels = {
+            'status': 'Статус',
+            'priority': 'Приоритет (0-10)',
+            'admin_notes': 'Заметки администратора',
+        }
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '10'}),
+            'admin_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
+
+
+class FeedbackUpdateView(LoginRequiredMixin, SuperuserRequiredMixin, UpdateView):
+    """Обновление статуса и заметок предложения"""
+    model = UserFeedback
+    form_class = FeedbackForm
+    template_name = 'customers/feedback_form.html'
+    success_url = reverse_lazy('superuser_feedback_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Редактирование предложения: {self.object.title}'
+        return context
+
+
+def create_feedback(request):
+    """API endpoint для создания предложения пользователем"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    import json
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        
+        if not title or not description:
+            return JsonResponse({'error': 'Заголовок и описание обязательны'}, status=400)
+        
+        # Определяем тенанта
+        tenant = getattr(request, 'tenant', None)
+        
+        feedback = UserFeedback.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            tenant=tenant,
+            title=title,
+            description=description,
+            status='NEW'
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Спасибо за ваше предложение! Оно было отправлено разработчикам.',
+            'feedback_id': feedback.id
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

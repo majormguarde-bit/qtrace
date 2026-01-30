@@ -1,0 +1,211 @@
+{% extends 'customers/superuser_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Журнал предложений - Q-TRACE{% endblock %}
+
+{% block header_title %}Журнал предложений пользователей{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_feedback_list' %}" class="btn btn-sm btn-primary">
+    <i class="bi bi-arrow-clockwise me-1"></i> Обновить
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <!-- Фильтры и поиск -->
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Поиск</label>
+                        <input type="text" name="search" class="form-control" placeholder="Заголовок или описание..." value="{{ current_search }}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Статус</label>
+                        <select name="status" class="form-select">
+                            <option value="">Все статусы</option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Приоритет</label>
+                        <select name="priority" class="form-select">
+                            <option value="">Все приоритеты</option>
+                            <option value="5" {% if current_priority == '5' %}selected{% endif %}>5+</option>
+                            <option value="7" {% if current_priority == '7' %}selected{% endif %}>7+</option>
+                            <option value="9" {% if current_priority == '9' %}selected{% endif %}>9+</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Сортировка</label>
+                        <select name="sort" class="form-select">
+                            <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Новые первыми</option>
+                            <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>Старые первыми</option>
+                            <option value="-priority" {% if current_sort == '-priority' %}selected{% endif %}>По приоритету</option>
+                            <option value="status" {% if current_sort == 'status' %}selected{% endif %}>По статусу</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i> Фильтр
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Таблица предложений -->
+        <div class="card card-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 25%">Заголовок</th>
+                            <th style="width: 15%">Пользователь</th>
+                            <th style="width: 15%">Организация</th>
+                            <th style="width: 10%">Статус</th>
+                            <th style="width: 8%">Приоритет</th>
+                            <th style="width: 12%">Дата</th>
+                            <th style="width: 10%">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for feedback in feedbacks %}
+                        <tr>
+                            <td class="text-muted">{{ feedback.id }}</td>
+                            <td>
+                                <strong>{{ feedback.title }}</strong>
+                                <br>
+                                <small class="text-muted">{{ feedback.description|truncatewords:10 }}</small>
+                            </td>
+                            <td>
+                                {% if feedback.user %}
+                                    <i class="bi bi-person me-1"></i>{{ feedback.user.username }}
+                                {% else %}
+                                    <span class="text-muted">Аноним</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if feedback.tenant %}
+                                    <i class="bi bi-building me-1"></i>{{ feedback.tenant.name }}
+                                {% else %}
+                                    <span class="text-muted">Публичная</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if feedback.status == 'NEW' %}
+                                    <span class="badge bg-info">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'REVIEWED' %}
+                                    <span class="badge bg-warning">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'PLANNED' %}
+                                    <span class="badge bg-primary">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'IN_PROGRESS' %}
+                                    <span class="badge bg-secondary">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'COMPLETED' %}
+                                    <span class="badge bg-success">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'REJECTED' %}
+                                    <span class="badge bg-danger">{{ feedback.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if feedback.priority >= 8 %}bg-danger{% elif feedback.priority >= 5 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ feedback.priority|multiply:10 }}%"
+                                         aria-valuenow="{{ feedback.priority }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="10">
+                                        {{ feedback.priority }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ feedback.created_at|date:"d.m.Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'superuser_feedback_detail' feedback.id %}" class="btn btn-sm btn-outline-primary" title="Просмотр">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'superuser_feedback_edit' feedback.id %}" class="btn btn-sm btn-outline-secondary" title="Редактировать">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                Предложений не найдено
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Пагинация -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+</style>
+{% endblock %}

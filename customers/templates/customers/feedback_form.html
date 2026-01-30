@@ -1,0 +1,183 @@
+{% extends 'customers/superuser_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ title }} - Q-TRACE{% endblock %}
+
+{% block header_title %}{{ title }}{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_feedback_detail' object.id %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Назад
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-table">
+            <div class="card-body">
+                <!-- Информация о предложении -->
+                <div class="mb-4 pb-4 border-bottom">
+                    <h5 class="mb-2">{{ object.title }}</h5>
+                    <p class="text-muted mb-0">{{ object.description }}</p>
+                </div>
+
+                <!-- Форма редактирования -->
+                <form method="post" class="needs-validation">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.status.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.priority.id_for_label }}" class="form-label">{{ form.priority.label }}</label>
+                        <div class="input-group">
+                            {{ form.priority }}
+                            <span class="input-group-text">/10</span>
+                        </div>
+                        {% if form.priority.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.priority.errors }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">0 - низкий приоритет, 10 - критический</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.admin_notes.id_for_label }}" class="form-label">{{ form.admin_notes.label }}</label>
+                        {{ form.admin_notes }}
+                        {% if form.admin_notes.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.admin_notes.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i> Сохранить
+                        </button>
+                        <a href="{% url 'superuser_feedback_detail' object.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Информация об авторе -->
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Информация об авторе</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Пользователь</label>
+                    <div>
+                        {% if object.user %}
+                            <i class="bi bi-person me-1"></i>
+                            <strong>{{ object.user.username }}</strong>
+                            {% if object.user.first_name or object.user.last_name %}
+                            <br>
+                            <small class="text-muted">{{ object.user.first_name }} {{ object.user.last_name }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Аноним</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Организация</label>
+                    <div>
+                        {% if object.tenant %}
+                            <i class="bi bi-building me-1"></i>
+                            <strong>{{ object.tenant.name }}</strong>
+                        {% else %}
+                            <span class="text-muted">Публичная схема</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статус -->
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Текущий статус</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Статус</label>
+                    <div>
+                        {% if object.status == 'NEW' %}
+                            <span class="badge bg-info fs-6">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'REVIEWED' %}
+                            <span class="badge bg-warning fs-6">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'PLANNED' %}
+                            <span class="badge bg-primary fs-6">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'IN_PROGRESS' %}
+                            <span class="badge bg-secondary fs-6">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'COMPLETED' %}
+                            <span class="badge bg-success fs-6">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'REJECTED' %}
+                            <span class="badge bg-danger fs-6">{{ object.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label text-muted">Приоритет</label>
+                    <div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar {% if object.priority >= 8 %}bg-danger{% elif object.priority >= 5 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ object.priority|multiply:10 }}%"
+                                 aria-valuenow="{{ object.priority }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="10">
+                                {{ object.priority }}/10
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Даты -->
+        <div class="card card-table">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Даты</h5>
+                
+                <div class="mb-2">
+                    <label class="form-label text-muted">Создано</label>
+                    <div>
+                        <small>{{ object.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label text-muted">Обновлено</label>
+                    <div>
+                        <small>{{ object.updated_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-select, .form-control {
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}

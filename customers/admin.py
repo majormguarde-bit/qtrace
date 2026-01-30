@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django_tenants.admin import TenantAdminMixin
-from .models import Client, Domain, MailSettings, ContactMessage, UserProfile
+from .models import Client, Domain, MailSettings, ContactMessage, UserProfile, UserFeedback
 
 @admin.register(MailSettings)
 class MailSettingsAdmin(admin.ModelAdmin):
@@ -58,3 +58,25 @@ class ClientAdmin(TenantAdminMixin, admin.ModelAdmin):
 class DomainAdmin(admin.ModelAdmin):
     list_display = ('domain', 'tenant', 'is_primary')
     search_fields = ('domain',)
+
+@admin.register(UserFeedback)
+class UserFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('title', 'user', 'tenant', 'status', 'priority', 'created_at')
+    list_filter = ('status', 'priority', 'created_at')
+    search_fields = ('title', 'description', 'user__username')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'description', 'user', 'tenant')
+        }),
+        ('Статус', {
+            'fields': ('status', 'priority')
+        }),
+        ('Администратор', {
+            'fields': ('admin_notes',)
+        }),
+        ('Даты', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+

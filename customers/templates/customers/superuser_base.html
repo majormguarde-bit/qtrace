@@ -121,8 +121,8 @@
                 <a href="{% url 'superuser_templates' %}" class="sidebar-link {% if 'superuser_templates' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-file-earmark-text me-2"></i> Шаблоны задач
                 </a>
-                <a href="{% url 'superuser_proposals' %}" class="sidebar-link {% if 'superuser_proposals' in request.resolver_match.url_name %}active{% endif %}">
-                    <i class="bi bi-inbox me-2"></i> Управление предложениями
+                <a href="{% url 'superuser_feedback_list' %}" class="sidebar-link {% if 'superuser_feedback' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-chat-left-text me-2"></i> Журнал предложений
                 </a>
                 
                 <hr class="mx-3 opacity-25 my-1">

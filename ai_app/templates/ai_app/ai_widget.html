@@ -123,6 +123,117 @@
         margin-bottom: 0.5rem;
         display: none;
     }
+
+    #feedback-modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .feedback-modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 1.5rem;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .feedback-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+    }
+
+    .feedback-modal-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .feedback-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6c757d;
+    }
+
+    .feedback-form-group {
+        margin-bottom: 1rem;
+    }
+
+    .feedback-form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #212529;
+    }
+
+    .feedback-form-group input,
+    .feedback-form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        font-family: inherit;
+        font-size: 0.9rem;
+    }
+
+    .feedback-form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .feedback-form-group input:focus,
+    .feedback-form-group textarea:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .feedback-modal-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+    }
+
+    .feedback-modal-buttons button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .feedback-submit-btn {
+        background: #0d6efd;
+        color: white;
+    }
+
+    .feedback-submit-btn:hover {
+        background: #0b5ed7;
+    }
+
+    .feedback-cancel-btn {
+        background: #e9ecef;
+        color: #212529;
+    }
+
+    .feedback-cancel-btn:hover {
+        background: #dee2e6;
+    }
+
 </style>
 
 <div id="ai-widget-container">
@@ -135,7 +246,12 @@
                     <div class="small opacity-75">Q-TRACE Intelligence</div>
                 </div>
             </div>
-            <button class="btn-close btn-close-white" onclick="toggleAIChat()"></button>
+            <div class="d-flex gap-2">
+                <button class="btn-close btn-close-white" onclick="openFeedbackModal()" title="Отправить предложение" style="opacity: 0.7; transform: scale(0.8);">
+                    <i class="bi bi-chat-left-text"></i>
+                </button>
+                <button class="btn-close btn-close-white" onclick="toggleAIChat()"></button>
+            </div>
         </div>
         <div class="ai-chat-messages" id="ai-chat-messages">
             <div class="message message-ai">
@@ -159,6 +275,30 @@
     </button>
 </div>
 
+<!-- Feedback Modal -->
+<div id="feedback-modal">
+    <div class="feedback-modal-content">
+        <div class="feedback-modal-header">
+            <h5>Отправить предложение</h5>
+            <button class="feedback-modal-close" onclick="closeFeedbackModal()">×</button>
+        </div>
+        <form id="feedback-form">
+            <div class="feedback-form-group">
+                <label for="feedback-title">Заголовок</label>
+                <input type="text" id="feedback-title" placeholder="Кратко опишите вашу идею..." required>
+            </div>
+            <div class="feedback-form-group">
+                <label for="feedback-description">Описание</label>
+                <textarea id="feedback-description" placeholder="Подробно расскажите о вашем предложении..." required></textarea>
+            </div>
+            <div class="feedback-modal-buttons">
+                <button type="button" class="feedback-cancel-btn" onclick="closeFeedbackModal()">Отмена</button>
+                <button type="submit" class="feedback-submit-btn">Отправить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     function toggleAIChat() {
         const window = document.getElementById('ai-chat-window');
@@ -169,6 +309,61 @@
             document.getElementById('ai-chat-input').focus();
         }
     }
+
+    function openFeedbackModal() {
+        document.getElementById('feedback-modal').style.display = 'flex';
+    }
+
+    function closeFeedbackModal() {
+        document.getElementById('feedback-modal').style.display = 'none';
+        document.getElementById('feedback-form').reset();
+    }
+
+    // Закрытие модала при клике вне его
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('feedback-modal');
+        if (event.target === modal) {
+            closeFeedbackModal();
+        }
+    });
+
+    // Обработка отправки формы обратной связи
+    document.getElementById('feedback-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('feedback-title').value.trim();
+        const description = document.getElementById('feedback-description').value.trim();
+        
+        if (!title || !description) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+
+        try {
+            const response = await fetch('{% url "api_create_feedback" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                alert(data.message);
+                closeFeedbackModal();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось отправить предложение'));
+            }
+        } catch (error) {
+            alert('Ошибка при отправке: ' + error.message);
+        }
+    });
 
     document.getElementById('ai-chat-form').addEventListener('submit', async function(e) {
         e.preventDefault();

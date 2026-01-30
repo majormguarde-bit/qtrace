@@ -1,0 +1,149 @@
+{% extends 'customers/superuser_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ feedback.title }} - Q-TRACE{% endblock %}
+
+{% block header_title %}{{ feedback.title }}{% endblock %}
+
+{% block action_buttons %}
+<a href="{% url 'superuser_feedback_edit' feedback.id %}" class="btn btn-sm btn-primary">
+    <i class="bi bi-pencil me-1"></i> Редактировать
+</a>
+<a href="{% url 'superuser_feedback_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Назад
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Основная информация -->
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Описание предложения</h5>
+                <p class="card-text">{{ feedback.description }}</p>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Статус</label>
+                            <div>
+                                {% if feedback.status == 'NEW' %}
+                                    <span class="badge bg-info fs-6">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'REVIEWED' %}
+                                    <span class="badge bg-warning fs-6">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'PLANNED' %}
+                                    <span class="badge bg-primary fs-6">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'IN_PROGRESS' %}
+                                    <span class="badge bg-secondary fs-6">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'COMPLETED' %}
+                                    <span class="badge bg-success fs-6">{{ feedback.get_status_display }}</span>
+                                {% elif feedback.status == 'REJECTED' %}
+                                    <span class="badge bg-danger fs-6">{{ feedback.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Приоритет</label>
+                            <div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar {% if feedback.priority >= 8 %}bg-danger{% elif feedback.priority >= 5 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ feedback.priority|multiply:10 }}%"
+                                         aria-valuenow="{{ feedback.priority }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="10">
+                                        {{ feedback.priority }}/10
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Заметки администратора -->
+        {% if feedback.admin_notes %}
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Заметки администратора</h5>
+                <p class="card-text">{{ feedback.admin_notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Информация об авторе -->
+        <div class="card card-table mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Информация об авторе</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Пользователь</label>
+                    <div>
+                        {% if feedback.user %}
+                            <i class="bi bi-person me-1"></i>
+                            <strong>{{ feedback.user.username }}</strong>
+                            {% if feedback.user.first_name or feedback.user.last_name %}
+                            <br>
+                            <small class="text-muted">{{ feedback.user.first_name }} {{ feedback.user.last_name }}</small>
+                            {% endif %}
+                            {% if feedback.user.email %}
+                            <br>
+                            <small class="text-muted">{{ feedback.user.email }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Аноним</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Организация</label>
+                    <div>
+                        {% if feedback.tenant %}
+                            <i class="bi bi-building me-1"></i>
+                            <strong>{{ feedback.tenant.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ feedback.tenant.schema_name }}</small>
+                        {% else %}
+                            <span class="text-muted">Публичная схема</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Даты -->
+        <div class="card card-table">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Даты</h5>
+                
+                <div class="mb-2">
+                    <label class="form-label text-muted">Создано</label>
+                    <div>
+                        <i class="bi bi-calendar me-1"></i>
+                        <strong>{{ feedback.created_at|date:"d.m.Y H:i" }}</strong>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label text-muted">Обновлено</label>
+                    <div>
+                        <i class="bi bi-calendar me-1"></i>
+                        <strong>{{ feedback.updated_at|date:"d.m.Y H:i" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
