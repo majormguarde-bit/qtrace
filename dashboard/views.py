@@ -160,44 +160,32 @@ class TenantLogoutView(auth_views.LogoutView):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'is_completed', 'assigned_to']
+        fields = ['title', 'description', 'is_completed']
         labels = {
             'title': 'Заголовок',
             'description': 'Описание',
             'is_completed': 'Выполнено',
-            'assigned_to': 'Исполнитель'
         }
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_completed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        if hasattr(user, 'role'):
-            user_role = user.role
-        elif getattr(user, 'is_superuser', False):
-            user_role = 'ADMIN'
-        else:
-            user_role = 'WORKER'
-            
-        if user and user_role != 'ADMIN':
-            if 'assigned_to' in self.fields:
-                self.fields.pop('assigned_to')
 
 TaskStageFormSet = inlineformset_factory(
     Task, TaskStage,
-    fields=['name', 'duration_minutes', 'order', 'position_name', 'duration_text', 'materials_info'],
+    fields=['name', 'duration_minutes', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info'],
     extra=1,
     can_delete=True,
     widgets={
         'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
         'duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Мин'}),
         'order': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '№'}),
+        'assigned_to': forms.Select(attrs={'class': 'form-select'}),
         'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность'}),
         'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность'}),
         'materials_info': forms.HiddenInput(),
@@ -1812,6 +1800,7 @@ def get_template_stages(request, pk):
             materials = []
             for stage_material in stage.materials.all():
                 materials.append({
+                    'id': stage_material.material.id,
                     'name': stage_material.material.name,
                     'quantity': float(stage_material.quantity),
                     'unit': stage_material.material.unit.abbreviation
@@ -1822,6 +1811,7 @@ def get_template_stages(request, pk):
                 'duration_minutes': duration_minutes,
                 'duration_text': duration_text,
                 'order': stage.sequence_number,
+                'position_id': stage.position.id if stage.position else None,
                 'position': stage.position.name if stage.position else None,
                 'materials': materials,
                 'has_materials': len(materials) > 0

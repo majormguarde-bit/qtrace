@@ -15,7 +15,6 @@ class Task(models.Model):
 
     title = models.CharField(max_length=200, verbose_name='Заголовок')
     description = models.TextField(blank=True, verbose_name='Описание')
-    assigned_to = models.ForeignKey(TenantUser, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True, verbose_name='Исполнитель')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', verbose_name='Статус')
     is_completed = models.BooleanField(default=False, verbose_name='Завершена')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,8 +46,12 @@ class TaskStage(models.Model):
     status = models.CharField(max_length=20, choices=STAGE_STATUS_CHOICES, default='PENDING', verbose_name='Статус этапа')
     is_worker_added = models.BooleanField(default=False, verbose_name='Добавлено сотрудником')
     
+    # Исполнитель этапа
+    assigned_to = models.ForeignKey(TenantUser, on_delete=models.SET_NULL, related_name='stage_assignments', null=True, blank=True, verbose_name='Исполнитель')
+    
     # Новые поля для наследования из шаблона
-    position_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Должность исполнителя')
+    position_id = models.IntegerField(blank=True, null=True, verbose_name='ID должности (из public schema)')
+    position_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Название должности')
     duration_text = models.CharField(max_length=100, blank=True, null=True, verbose_name='Длительность (текст)')
     materials_info = models.JSONField(default=list, blank=True, verbose_name='Информация о материалах')
 

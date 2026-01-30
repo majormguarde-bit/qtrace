@@ -69,9 +69,10 @@
                         {% for stage_form in stages %}
                         <div class="stage-form mb-3 border p-3 rounded bg-light">
                             {{ stage_form.id }}
+                            {{ stage_form.position_name }}
                             {{ stage_form.materials_info }}
                             <div class="row g-2">
-                                <div class="col-md-5">
+                                <div class="col-md-3">
                                     <label class="form-label small text-muted">Название этапа</label>
                                     {{ stage_form.name }}
                                     {% if stage_form.name.errors %}
@@ -84,6 +85,10 @@
                                     {% if stage_form.duration_minutes.errors %}
                                     <div class="text-danger small">{{ stage_form.duration_minutes.errors.0 }}</div>
                                     {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Исполнитель</label>
+                                    {{ stage_form.assigned_to }}
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Должность</label>
@@ -109,9 +114,14 @@
                                     <label class="form-label small text-muted">Длительность (текст)</label>
                                     {{ stage_form.duration_text }}
                                 </div>
-                                <div class="col-md-9">
-                                    <label class="form-label small text-muted">Материалы</label>
-                                    <div class="materials-display small text-muted" data-form-num="{{ forloop.counter0 }}"></div>
+                                <div class="col-md-8">
+                                    <label class="form-label small text-muted d-flex justify-content-between align-items-center">
+                                        <span>Материалы</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary edit-materials-btn" data-form-num="{{ forloop.counter0 }}">
+                                            <i class="bi bi-pencil"></i> Редактировать
+                                        </button>
+                                    </label>
+                                    <div class="materials-display small text-muted p-2 border rounded bg-white" data-form-num="{{ forloop.counter0 }}"></div>
                                 </div>
                             </div>
                         </div>
@@ -131,7 +141,103 @@
     </div>
 </div>
 
+<!-- Модальное окно для редактирования материалов -->
+<div class="modal fade" id="materialsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактирование материалов этапа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="materials-list"></div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-material-btn">
+                    <i class="bi bi-plus-lg"></i> Добавить материал
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="save-materials-btn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Глобальные переменные
+let positionsData = [];
+let materialsData = [];
+let currentEditingStageNum = null;
+
+// Загрузка справочников при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadPositions();
+    await loadMaterials();
+    updateAllPositionSelects();
+    updateAllMaterialsDisplays();
+});
+
+// Загрузка должностей
+async function loadPositions() {
+    try {
+        const response = await fetch('/api/positions/');
+        positionsData = await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки должностей:', error);
+    }
+}
+
+// Загрузка материалов
+async function loadMaterials() {
+    try {
+        const response = await fetch('/api/materials/');
+        materialsData = await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки материалов:', error);
+    }
+}
+
+// Обновление всех выпадающих списков должностей
+function updateAllPositionSelects() {
+    document.querySelectorAll('.position-select').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- Не выбрано --</option>';
+        positionsData.forEach(pos => {
+            const option = document.createElement('option');
+            option.value = pos.id;
+            option.textContent = pos.name;
+            if (pos.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    });
+}
+
+// Обновление всех отображений материалов
+function updateAllMaterialsDisplays() {
+    document.querySelectorAll('.materials-display').forEach(display => {
+        const formNum = display.dataset.formNum;
+        const materialsInput = document.getElementById(`id_stages-${formNum}-materials_info`);
+        if (materialsInput) {
+            const materials = JSON.parse(materialsInput.value || '[]');
+            updateMaterialsDisplay(formNum, materials);
+        }
+    });
+}
+
+// Обновление отображения материалов для этапа
+function updateMaterialsDisplay(formNum, materials) {
+    const display = document.querySelector(`.materials-display[data-form-num="${formNum}"]`);
+    if (!display) return;
+    
+    if (materials.length === 0) {
+        display.innerHTML = '<span class="text-muted fst-italic">Нет материалов</span>';
+    } else {
+        display.innerHTML = materials.map(m => `${m.name}: ${m.quantity} ${m.unit}`).join(', ');
+    }
+}
+
 async function improveDescription() {
     const descField = document.querySelector('textarea[name="description"]');
     const loading = document.getElementById('ai-task-loading');
@@ -217,24 +323,25 @@ function addStageForm(formNum, stageData = {}) {
     const name = stageData.name || '';
     const duration = stageData.duration_minutes || 0;
     const order = stageData.order || formNum;
-    const position = stageData.position || '';
+    const positionId = stageData.position_id || '';
+    const positionName = stageData.position || '';
     const durationText = stageData.duration_text || '';
     const materials = stageData.materials || [];
     
-    // Формируем текст материалов для отображения
-    let materialsHtml = '';
-    if (materials.length > 0) {
-        materialsHtml = materials.map(m => `${m.name}: ${m.quantity} ${m.unit}`).join(', ');
-    } else {
-        materialsHtml = '<span class="text-muted fst-italic">Нет материалов</span>';
-    }
+    // Формируем опции для выпадающего списка должностей
+    let positionOptions = '<option value="">-- Не выбрано --</option>';
+    positionsData.forEach(pos => {
+        const selected = pos.id == positionId ? 'selected' : '';
+        positionOptions += `<option value="${pos.id}" ${selected}>${pos.name}</option>`;
+    });
     
     const formHtml = `
         <div class="stage-form mb-3 border p-3 rounded bg-light">
             <input type="hidden" name="stages-${formNum}-id" id="id_stages-${formNum}-id">
+            <input type="hidden" name="stages-${formNum}-position_name" value="${positionName}" id="id_stages-${formNum}-position_name">
             <input type="hidden" name="stages-${formNum}-materials_info" value='${JSON.stringify(materials)}' id="id_stages-${formNum}-materials_info">
             <div class="row g-2">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label small text-muted">Название этапа</label>
                     <input type="text" name="stages-${formNum}-name" value="${name}" class="form-control" maxlength="200" required id="id_stages-${formNum}-name">
                 </div>
@@ -242,9 +349,11 @@ function addStageForm(formNum, stageData = {}) {
                     <label class="form-label small text-muted">Мин</label>
                     <input type="number" name="stages-${formNum}-duration_minutes" value="${duration}" class="form-control" min="0" id="id_stages-${formNum}-duration_minutes">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small text-muted">Должность</label>
-                    <input type="text" name="stages-${formNum}-position_name" value="${position}" class="form-control" maxlength="255" id="id_stages-${formNum}-position_name">
+                    <select name="stages-${formNum}-position_id" class="form-select position-select" id="id_stages-${formNum}-position_id">
+                        ${positionOptions}
+                    </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted">Порядок</label>
@@ -264,15 +373,23 @@ function addStageForm(formNum, stageData = {}) {
                     <label class="form-label small text-muted">Длительность (текст)</label>
                     <input type="text" name="stages-${formNum}-duration_text" value="${durationText}" class="form-control" maxlength="100" id="id_stages-${formNum}-duration_text">
                 </div>
-                <div class="col-md-9">
-                    <label class="form-label small text-muted">Материалы</label>
-                    <div class="materials-display small text-muted">${materialsHtml}</div>
+                <div class="col-md-8">
+                    <label class="form-label small text-muted d-flex justify-content-between align-items-center">
+                        <span>Материалы</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary edit-materials-btn" data-form-num="${formNum}">
+                            <i class="bi bi-pencil"></i> Редактировать
+                        </button>
+                    </label>
+                    <div class="materials-display small text-muted p-2 border rounded bg-white" data-form-num="${formNum}"></div>
                 </div>
             </div>
         </div>
     `;
     
     container.insertAdjacentHTML('beforeend', formHtml);
+    
+    // Обновляем отображение материалов
+    updateMaterialsDisplay(formNum, materials);
 }
 
 // Фильтр "Показать все категории"
@@ -288,6 +405,114 @@ document.getElementById('add-stage').addEventListener('click', function() {
     addStageForm(formNum, {});
     
     totalForms.value = formNum + 1;
+});
+
+// Редактирование материалов
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.edit-materials-btn')) {
+        const btn = e.target.closest('.edit-materials-btn');
+        currentEditingStageNum = btn.dataset.formNum;
+        openMaterialsEditor(currentEditingStageNum);
+    }
+});
+
+function openMaterialsEditor(formNum) {
+    const materialsInput = document.getElementById(`id_stages-${formNum}-materials_info`);
+    const materials = JSON.parse(materialsInput.value || '[]');
+    
+    const materialsList = document.getElementById('materials-list');
+    materialsList.innerHTML = '';
+    
+    materials.forEach((material, index) => {
+        addMaterialRow(index, material);
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('materialsModal'));
+    modal.show();
+}
+
+function addMaterialRow(index, material = {}) {
+    const materialsList = document.getElementById('materials-list');
+    
+    const row = document.createElement('div');
+    row.className = 'material-row mb-2 p-2 border rounded';
+    row.dataset.index = index;
+    
+    row.innerHTML = `
+        <div class="row g-2">
+            <div class="col-md-6">
+                <select class="form-select material-select" data-index="${index}">
+                    <option value="">-- Выберите материал --</option>
+                    ${materialsData.map(m => `
+                        <option value="${m.id}" data-name="${m.name}" data-unit="${m.unit_abbreviation}" ${m.id == material.id ? 'selected' : ''}>
+                            ${m.name} (${m.code})
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control material-quantity" placeholder="Количество" value="${material.quantity || ''}" step="0.01" min="0">
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control material-unit" placeholder="Ед.изм." value="${material.unit || ''}" readonly>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-danger remove-material-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    materialsList.appendChild(row);
+    
+    // Обработчик изменения материала
+    row.querySelector('.material-select').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const unitInput = row.querySelector('.material-unit');
+        unitInput.value = selectedOption.dataset.unit || '';
+    });
+    
+    // Обработчик удаления
+    row.querySelector('.remove-material-btn').addEventListener('click', function() {
+        row.remove();
+    });
+}
+
+document.getElementById('add-material-btn').addEventListener('click', function() {
+    const materialsList = document.getElementById('materials-list');
+    const index = materialsList.children.length;
+    addMaterialRow(index);
+});
+
+document.getElementById('save-materials-btn').addEventListener('click', function() {
+    const materials = [];
+    document.querySelectorAll('.material-row').forEach(row => {
+        const select = row.querySelector('.material-select');
+        const quantity = row.querySelector('.material-quantity').value;
+        const unit = row.querySelector('.material-unit').value;
+        
+        if (select.value && quantity) {
+            const selectedOption = select.options[select.selectedIndex];
+            materials.push({
+                id: select.value,
+                name: selectedOption.dataset.name,
+                quantity: parseFloat(quantity),
+                unit: unit
+            });
+        }
+    });
+    
+    // Сохраняем в скрытое поле
+    const materialsInput = document.getElementById(`id_stages-${currentEditingStageNum}-materials_info`);
+    materialsInput.value = JSON.stringify(materials);
+    
+    // Обновляем отображение
+    updateMaterialsDisplay(currentEditingStageNum, materials);
+    
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('materialsModal'));
+    modal.hide();
 });
 </script>
 {% endblock %}
