@@ -34,9 +34,22 @@ urlpatterns = [
 
     # Positions
     path('positions/', views.PositionListView.as_view(), name='position_list'),
+    path('positions/create/', views.PositionCreateView.as_view(), name='position_create'),
     path('positions/<int:pk>/edit/', views.PositionUpdateView.as_view(), name='position_edit'),
     path('positions/<int:pk>/delete/', views.PositionDeleteView.as_view(), name='position_delete'),
     path('positions/create-ajax/', views.PositionCreateAjaxView.as_view(), name='position_create_ajax'),
+    
+    # Duration Units (Единицы времени)
+    path('duration-units/', views.DurationUnitListView.as_view(), name='duration_unit_list'),
+    path('duration-units/create/', views.DurationUnitCreateView.as_view(), name='duration_unit_create'),
+    path('duration-units/<int:pk>/edit/', views.DurationUnitUpdateView.as_view(), name='duration_unit_edit'),
+    path('duration-units/<int:pk>/delete/', views.DurationUnitDeleteView.as_view(), name='duration_unit_delete'),
+    
+    # Materials (Материалы)
+    path('materials/', views.MaterialListView.as_view(), name='material_list'),
+    path('materials/create/', views.MaterialCreateView.as_view(), name='material_create'),
+    path('materials/<int:pk>/edit/', views.MaterialUpdateView.as_view(), name='material_edit'),
+    path('materials/<int:pk>/delete/', views.MaterialDeleteView.as_view(), name='material_delete'),
     
     # Task AJAX Management
     path('tasks/<int:pk>/status-update-ajax/', views.TaskStatusUpdateAjaxView.as_view(), name='task_status_update_ajax'),
@@ -58,8 +71,10 @@ urlpatterns = [
     path('my-templates/', views.LocalTemplateListView.as_view(), name='local_template_list'),
     path('my-templates/create/', views.LocalTemplateCreateView.as_view(), name='local_template_create'),
     path('my-templates/<int:pk>/edit/', views.LocalTemplateEditView.as_view(), name='local_template_edit'),
+    path('my-templates/<int:pk>/diagram/', views.LocalTemplateDiagramView.as_view(), name='local_template_diagram'),
     path('my-templates/<int:pk>/delete/', views.LocalTemplateDeleteView.as_view(), name='local_template_delete'),
     path('templates/<int:pk>/detail/', views.TemplateDetailAjaxView.as_view(), name='template_detail_ajax'),
+    path('templates/copy/', views.CopyGlobalTemplateView.as_view(), name='copy_global_template'),
     
     # Template Proposals
     path('my-proposals/', views.MyProposalsView.as_view(), name='my_proposals'),

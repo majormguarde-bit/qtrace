@@ -1,0 +1,568 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Диаграмма - {{ template.name }}{% endblock %}
+
+{% block content %}
+<style>
+    #rightSidebar .card {
+        flex-shrink: 0;
+    }
+    #rightSidebar .card-body {
+        font-size: 0.9rem;
+    }
+    #rightSidebar .form-label {
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+    }
+    #rightSidebar .form-select-sm {
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Диаграмма: {{ template.name }}</h3>
+    <a href="{% url 'dashboard:local_template_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+    </a>
+</div>
+
+<div class="row" style="height: calc(100vh - 250px);">
+    <!-- Левая колонка: Диаграмма -->
+    <div class="col-lg-8">
+        <div class="card h-100" style="display: flex; flex-direction: column;">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Структура этапов (интерактивная диаграмма)</h5>
+            </div>
+            <div class="card-body flex-grow-1" style="display: flex; flex-direction: column;">
+                <!-- Cytoscape диаграмма -->
+                <div id="cy" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa;"></div>
+                
+                <!-- Информация о статусе -->
+                <div id="statusMessage" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Правая колонка: Управление -->
+    <div class="col-lg-4" style="overflow-y: auto; max-height: calc(100vh - 250px); padding-right: 0.5rem;" id="rightSidebar">
+        <!-- Сводная информация -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Сводная информация</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Общее время:</strong><br>
+                    {% if total_duration_min == total_duration_max %}
+                        <span class="badge bg-info">{{ total_duration_min }} часов</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ total_duration_min }}-{{ total_duration_max }} часов</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <strong>Исполнители:</strong><br>
+                    {% for pos in unique_positions %}
+                        <span class="badge bg-secondary">{{ pos }}</span>
+                    {% empty %}
+                        <span class="text-muted">Не указаны</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Управление этапом -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Управление этапом</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'dashboard:local_template_edit' template.id %}" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <label class="form-label">Выберите этап:</label>
+                        <select name="stage_id" class="form-select form-select-sm" required id="stageSelect">
+                            <option value="">-- Выберите этап --</option>
+                            {% for stage in all_stages %}
+                            <option value="{{ stage.id }}">{{ stage.sequence_number }}. {{ stage.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Исполнитель (должность):</label>
+                        <select name="position_id" class="form-select form-select-sm" id="positionSelect">
+                            <option value="">-- Не указана --</option>
+                            {% for position in positions %}
+                            <option value="{{ position.id }}">{{ position.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Время (часов):</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="number" class="form-control form-control-sm" id="durationMin" placeholder="Мин" min="1" value="1">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="form-control form-control-sm" id="durationMax" placeholder="Макс" min="1" value="1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" id="submitStageForm">
+                            <i class="bi bi-check-circle me-1"></i> Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Управление связями -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Управление связями</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="editModeToggle">
+                    <label class="form-check-label" for="editModeToggle">
+                        <small>Режим редактирования связей</small>
+                    </label>
+                </div>
+                
+                <div id="editModeInfo" class="text-muted" style="display: none;">
+                    <small>
+                        <strong>Активен режим:</strong><br>
+                        • Shift+Клик на блок - начать связь<br>
+                        • Shift+Клик на целевой блок - завершить связь<br>
+                        • Escape - отмена
+                    </small>
+                </div>
+                
+                <hr class="my-2">
+                
+                <small class="text-muted d-block">
+                    <strong>Горячие клавиши:</strong><br>
+                    • Колесо мыши - масштабирование<br>
+                    • Перетаскивание - панорама<br>
+                    • Клик на блок - выбрать<br>
+                    • Delete - удалить связь<br>
+                    • Ctrl+R - сбросить вид
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+
+<script>
+// Данные о этапах
+const stagesDataJson = '{{ stages_json|escapejs }}';
+const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
+
+// Данные о должностях
+const positionsDataJson = '{{ positions_json|escapejs }}';
+const positionsData = positionsDataJson ? JSON.parse(positionsDataJson) : [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const templateId = parseInt('{{ template.id }}');
+    
+    // Переменные для режима редактирования связей
+    let editMode = false;
+    let isDrawing = false;
+    let sourceNode = null;
+    let tempEdge = null;
+    
+    // Подготавливаем элементы для Cytoscape
+    const elements = [];
+    
+    // Добавляем узел "Старт"
+    elements.push({
+        data: { id: 'start', label: '🟢 Старт' },
+        classes: 'start'
+    });
+    
+    // Добавляем узлы этапов
+    stagesData.forEach(stage => {
+        const stageName = stage.sequence_number + '. ' + stage.name;
+        const position = stage.position || 'Не указана';
+        
+        let durationText = 'Не указана';
+        if (stage.duration_from && stage.duration_to) {
+            if (stage.duration_from === stage.duration_to) {
+                durationText = 'Длительность: ' + stage.duration_from + ' ' + (stage.duration_unit || '');
+            } else {
+                durationText = 'Длительность: ' + stage.duration_from + '-' + stage.duration_to + ' ' + (stage.duration_unit || '');
+            }
+        }
+        
+        const label = '━━━━━━━━━━\n' + stageName + '\n━━━━━━━━━━\n' + position + '\n' + durationText;
+        
+        elements.push({
+            data: {
+                id: 'stage_' + stage.id,
+                label: label,
+                stageName: stageName,
+                position: position,
+                duration: durationText
+            }
+        });
+        
+        // Если есть материалы, добавляем узел с материалами рядом
+        if (stage.materials && stage.materials.length > 0) {
+            const materialsLabel = stage.materials.map(m => m.quantity + ' ' + m.unit + ' ' + m.name).join('\n');
+            elements.push({
+                data: {
+                    id: 'materials_' + stage.id,
+                    label: 'Материалы:\n' + materialsLabel
+                },
+                classes: 'materials'
+            });
+            
+            elements.push({
+                data: {
+                    id: 'edge_stage_materials_' + stage.id,
+                    source: 'materials_' + stage.id,
+                    target: 'stage_' + stage.id
+                },
+                classes: 'materials-edge'
+            });
+        }
+    });
+    
+    // Добавляем узел "Стоп"
+    elements.push({
+        data: { id: 'stop', label: '🔴 Стоп' },
+        classes: 'stop'
+    });
+    
+    // Добавляем ребра (связи)
+    if (stagesData.length > 0) {
+        elements.push({
+            data: {
+                id: 'edge_start_' + stagesData[0].id,
+                source: 'start',
+                target: 'stage_' + stagesData[0].id
+            }
+        });
+    } else {
+        elements.push({
+            data: {
+                id: 'edge_start_stop',
+                source: 'start',
+                target: 'stop'
+            }
+        });
+    }
+    
+    // От последнего этапа к Стопу
+    if (stagesData.length > 0) {
+        const lastStage = stagesData[stagesData.length - 1];
+        elements.push({
+            data: {
+                id: 'edge_' + lastStage.id + '_stop',
+                source: 'stage_' + lastStage.id,
+                target: 'stop'
+            }
+        });
+    }
+    
+    // Инициализируем Cytoscape
+    const cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: elements,
+        style: [
+            {
+                selector: 'node:not(:parent)',
+                style: {
+                    'background-color': '#2d5016',
+                    'label': 'data(label)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'font-size': 24,
+                    'font-weight': 'bold',
+                    'color': 'white',
+                    'border-width': 2,
+                    'border-color': '#1a3009',
+                    'padding': '20px',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '260px',
+                    'shape': 'rectangle',
+                    'width': '336px',
+                    'height': '220px',
+                    'line-height': 1.2
+                }
+            },
+            {
+                selector: 'node:active',
+                style: {
+                    'border-width': 3,
+                    'border-color': '#ff9800'
+                }
+            },
+            {
+                selector: 'node.start',
+                style: {
+                    'background-color': '#28a745',
+                    'border-color': '#1e7e34',
+                    'shape': 'ellipse',
+                    'width': 120,
+                    'height': 120,
+                    'font-size': 20,
+                    'font-weight': 'bold'
+                }
+            },
+            {
+                selector: 'node.stop',
+                style: {
+                    'background-color': '#155724',
+                    'border-color': '#0d3818',
+                    'shape': 'ellipse',
+                    'width': 120,
+                    'height': 120,
+                    'font-size': 20,
+                    'font-weight': 'bold'
+                }
+            },
+            {
+                selector: 'node:selected',
+                style: {
+                    'background-color': '#3d7024',
+                    'color': 'white',
+                    'border-color': '#ff9800',
+                    'border-width': 3
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'line-color': '#0056b3',
+                    'target-arrow-color': '#0056b3',
+                    'target-arrow-shape': 'triangle',
+                    'arrow-scale': 2,
+                    'width': 3,
+                    'curve-style': 'bezier',
+                    'opacity': 0.8
+                }
+            },
+            {
+                selector: 'edge:active',
+                style: {
+                    'line-color': '#ff9800',
+                    'target-arrow-color': '#ff9800',
+                    'width': 4,
+                    'opacity': 1
+                }
+            },
+            {
+                selector: 'edge:selected',
+                style: {
+                    'line-color': '#ff9800',
+                    'target-arrow-color': '#ff9800',
+                    'width': 4,
+                    'opacity': 1
+                }
+            },
+            {
+                selector: 'node.materials',
+                style: {
+                    'background-color': '#f0f0f0',
+                    'border-color': '#666',
+                    'border-width': 3,
+                    'color': '#333',
+                    'font-size': 12,
+                    'font-weight': 'normal',
+                    'padding': '15px',
+                    'text-max-width': '200px',
+                    'width': '220px',
+                    'height': 'auto',
+                    'min-height': '120px',
+                    'text-wrap': 'wrap',
+                    'line-height': 1.3
+                }
+            },
+            {
+                selector: 'edge.materials-edge',
+                style: {
+                    'line-color': '#999',
+                    'target-arrow-color': '#999',
+                    'target-arrow-shape': 'triangle',
+                    'line-style': 'dashed',
+                    'width': 2,
+                    'opacity': 0.7,
+                    'arrow-scale': 1.5
+                }
+            }
+        ],
+        layout: {
+            name: 'breadthfirst',
+            directed: true,
+            animate: true,
+            animationDuration: 500,
+            spacingFactor: 1.5,
+            roots: '#start'
+        },
+        wheelSensitivity: 0.1,
+        minZoom: 0.1,
+        maxZoom: 3
+    });
+    
+    // Загружаем сохранённые позиции блоков
+    const savedPositions = localStorage.getItem('diagramPositions_' + templateId);
+    if (savedPositions) {
+        try {
+            const positions = JSON.parse(savedPositions);
+            cy.nodes().forEach(node => {
+                if (positions[node.id()]) {
+                    node.position(positions[node.id()]);
+                }
+            });
+        } catch (e) {
+            console.error('Error loading saved positions:', e);
+        }
+    } else {
+        cy.layout({ name: 'breadthfirst', directed: true, animate: true, animationDuration: 500, spacingFactor: 1.5, roots: '#start' }).run();
+    }
+    
+    // Сохраняем позиции при перемещении узлов
+    cy.on('free', 'node', function(evt) {
+        const positions = {};
+        cy.nodes().forEach(node => {
+            positions[node.id()] = node.position();
+        });
+        localStorage.setItem('diagramPositions_' + templateId, JSON.stringify(positions));
+    });
+    
+    // Обработчик клика на узел
+    cy.on('tap', function(evt) {
+        const target = evt.target;
+        
+        if (!target || !target.isNode || !target.isNode()) {
+            return;
+        }
+        
+        const node = target;
+        const nodeId = node.id();
+        
+        if (editMode) {
+            if (isDrawing) {
+                const targetNode = node;
+                const sourceId = sourceNode.id();
+                const targetId = targetNode.id();
+                
+                if (sourceId === targetId) {
+                    showStatus('Нельзя создать связь на самого себя', 'error');
+                    cancelDrawing();
+                    return;
+                }
+                
+                if (targetId === 'start') {
+                    showStatus('Нельзя создать связь к Старту', 'error');
+                    cancelDrawing();
+                    return;
+                }
+                
+                const newEdgeId = 'edge_' + sourceId + '_' + targetId;
+                const existingEdge = cy.$('#' + newEdgeId);
+                
+                if (existingEdge.length === 0) {
+                    cy.add({
+                        data: {
+                            id: newEdgeId,
+                            source: sourceId,
+                            target: targetId
+                        }
+                    });
+                    showStatus('Связь создана', 'success');
+                } else {
+                    showStatus('Такая связь уже существует', 'warning');
+                }
+                
+                cancelDrawing();
+                return;
+            }
+            
+            if (evt.originalEvent.shiftKey) {
+                if (nodeId === 'start' || nodeId === 'stop') {
+                    showStatus('Нельзя рисовать связи от системных узлов', 'error');
+                    return;
+                }
+                
+                sourceNode = node;
+                isDrawing = true;
+                node.style('border-width', 4);
+                node.style('border-color', '#0056b3');
+                node.style('background-color', '#0056b3');
+                showStatus('Связь начата. Клик на целевой блок для завершения', 'info');
+                return;
+            }
+        }
+        
+        if (nodeId === 'start' || nodeId === 'stop') {
+            return;
+        }
+        
+        const stageId = nodeId.replace('stage_', '');
+        document.getElementById('stageSelect').value = stageId;
+        
+        const stage = stagesData.find(s => s.id == stageId);
+        if (stage) {
+            if (stage.position_id) {
+                document.getElementById('positionSelect').value = stage.position_id;
+            } else {
+                document.getElementById('positionSelect').value = '';
+            }
+            
+            document.getElementById('durationMin').value = stage.duration_from || 1;
+            document.getElementById('durationMax').value = stage.duration_to || 1;
+        }
+        
+        showStatus('Этап выбран', 'info');
+    });
+    
+    function cancelDrawing() {
+        if (sourceNode) {
+            sourceNode.style('border-width', 2);
+            sourceNode.style('border-color', '#1a3009');
+            sourceNode.style('background-color', '#2d5016');
+        }
+        isDrawing = false;
+        sourceNode = null;
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (isDrawing) {
+                cancelDrawing();
+                showStatus('Рисование отменено', 'info');
+            }
+        }
+        
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            cy.fit();
+            showStatus('Вид сброшен', 'info');
+        }
+    });
+    
+    document.getElementById('editModeToggle').addEventListener('change', function(e) {
+        editMode = e.target.checked;
+        document.getElementById('editModeInfo').style.display = editMode ? 'block' : 'none';
+        
+        if (editMode) {
+            showStatus('Режим редактирования активирован', 'info');
+        } else {
+            cancelDrawing();
+            showStatus('Режим редактирования отключен', 'info');
+        }
+    });
+    
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('statusMessage');
+        const alertClass = type === 'error' ? 'alert-danger' : type === 'warning' ? 'alert-warning' : type === 'success' ? 'alert-success' : 'alert-info';
+        statusDiv.innerHTML = `<div class="alert ${alertClass} mb-0">${message}</div>`;
+    }
+});
+</script>
+{% endblock %}

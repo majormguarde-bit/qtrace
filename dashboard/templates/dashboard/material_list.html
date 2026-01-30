@@ -1,0 +1,107 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Материалы{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-box me-2"></i>Материалы
+    </h1>
+    <a href="{% url 'dashboard:material_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Добавить материал
+    </a>
+</div>
+
+{% if materials %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Название</th>
+                <th>Код</th>
+                <th>Единица измерения</th>
+                <th class="text-end">Стоимость</th>
+                <th class="text-center">Статус</th>
+                <th class="text-end">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for material in materials %}
+            <tr>
+                <td>
+                    <div class="fw-medium">{{ material.name }}</div>
+                    {% if material.description %}
+                    <small class="text-muted d-block">{{ material.description|truncatewords:10 }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <code class="bg-light px-2 py-1 rounded">{{ material.code }}</code>
+                </td>
+                <td>
+                    <span class="badge bg-info-soft text-info">
+                        {{ material.unit.abbreviation }}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <span class="fw-medium">{{ material.unit_cost }} ₽</span>
+                </td>
+                <td class="text-center">
+                    {% if material.is_active %}
+                    <span class="badge bg-success-soft text-success">Активен</span>
+                    {% else %}
+                    <span class="badge bg-danger-soft text-danger">Неактивен</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'dashboard:material_edit' material.pk %}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'dashboard:material_delete' material.pk %}" class="btn btn-sm btn-outline-danger" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1">Первая</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Следующая</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Последняя</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Нет материалов</strong>
+    <p class="mb-0 mt-2">Создайте первый материал, нажав кнопку "Добавить материал".</p>
+</div>
+{% endif %}
+{% endblock %}

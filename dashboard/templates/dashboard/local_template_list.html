@@ -1,13 +1,13 @@
 {% extends 'dashboard/base.html' %}
 
-{% block title %}Мои шаблоны{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold"><i class="bi bi-file-earmark-text me-2"></i>{{ page_title }}</h2>
     {% if template_type == 'local' %}
     <a href="{% url 'dashboard:local_template_create' %}" class="btn btn-primary rounded-pill px-4">
-        <i class="bi bi-plus-lg me-1"></i> Создать локальный шаблон
+        <i class="bi bi-plus-lg me-1"></i> Создать мой шаблон
     </a>
     {% endif %}
 </div>
@@ -16,11 +16,11 @@
 <div class="btn-group mb-4" role="group">
     <a href="?type=global{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
        class="btn btn-outline-primary {% if template_type == 'global' %}active{% endif %}">
-        <i class="bi bi-globe me-1"></i> Глобальные шаблоны
+        <i class="bi bi-globe me-1"></i> Типовые шаблоны
     </a>
     <a href="?type=local{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
        class="btn btn-outline-primary {% if template_type == 'local' %}active{% endif %}">
-        <i class="bi bi-building me-1"></i> Локальные шаблоны
+        <i class="bi bi-building me-1"></i> Мои шаблоны
     </a>
 </div>
 
@@ -31,7 +31,7 @@
             <input type="hidden" name="type" value="{{ template_type }}">
             <div class="col-md-4">
                 <label class="form-label small text-muted text-uppercase">Категория</label>
-                <select name="category" class="form-select">
+                <select name="category" class="form-select" onchange="this.form.submit()">
                     <option value="">Все категории</option>
                     {% for cat in categories %}
                     <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category %}selected{% endif %}>
@@ -63,9 +63,6 @@
                         <th class="px-4 py-3" style="width: auto;">Название</th>
                         <th class="py-3" style="width: 10%; white-space: nowrap;">Категория</th>
                         <th class="py-3 text-center" style="width: 10%; white-space: nowrap;">Этапов</th>
-                        {% if template_type == 'local' %}
-                        <th class="py-3" style="width: 15%; white-space: nowrap;">Статус предложения</th>
-                        {% endif %}
                         <th class="px-4 py-3 text-end" style="width: 5%; white-space: nowrap;">Действия</th>
                     </tr>
                 </thead>
@@ -86,43 +83,34 @@
                         <td class="py-3 text-center">
                             <span class="badge bg-primary-soft text-primary">{{ template.stages.count }}</span>
                         </td>
-                        {% if template_type == 'local' %}
-                        <td class="py-3">
-                            {% with proposal=template.proposals.first %}
-                                {% if proposal %}
-                                    {% if proposal.status == 'PENDING' %}
-                                        <span class="badge bg-warning-soft text-warning">⏳ Ожидание</span>
-                                    {% elif proposal.status == 'APPROVED' %}
-                                        <span class="badge bg-success-soft text-success">✓ Одобрено</span>
-                                    {% elif proposal.status == 'REJECTED' %}
-                                        <span class="badge bg-danger-soft text-danger">✕ Отклонено</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="badge bg-light text-muted">—</span>
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-                        {% endif %}
                         <td class="px-4 py-3 text-end">
                             <div class="btn-group shadow-sm rounded-pill bg-white border p-1">
                                 <button type="button" class="btn btn-sm btn-light border-0 rounded-circle" 
                                         data-bs-toggle="modal" data-bs-target="#templateDetailModal"
                                         onclick="loadTemplateDetail({{ template.pk }})" title="Просмотр">
-                                    <i class="bi bi-eye text-info"></i>
+                                    <i class="bi bi-eye text-dark"></i>
                                 </button>
                                 {% if template_type == 'local' %}
+                                    <a href="{% url 'dashboard:local_template_diagram' template.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Диаграмма">
+                                        <i class="bi bi-diagram-3 text-dark"></i>
+                                    </a>
                                     <a href="{% url 'dashboard:local_template_edit' template.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Редактировать">
-                                        <i class="bi bi-pencil-square text-primary"></i>
+                                        <i class="bi bi-pencil-square text-dark"></i>
                                     </a>
                                     <a href="{% url 'dashboard:local_template_delete' template.pk %}" class="btn btn-sm btn-light border-0 rounded-circle" title="Удалить">
                                         <i class="bi bi-trash text-danger"></i>
                                     </a>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-light border-0 rounded-circle" 
+                                            onclick="inheritTemplate({{ template.pk }})" title="Наследовать">
+                                        <i class="bi bi-download text-dark"></i>
+                                    </button>
                                 {% endif %}
                                 {% with proposal=template.proposals.first %}
-                                    {% if template_type == 'global' or not proposal or proposal.status != 'PENDING' %}
+                                    {% if template_type == 'local' and not proposal or template_type == 'local' and proposal.status != 'PENDING' %}
                                     <button type="button" class="btn btn-sm btn-light border-0 rounded-circle" 
-                                            onclick="proposeTemplate({{ template.pk }})" title="{% if template_type == 'global' %}Наследовать{% else %}Предложить{% endif %}">
-                                        <i class="bi bi-{% if template_type == 'global' %}download{% else %}upload{% endif %} text-success"></i>
+                                            onclick="proposeTemplate({{ template.pk }})" title="Предложить">
+                                        <i class="bi bi-upload text-dark"></i>
                                     </button>
                                     {% endif %}
                                 {% endwith %}
@@ -131,12 +119,12 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="4" class="text-center py-5 text-muted">
                             <i class="bi bi-file-earmark-text display-1 opacity-10 d-block mb-3"></i>
                             {% if template_type == 'local' %}
-                                Локальных шаблонов пока нет
+                                Ваших шаблонов пока нет
                             {% else %}
-                                Глобальных шаблонов пока нет
+                                Типовых шаблонов пока нет
                             {% endif %}
                         </td>
                     </tr>
@@ -197,7 +185,7 @@
 
 <script>
 function loadTemplateDetail(templateId) {
-    const url = `/templates/${templateId}/detail/`;
+    const url = `{% url 'dashboard:template_detail_ajax' 0 %}`.replace('0', templateId);
     fetch(url)
         .then(response => response.text())
         .then(html => {
@@ -214,6 +202,38 @@ function proposeTemplate(templateId) {
         // TODO: Реализовать AJAX запрос для создания предложения
         alert('Функция предложения будет реализована позже');
     }
+}
+
+function inheritTemplate(templateId) {
+    if (!confirm('Вы хотите создать копию этого шаблона в своем рабочем пространстве?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('template_id', templateId);
+    
+    fetch('{% url "dashboard:copy_global_template" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                          document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1]
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            // Перенаправляем на редактор нового шаблона
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при копировании шаблона');
+    });
 }
 </script>
 {% endblock %}

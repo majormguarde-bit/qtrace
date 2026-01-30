@@ -16,7 +16,7 @@
         .sidebar-link {
             color: rgba(255, 255, 255, .8);
             text-decoration: none;
-            padding: 10px 20px;
+            padding: 6px 20px;
             display: block;
             width: 100%;
             text-align: left;
@@ -131,14 +131,24 @@
                     <a href="{% url 'dashboard:department_list' %}" class="sidebar-link {% if 'department' in request.resolver_match.view_name %}active{% endif %}">
                         <i class="bi bi-diagram-3 me-2"></i> Подразделения
                     </a>
+                    
+                    <hr class="my-2">
+                    <div class="text-uppercase px-3 mt-2 mb-2 fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Справочники</div>
+                    
                     <a href="{% url 'dashboard:position_list' %}" class="sidebar-link {% if 'position' in request.resolver_match.view_name %}active{% endif %}">
                         <i class="bi bi-briefcase me-2"></i> Должности
+                    </a>
+                    <a href="{% url 'dashboard:duration_unit_list' %}" class="sidebar-link {% if 'duration_unit' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-hourglass-split me-2"></i> Единицы времени
+                    </a>
+                    <a href="{% url 'dashboard:material_list' %}" class="sidebar-link {% if 'material' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-box me-2"></i> Материалы
                     </a>
                     {% endif %}
                     
                     {% if request.user.role == 'ADMIN' and not request.user.is_superuser %}
                     <hr>
-                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Мой тенант</div>
+                    <div class="text-uppercase px-3 mt-3 mb-1 fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Мой тенант</div>
                     <a href="{% url 'dashboard:local_template_list' %}" class="sidebar-link {% if 'local_template' in request.resolver_match.view_name %}active{% endif %}">
                         <i class="bi bi-file-earmark-text me-2"></i> Мои шаблоны
                     </a>
@@ -149,7 +159,7 @@
                     
                     {% if request.user.is_superuser or request.user.is_staff %}
                     <hr>
-                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Администрирование</div>
+                    <div class="text-uppercase px-3 mt-3 mb-1 fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Администрирование</div>
                     <a href="{% url 'dashboard:template_list' %}" class="sidebar-link {% if 'template_list' in request.resolver_match.view_name %}active{% endif %}">
                         <i class="bi bi-file-earmark-text me-2"></i> Шаблоны задач
                     </a>
@@ -157,7 +167,7 @@
                         <i class="bi bi-inbox me-2"></i> Управление предложениями
                     </a>
                     <hr>
-                    <div class="text-uppercase small text-muted px-3 mt-3 mb-1">Система</div>
+                    <div class="text-uppercase px-3 mt-3 mb-1 fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Система</div>
                     <a href="/admin/" target="_blank" class="sidebar-link">
                         <i class="bi bi-database-fill me-2"></i> Вход в базу
                     </a>
@@ -214,7 +224,11 @@
                 {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
                 <a href="{% url 'dashboard:employee_list' %}" class="nav-link text-white">Сотрудники</a>
                 <a href="{% url 'dashboard:department_list' %}" class="nav-link text-white">Подразделения</a>
-                <a href="{% url 'dashboard:position_list' %}" class="nav-link text-white">Должности</a>
+                <hr class="border-secondary">
+                <span class="nav-link text-muted small">Справочники</span>
+                <a href="{% url 'dashboard:position_list' %}" class="nav-link text-white ps-4">Должности</a>
+                <a href="{% url 'dashboard:duration_unit_list' %}" class="nav-link text-white ps-4">Единицы времени</a>
+                <a href="{% url 'dashboard:material_list' %}" class="nav-link text-white ps-4">Материалы</a>
                 {% endif %}
                 {% if request.user.role == 'ADMIN' and not request.user.is_superuser %}
                 <hr class="border-secondary">

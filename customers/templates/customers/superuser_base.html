@@ -30,7 +30,7 @@
         .sidebar-link {
             color: rgba(255, 255, 255, .8);
             text-decoration: none;
-            padding: 8px 20px;
+            padding: 6px 20px;
             display: block;
             width: 100%;
             text-align: left;
@@ -114,7 +114,7 @@
                 </a>
                 
                 <hr class="mx-3 opacity-25 my-1">
-                <div class="px-3 mb-1 small text-uppercase opacity-50">Шаблоны</div>
+                <div class="px-3 mb-1 text-uppercase fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Шаблоны</div>
                 
                 <a href="{% url 'superuser_templates' %}" class="sidebar-link {% if 'superuser_templates' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-file-earmark-text me-2"></i> Шаблоны задач
@@ -124,7 +124,7 @@
                 </a>
                 
                 <hr class="mx-3 opacity-25 my-1">
-                <div class="px-3 mb-1 small text-uppercase opacity-50">Справочники</div>
+                <div class="px-3 mb-1 text-uppercase fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Справочники</div>
                 
                 <a href="{% url 'superuser_materials' %}" class="sidebar-link {% if 'superuser_materials' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-box-seam me-2"></i> Материалы
@@ -137,7 +137,7 @@
                 </a>
                 
                 <hr class="mx-3 opacity-25 my-1">
-                <div class="px-3 mb-1 small text-uppercase opacity-50">Настройки</div>
+                <div class="px-3 mb-1 text-uppercase fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Настройки</div>
                 
                 <a href="{% url 'superuser_mail_settings' %}" class="sidebar-link {% if 'mail_settings' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-envelope-gear me-2"></i> Почта
@@ -152,7 +152,7 @@
                 </a>
                 
                 <hr class="mx-3 opacity-25 my-1">
-                <div class="px-3 mb-1 small text-uppercase opacity-50">Управление базой</div>
+                <div class="px-3 mb-1 text-uppercase fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Управление базой</div>
                 {% if user.is_superuser %}
                 <a href="{% url 'superuser_db_management' %}" class="sidebar-link {% if 'db-management' in request.path or 'db_management' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-database-fill-gear me-2"></i> Обслуживание БД

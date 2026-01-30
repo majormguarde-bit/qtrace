@@ -92,12 +92,24 @@ def universal_media_serve(request, path, **kwargs):
 
 
 urlpatterns = [
-
+    # ============================================================================
+    # ТИПОВАЯ СТРУКТУРА URL - НЕ ИЗМЕНЯТЬ!
+    # ============================================================================
+    # /admin/login/     → Вход для суперпользователей платформы
+    # /admin/           → Django admin (только для суперпользователей)
+    # /superuser/       → Панель управления платформой (требует авторизации)
+    # /landing/         → Лендинг (публичная страница, доступна всем)
+    # /                 → Перенаправляет на /landing/ для public schema
+    # /login/           → Вход для пользователей тенантов
+    # ============================================================================
+    
     path('admin/login/', SuperuserLoginView.as_view(), name='admin_login'),
     
     path('logout/', auth_views.LogoutView.as_view(next_page='/admin/login/'), name='logout'),
 
     path('admin/', admin.site.urls), # Standard admin for public schema
+    
+    path('landing/', landing_page, name='home'),  # Лендинг с именем 'home' для обратной совместимости
 
     path('tariffs/', public_tariffs, name='public_tariffs'),
 
@@ -242,10 +254,6 @@ urlpatterns = [
     path('api/task-templates/', include('task_templates.urls')),
     
     path('', include('dashboard.urls')),
-
-    
-
-    path('', landing_page, name='home'),
 
 ]
 

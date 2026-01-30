@@ -1,0 +1,150 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} материала{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-box me-2"></i>
+                    {% if form.instance.pk %}
+                        Редактирование материала
+                    {% else %}
+                        Создание нового материала
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.name.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted d-block mt-1">
+                            Введите название материала
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">
+                            {{ form.code.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.code }}
+                        {% if form.code.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.code.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted d-block mt-1">
+                            Уникальный код материала (например: MAT-001)
+                        </small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.unit.id_for_label }}" class="form-label">
+                                    {{ form.unit.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.unit }}
+                                {% if form.unit.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.unit.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.unit_cost.id_for_label }}" class="form-label">
+                                    {{ form.unit_cost.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.unit_cost }}
+                                {% if form.unit_cost.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.unit_cost.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.description.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted d-block mt-1">
+                            Дополнительная информация о материале
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+                        <small class="form-text text-muted d-block mt-1">
+                            Неактивные материалы не будут доступны при создании новых шаблонов
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            {% if form.instance.pk %}Сохранить{% else %}Создать{% endif %}
+                        </button>
+                        <a href="{% url 'dashboard:material_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle me-2"></i>Справка
+                </h6>
+                <p class="small mb-0">
+                    Материалы используются для указания необходимых ресурсов при выполнении этапов задач.
+                </p>
+                <hr>
+                <p class="small mb-0">
+                    <strong>Поля:</strong>
+                </p>
+                <ul class="small mb-0 ps-3">
+                    <li><strong>Название:</strong> Наименование материала</li>
+                    <li><strong>Код:</strong> Уникальный идентификатор</li>
+                    <li><strong>Единица:</strong> Единица измерения</li>
+                    <li><strong>Стоимость:</strong> Цена за единицу</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

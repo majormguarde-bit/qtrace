@@ -1,29 +1,58 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django import forms
 from django.forms import inlineformset_factory
 from django.contrib import messages
 from django.utils import timezone
+from django.http import Http404
 
 from django.db.models import Sum
 from django.db import models as django_models
 from tasks.models import Task, TaskStage
 from media_app.models import Media
 from users_app.models import TenantUser, Department, Position
-from task_templates.models import TaskTemplate, TaskTemplateStage, TemplateProposal, ActivityCategory
+from task_templates.models import (
+    TaskTemplate, TaskTemplateStage, TemplateProposal, ActivityCategory, 
+    StageMaterial, DurationUnit, Material
+)
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 
-@login_required
 def home(request):
+    """
+    ТИПОВАЯ ЛОГИКА МАРШРУТИЗАЦИИ - НЕ ИЗМЕНЯТЬ!
+    
+    Эта функция определяет, куда перенаправлять пользователя при обращении к корневому URL (/).
+    
+    Правила маршрутизации (ЗАФИКСИРОВАНЫ):
+    1. Public schema (localhost:8000) → ВСЕГДА перенаправляем на /landing/
+       - Лендинг доступен всем без авторизации
+       - Авторизованные пользователи тоже видят лендинг
+       - Из лендинга есть ссылки на /superuser/ и /login/
+    
+    2. Tenant schema (subdomain.localhost:8000) → требуется авторизация
+       - Если не авторизован → перенаправляем на /login/
+       - Если авторизован → показываем dashboard тенанта
+    
+    ВАЖНО: Проверка авторизации происходит ТОЛЬКО в панелях управления,
+    НЕ на лендинге! Лендинг - публичная страница для всех.
+    """
     user = request.user
     tenant = getattr(request, 'tenant', None)
+    
+    # Правило 1: Public schema → лендинг для всех
+    if tenant and tenant.schema_name == 'public':
+        return redirect('/landing/')
+    
+    # Правило 2: Tenant schema → требуется авторизация
+    if not user.is_authenticated:
+        return redirect('dashboard:login')
     
     # Context data
     context = {
@@ -1081,7 +1110,7 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
         # Получаем фильтры
         category_id = self.request.GET.get('category')
         search = self.request.GET.get('search', '')
-        template_type = self.request.GET.get('type', 'global')  # По умолчанию показываем глобальные
+        template_type = self.request.GET.get('type', 'local')  # По умолчанию показываем мои шаблоны
         
         # Определяем, какие шаблоны показывать
         if template_type == 'local':
@@ -1090,8 +1119,12 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
             queryset = TaskTemplate.objects.filter(template_type='global').prefetch_related('stages', 'activity_category')
         
         # Применяем фильтры
-        if category_id:
-            queryset = queryset.filter(activity_category_id=category_id)
+        if category_id and category_id.strip():  # Проверяем, что category_id не пустой
+            try:
+                queryset = queryset.filter(activity_category_id=int(category_id))
+            except (ValueError, TypeError):
+                pass  # Если не число, игнорируем фильтр
+        
         if search:
             queryset = queryset.filter(name__icontains=search)
         
@@ -1103,13 +1136,13 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
         # Получаем фильтры
         category_id = self.request.GET.get('category')
         search = self.request.GET.get('search', '')
-        template_type = self.request.GET.get('type', 'global')  # По умолчанию показываем глобальные
+        template_type = self.request.GET.get('type', 'local')  # По умолчанию показываем мои шаблоны
         
         # Определяем заголовок
         if template_type == 'local':
-            context['page_title'] = 'Локальные шаблоны'
+            context['page_title'] = 'Мои шаблоны'
         else:
-            context['page_title'] = 'Глобальные шаблоны задач'
+            context['page_title'] = 'Типовые шаблоны задач'
         
         context['categories'] = ActivityCategory.objects.all()
         context['selected_category'] = category_id
@@ -1152,7 +1185,7 @@ class LocalTemplateCreateView(LoginRequiredMixin, CreateView):
             self.object = form.save()
             stages.instance = self.object
             stages.save()
-            messages.success(self.request, 'Локальный шаблон успешно создан.')
+            messages.success(self.request, 'Мой шаблон успешно создан.')
             return redirect(self.success_url)
         else:
             return self.render_to_response(self.get_context_data(form=form))
@@ -1173,7 +1206,7 @@ class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
         
         obj = self.get_object()
         if obj.template_type == 'global':
-            messages.error(request, 'Вы не можете редактировать глобальный шаблон.')
+            messages.error(request, 'Вы не можете редактировать типовой шаблон.')
             return redirect('dashboard:local_template_list')
         
         return super().dispatch(request, *args, **kwargs)
@@ -1196,7 +1229,7 @@ class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
             self.object = form.save()
             stages.instance = self.object
             stages.save()
-            messages.success(self.request, 'Локальный шаблон успешно обновлен.')
+            messages.success(self.request, 'Мой шаблон успешно обновлен.')
             return redirect(self.success_url)
         else:
             return self.render_to_response(self.get_context_data(form=form))
@@ -1216,21 +1249,265 @@ class LocalTemplateDeleteView(LoginRequiredMixin, DeleteView):
         
         obj = self.get_object()
         if obj.template_type == 'global':
-            messages.error(request, 'Вы не можете удалить глобальный шаблон.')
+            messages.error(request, 'Вы не можете удалить типовой шаблон.')
             return redirect('dashboard:local_template_list')
         
         return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Удаление локального шаблона'
+        context['title'] = 'Удаление моего шаблона'
         context['message'] = f'Вы уверены, что хотите удалить шаблон "{self.object.name}"?'
         context['cancel_url'] = reverse_lazy('dashboard:local_template_list')
         return context
     
     def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Локальный шаблон успешно удален.')
+        messages.success(request, 'Мой шаблон успешно удален.')
         return super().delete(request, *args, **kwargs)
+
+
+class LocalTemplateDiagramView(LoginRequiredMixin, TemplateView):
+    """Редактор диаграммы для локального шаблона тенанта"""
+    template_name = 'dashboard/local_template_diagram.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            messages.error(request, 'У вас нет доступа к этой странице.')
+            return redirect('dashboard:home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        template_id = self.kwargs.get('pk')
+        template = get_object_or_404(TaskTemplate, id=template_id, template_type='local')
+        
+        # Проверяем, что это локальный шаблон
+        if template.template_type != 'local':
+            raise Http404("Это не локальный шаблон")
+        
+        context['template'] = template
+        
+        # Подготавливаем данные для Cytoscape
+        import json
+        stages_data = []
+        for stage in template.stages.all().order_by('sequence_number'):
+            stage_data = {
+                'id': stage.id,
+                'sequence_number': stage.sequence_number,
+                'name': stage.name,
+                'parent_stage_id': stage.parent_stage_id,
+                'duration_from': stage.duration_from,
+                'duration_to': stage.duration_to,
+                'duration_unit': stage.duration_unit.name if stage.duration_unit else '',
+                'position_id': stage.position_id,
+                'position': stage.position.name if stage.position else '',
+                'leads_to_stop': stage.leads_to_stop,
+                'materials': [
+                    {
+                        'id': m.id,
+                        'name': m.material.name,
+                        'quantity': str(m.quantity),
+                        'unit': m.material.unit.abbreviation
+                    }
+                    for m in stage.materials.all()
+                ]
+            }
+            stages_data.append(stage_data)
+        
+        context['stages_json'] = json.dumps(stages_data)
+        
+        # Подготавливаем данные о должностях
+        positions_data = []
+        for position in Position.objects.all():
+            positions_data.append({
+                'id': position.id,
+                'name': position.name
+            })
+        context['positions_json'] = json.dumps(positions_data)
+        
+        # Получаем все этапы для выпадающего списка
+        context['all_stages'] = template.stages.all().order_by('sequence_number')
+        context['positions'] = Position.objects.all()
+        
+        # Вычисляем общее время
+        total_min = sum(s.duration_from for s in template.stages.all()) if template.stages.exists() else 0
+        total_max = sum(s.duration_to for s in template.stages.all()) if template.stages.exists() else 0
+        context['total_duration_min'] = total_min
+        context['total_duration_max'] = total_max
+        
+        # Уникальные должности
+        unique_positions = set()
+        for stage in template.stages.all():
+            if stage.position:
+                unique_positions.add(stage.position.name)
+        context['unique_positions'] = sorted(list(unique_positions))
+        
+        return context
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(require_POST, name='dispatch')
+class CopyGlobalTemplateView(LoginRequiredMixin, TemplateView):
+    """Копирование глобального шаблона в локальный с импортом справочников"""
+    
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not (hasattr(user, 'role') and user.role == 'ADMIN'):
+            return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            from task_templates.models import DurationUnit, Material
+            
+            global_template_id = request.POST.get('template_id')
+            if not global_template_id:
+                return JsonResponse({'status': 'error', 'message': 'Template ID required'})
+            
+            # Получаем глобальный шаблон
+            global_template = get_object_or_404(TaskTemplate, id=global_template_id, template_type='global')
+            
+            # Импортируем справочники и получаем маппинг старых ID на новые
+            reference_mapping = self._import_reference_data(global_template)
+            
+            # Создаём локальный шаблон на основе глобального
+            local_template = TaskTemplate.objects.create(
+                name=f"{global_template.name} (копия)",
+                description=global_template.description,
+                template_type='local',
+                activity_category=global_template.activity_category,
+                based_on_global=global_template,
+                version=1
+            )
+            
+            # Копируем все этапы
+            for stage in global_template.stages.all():
+                # Получаем новые ID справочников
+                new_duration_unit = None
+                if stage.duration_unit:
+                    new_duration_unit = reference_mapping['duration_units'].get(stage.duration_unit.id)
+                
+                new_position = None
+                if stage.position:
+                    new_position = reference_mapping['positions'].get(stage.position.id)
+                
+                new_stage = TaskTemplateStage.objects.create(
+                    template=local_template,
+                    name=stage.name,
+                    parent_stage=None,  # Пока не копируем иерархию
+                    duration_from=stage.duration_from,
+                    duration_to=stage.duration_to,
+                    duration_unit=new_duration_unit,
+                    position=new_position,
+                    sequence_number=stage.sequence_number,
+                    leads_to_stop=stage.leads_to_stop
+                )
+                
+                # Копируем материалы для этапа
+                for material in stage.materials.all():
+                    new_material = reference_mapping['materials'].get(material.material.id)
+                    if new_material:
+                        StageMaterial.objects.create(
+                            stage=new_stage,
+                            material=new_material,
+                            quantity=material.quantity
+                        )
+            
+            # Копируем SVG диаграмму если есть
+            if global_template.diagram_svg:
+                local_template.diagram_svg = global_template.diagram_svg
+                local_template.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Шаблон "{local_template.name}" успешно создан',
+                'template_id': local_template.id,
+                'template_name': local_template.name,
+                'redirect_url': reverse('dashboard:local_template_edit', args=[local_template.id])
+            })
+        
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    def _import_reference_data(self, global_template):
+        """Импортирует справочники из глобального шаблона в рабочую область тенанта
+        Возвращает маппинг старых ID на новые объекты"""
+        from task_templates.models import DurationUnit, Material
+        
+        # Маппинг для отслеживания импортированных справочников
+        reference_mapping = {
+            'duration_units': {},  # global_id -> local_object
+            'positions': {},       # global_id -> local_object
+            'materials': {}        # global_id -> local_object
+        }
+        
+        # Собираем все уникальные справочники из этапов шаблона
+        duration_units_to_import = set()
+        positions_to_import = set()
+        materials_to_import = set()
+        
+        for stage in global_template.stages.all():
+            if stage.duration_unit:
+                duration_units_to_import.add(stage.duration_unit.id)
+            if stage.position:
+                positions_to_import.add(stage.position.id)
+            
+            for material in stage.materials.all():
+                materials_to_import.add(material.material.id)
+        
+        # Импортируем единицы времени
+        for duration_unit_id in duration_units_to_import:
+            try:
+                global_unit = DurationUnit.objects.get(id=duration_unit_id)
+                # Проверяем, есть ли уже такая единица в тенанте
+                local_unit, created = DurationUnit.objects.get_or_create(
+                    unit_type=global_unit.unit_type,
+                    defaults={
+                        'name': global_unit.name,
+                        'abbreviation': global_unit.abbreviation
+                    }
+                )
+                reference_mapping['duration_units'][duration_unit_id] = local_unit
+            except DurationUnit.DoesNotExist:
+                pass
+        
+        # Импортируем должности
+        for position_id in positions_to_import:
+            try:
+                global_position = Position.objects.get(id=position_id)
+                # Проверяем, есть ли уже такая должность в тенанте
+                local_position, created = Position.objects.get_or_create(
+                    name=global_position.name,
+                    defaults={
+                        'description': global_position.description
+                    }
+                )
+                reference_mapping['positions'][position_id] = local_position
+            except Position.DoesNotExist:
+                pass
+        
+        # Импортируем материалы
+        for material_id in materials_to_import:
+            try:
+                global_material = Material.objects.get(id=material_id)
+                # Проверяем, есть ли уже такой материал в тенанте
+                local_material, created = Material.objects.get_or_create(
+                    code=global_material.code,
+                    defaults={
+                        'name': global_material.name,
+                        'description': global_material.description,
+                        'unit': global_material.unit,
+                        'unit_cost': global_material.unit_cost
+                    }
+                )
+                reference_mapping['materials'][material_id] = local_material
+            except Material.DoesNotExist:
+                pass
+        
+        return reference_mapping
 
 
 class TemplateDetailAjaxView(LoginRequiredMixin, TemplateView):
@@ -1418,3 +1695,195 @@ def get_template_stages(request, pk):
         return JsonResponse({'status': 'success', 'stages': stages})
     except TaskTemplate.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Template not found'}, status=404)
+
+
+# ============================================================================
+# СПРАВОЧНИКИ (DICTIONARIES) - CRUD операции для администраторов тенанта
+# ============================================================================
+
+# --- Единицы времени (Duration Units) ---
+
+class DurationUnitForm(forms.ModelForm):
+    class Meta:
+        model = DurationUnit
+        fields = ['unit_type', 'name', 'abbreviation']
+        labels = {
+            'unit_type': 'Тип единицы',
+            'name': 'Название',
+            'abbreviation': 'Сокращение'
+        }
+        widgets = {
+            'unit_type': forms.Select(attrs={'class': 'form-select'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '5'}),
+        }
+
+
+class DurationUnitListView(LoginRequiredMixin, ListView):
+    """Список единиц времени"""
+    model = DurationUnit
+    template_name = 'dashboard/duration_unit_list.html'
+    context_object_name = 'duration_units'
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+    def get_queryset(self):
+        return DurationUnit.objects.all().order_by('id')
+
+
+class DurationUnitCreateView(LoginRequiredMixin, CreateView):
+    """Создание единицы времени"""
+    model = DurationUnit
+    form_class = DurationUnitForm
+    template_name = 'dashboard/duration_unit_form.html'
+    success_url = reverse_lazy('dashboard:duration_unit_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+class DurationUnitUpdateView(LoginRequiredMixin, UpdateView):
+    """Редактирование единицы времени"""
+    model = DurationUnit
+    form_class = DurationUnitForm
+    template_name = 'dashboard/duration_unit_form.html'
+    success_url = reverse_lazy('dashboard:duration_unit_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+class DurationUnitDeleteView(LoginRequiredMixin, DeleteView):
+    """Удаление единицы времени"""
+    model = DurationUnit
+    template_name = 'dashboard/confirm_delete.html'
+    success_url = reverse_lazy('dashboard:duration_unit_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Удаление единицы времени'
+        context['message'] = f'Вы уверены, что хотите удалить единицу времени "{self.object.name}"?'
+        context['cancel_url'] = reverse_lazy('dashboard:duration_unit_list')
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+# --- Должности исполнителей (Positions) - дополнительные представления ---
+
+class PositionCreateView(LoginRequiredMixin, CreateView):
+    """Создание должности"""
+    model = Position
+    form_class = PositionForm
+    template_name = 'dashboard/position_form.html'
+    success_url = reverse_lazy('dashboard:position_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+# --- Материалы (Materials) ---
+
+class MaterialForm(forms.ModelForm):
+    class Meta:
+        model = Material
+        fields = ['name', 'description', 'code', 'unit', 'unit_cost', 'is_active']
+        labels = {
+            'name': 'Название',
+            'description': 'Описание',
+            'code': 'Код материала',
+            'unit': 'Единица измерения',
+            'unit_cost': 'Стоимость за единицу',
+            'is_active': 'Активен'
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'code': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit': forms.Select(attrs={'class': 'form-select'}),
+            'unit_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class MaterialListView(LoginRequiredMixin, ListView):
+    """Список материалов"""
+    model = Material
+    template_name = 'dashboard/material_list.html'
+    context_object_name = 'materials'
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+    def get_queryset(self):
+        return Material.objects.select_related('unit').all().order_by('name')
+
+
+class MaterialCreateView(LoginRequiredMixin, CreateView):
+    """Создание материала"""
+    model = Material
+    form_class = MaterialForm
+    template_name = 'dashboard/material_form.html'
+    success_url = reverse_lazy('dashboard:material_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+class MaterialUpdateView(LoginRequiredMixin, UpdateView):
+    """Редактирование материала"""
+    model = Material
+    form_class = MaterialForm
+    template_name = 'dashboard/material_form.html'
+    success_url = reverse_lazy('dashboard:material_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')
+
+
+class MaterialDeleteView(LoginRequiredMixin, DeleteView):
+    """Удаление материала"""
+    model = Material
+    template_name = 'dashboard/confirm_delete.html'
+    success_url = reverse_lazy('dashboard:material_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Удаление материала'
+        context['message'] = f'Вы уверены, что хотите удалить материал "{self.object.name}"?'
+        context['cancel_url'] = reverse_lazy('dashboard:material_list')
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
+            return super().dispatch(request, *args, **kwargs)
+        return redirect('dashboard:home')

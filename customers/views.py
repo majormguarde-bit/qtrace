@@ -976,24 +976,27 @@ def superuser_ai_settings(request):
 
 
 def landing_page(request):
-    """Отображение главной страницы (только для публичной схемы)"""
-    # Безопасно проверяем наличие тенанта
+    """Главная страница - лендинг платформы (доступна всем без авторизации)"""
+    from django.views.decorators.cache import cache_page
+    
     tenant = getattr(request, 'tenant', None)
     
-    # Если мы в тенанте и это не публичная схема - мы не должны быть здесь, 
-    # но на всякий случай перенаправим в дашборд
+    # Если это тенант (не public schema) - перенаправляем в dashboard
     if tenant and tenant.schema_name != 'public':
+        # Если пользователь не авторизован, перенаправляем на login
+        if not request.user.is_authenticated:
+            return redirect('dashboard:login')
+        # Если авторизован - на главную dashboard
         return redirect('dashboard:home')
     
+    # Для public schema показываем landing page (БЕЗ РЕДИРЕКТОВ!)
     # Получаем базовый домен из текущего запроса
     host = request.get_host().split(':')[0]
     if host == '127.0.0.1' or host == 'localhost':
         base_domain = 'localhost'
     elif '.nip.io' in host:
-        # Для отладки через nip.io
         base_domain = host
     else:
-        # В проде, например qtrace.ru
         base_domain = host
 
     # Логика для формы входа (редирект по параметру)

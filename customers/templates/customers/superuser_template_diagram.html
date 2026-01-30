@@ -1168,13 +1168,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик сохранения диаграммы
     document.getElementById('saveDiagramBtn').addEventListener('click', function() {
         try {
-            // Получаем SVG из Cytoscape
-            const svgString = cy.svg({
+            // Экспортируем диаграмму в PNG, затем конвертируем в SVG
+            // Используем встроенный метод Cytoscape для экспорта
+            const pngData = cy.png({
                 full: true,
-                scale: 1,
+                scale: 2,
                 maxWidth: 1000,
                 maxHeight: 1000
             });
+            
+            // Создаем SVG обертку с PNG изображением
+            const bbox = cy.elements().boundingBox();
+            const width = bbox.w || 1000;
+            const height = bbox.h || 800;
+            
+            const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <image href="${pngData}" width="${width}" height="${height}" />
+            </svg>`;
             
             // Отправляем SVG на сервер
             const formData = new FormData();

@@ -2,61 +2,180 @@
 <div class="alert alert-danger">{{ error }}</div>
 {% else %}
 <div class="template-detail">
-    <h6 class="mb-3">{{ template.name }}</h6>
-    
-    {% if template.description %}
-    <div class="mb-3">
-        <strong>Описание:</strong>
-        <p class="text-muted">{{ template.description }}</p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">{{ template.name }}</h6>
+        <div>
+            {% if template.template_type == 'global' %}
+            <button type="button" class="btn btn-sm btn-success me-2" onclick="inheritTemplate({{ template.id }})">
+                <i class="bi bi-download me-1"></i> Наследовать
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="goToHome()">
+                <i class="bi bi-house me-1"></i> На главную
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
     </div>
-    {% endif %}
     
-    {% if template.activity_category %}
-    <div class="mb-3">
-        <strong>Категория:</strong>
-        <span class="badge bg-light text-dark border">{{ template.activity_category.name }}</span>
-    </div>
-    {% endif %}
+    <!-- Вкладки -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info-content" type="button" role="tab" aria-controls="info-content" aria-selected="true">
+                <i class="bi bi-info-circle me-1"></i> Информация
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="diagram-tab" data-bs-toggle="tab" data-bs-target="#diagram-content" type="button" role="tab" aria-controls="diagram-content" aria-selected="false">
+                <i class="bi bi-diagram-3 me-1"></i> Диаграмма
+            </button>
+        </li>
+    </ul>
     
-    <div class="mb-3">
-        <strong>Этапы ({{ stages.count }}):</strong>
-        <div class="mt-2">
-            {% for stage in stages %}
-            <div class="card card-sm mb-2">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <strong>{{ stage.sequence_number }}. {{ stage.name }}</strong>
-                            {% if stage.position %}
-                            <br><small class="text-muted">Должность: {{ stage.position.name }}</small>
-                            {% endif %}
-                        </div>
-                        <div class="text-end">
-                            <small class="text-muted">
-                                {% if stage.duration_from == stage.duration_to %}
-                                    {{ stage.duration_from }} {{ stage.duration_unit.name|default:"" }}
-                                {% else %}
-                                    {{ stage.duration_from }}-{{ stage.duration_to }} {{ stage.duration_unit.name|default:"" }}
-                                {% endif %}
-                            </small>
+    <!-- Содержимое вкладок -->
+    <div class="tab-content">
+        <!-- Вкладка "Информация" -->
+        <div class="tab-pane fade show active" id="info-content" role="tabpanel" aria-labelledby="info-tab">
+            {% if template.description %}
+            <div class="mb-3">
+                <strong>Описание:</strong>
+                <p class="text-muted">{{ template.description }}</p>
+            </div>
+            {% endif %}
+            
+            {% if template.activity_category %}
+            <div class="mb-3">
+                <strong>Категория:</strong>
+                <span class="badge bg-light text-dark border">{{ template.activity_category.name }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <strong>Этапы ({{ stages.count }}):</strong>
+                <div class="mt-2">
+                    {% for stage in stages %}
+                    <div class="card card-sm mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ stage.sequence_number }}. {{ stage.name }}</strong>
+                                    {% if stage.position %}
+                                    <br><small class="text-muted">Должность: {{ stage.position.name }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">
+                                        {% if stage.duration_from == stage.duration_to %}
+                                            {{ stage.duration_from }} {{ stage.duration_unit.name|default:"" }}
+                                        {% else %}
+                                            {{ stage.duration_from }}-{{ stage.duration_to }} {{ stage.duration_unit.name|default:"" }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    {% empty %}
+                    <p class="text-muted">Этапы не добавлены</p>
+                    {% endfor %}
                 </div>
             </div>
-            {% empty %}
-            <p class="text-muted">Этапы не добавлены</p>
-            {% endfor %}
+        </div>
+        
+        <!-- Вкладка "Диаграмма" -->
+        <div class="tab-pane fade" id="diagram-content" role="tabpanel" aria-labelledby="diagram-tab">
+            {% if template.diagram_svg %}
+            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 15px; background: #f8f9fa; overflow: auto; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                    {{ template.diagram_svg|safe }}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Диаграмма для этого шаблона еще не создана. Обратитесь к администратору платформы.
+            </div>
+            {% endif %}
         </div>
     </div>
-    
-    <!-- Сохраненная диаграмма -->
-    {% if template.diagram_svg %}
-    <div class="mt-4 pt-4 border-top">
-        <strong>Диаграмма:</strong>
-        <div class="mt-2" style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f8f9fa; overflow-x: auto;">
-            {{ template.diagram_svg|safe }}
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endif %}
+
+<script>
+function goToHome() {
+    // Всегда переходим на главную платформы (localhost:8000 или главный домен)
+    const host = window.location.hostname;
+    const port = window.location.port;
+    const protocol = window.location.protocol;
+    
+    if (host === 'localhost' || host === '127.0.0.1') {
+        // Для localhost - переходим на localhost:8000 (или без порта если 80/443)
+        const portStr = (port && port !== '80' && port !== '443') ? ':' + port : '';
+        window.location.href = protocol + '//' + 'localhost' + portStr;
+    } else {
+        // Для production - переходим на главный домен (последние 2 части)
+        const parts = host.split('.');
+        const mainDomain = parts.slice(-2).join('.');
+        window.location.href = protocol + '//' + mainDomain;
+    }
+}
+
+function inheritTemplate(templateId) {
+    if (!confirm('Вы хотите создать копию этого шаблона в своем рабочем пространстве?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('template_id', templateId);
+    
+    fetch('{% url "dashboard:copy_global_template" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                          document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1]
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('templateDetailModal'));
+            if (modal) modal.hide();
+            // Перенаправляем на редактор нового шаблона
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при копировании шаблона');
+    });
+}
+</script>
+
+<style>
+/* Масштабирование SVG диаграммы */
+#diagram-content svg {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: auto;
+}
+</style>
+
+<script>
+// Дополнительное масштабирование при загрузке вкладки
+document.addEventListener('shown.bs.tab', function(e) {
+    if (e.target.id === 'diagram-tab') {
+        const svg = document.querySelector('#diagram-content svg');
+        if (svg) {
+            svg.style.maxWidth = '100%';
+            svg.style.maxHeight = '100%';
+        }
+    }
+});
+</script>
