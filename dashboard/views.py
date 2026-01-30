@@ -644,6 +644,13 @@ class EmployeeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Заполняем queryset для department
+        self.fields['department'].queryset = Department.objects.all().order_by('name')
+        # Заполняем queryset для position
+        self.fields['position'].queryset = Position.objects.all().order_by('name')
+
     def save(self, commit=True):
         user = super().save(commit=False)
         password = self.cleaned_data.get("password")
