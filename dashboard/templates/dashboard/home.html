@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function updateTaskStatus(taskId, status, item) {
-        const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
+        const url = `/tasks/${taskId}/status-update-ajax/`;
         
         // Показываем индикатор загрузки на карточке
         item.style.opacity = '0.5';

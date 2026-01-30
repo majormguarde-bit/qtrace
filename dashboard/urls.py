@@ -54,7 +54,7 @@ urlpatterns = [
     path('materials/<int:pk>/delete/', views.MaterialDeleteView.as_view(), name='material_delete'),
     
     # Task AJAX Management
-    path('tasks/<int:pk>/status-update-ajax/', views.TaskStatusUpdateAjaxView.as_view(), name='task_status_update_ajax'),
+    path('tasks/<int:pk>/status-update-ajax/', views.task_status_update_ajax, name='task_status_update_ajax'),
 
     # Stages
     path('stages/<int:pk>/toggle-ajax/', views.TaskStageToggleAjaxView.as_view(), name='task_stage_toggle_ajax'),

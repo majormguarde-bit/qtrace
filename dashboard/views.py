@@ -1187,6 +1187,57 @@ class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
 # --- AJAX Task Management ---
 
 @method_decorator(csrf_exempt, name='dispatch')
+@csrf_exempt
+@require_POST
+def task_status_update_ajax(request, pk):
+    """AJAX endpoint для обновления статуса задачи"""
+    import json
+    
+    try:
+        task = Task.objects.get(pk=pk)
+        user = request.user
+        
+        # Проверяем права доступа
+        if hasattr(user, 'role'):
+            if user.role != 'ADMIN' and task.assigned_to != user:
+                return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+        elif not getattr(user, 'is_superuser', False):
+            return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+        
+        # Получаем новый статус из JSON
+        try:
+            data = json.loads(request.body)
+            new_status = data.get('status')
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+        
+        if not new_status:
+            return JsonResponse({'status': 'error', 'message': 'Status is required'}, status=400)
+        
+        # Проверяем, что статус валиден
+        valid_statuses = [choice[0] for choice in Task.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return JsonResponse({'status': 'error', 'message': 'Invalid status'}, status=400)
+        
+        # Обновляем статус
+        task.status = new_status
+        task.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'task_status': task.status,
+            'task_status_display': task.get_status_display()
+        })
+        
+    except Task.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Task not found'}, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('django')
+        logger.error(f"Error updating task status: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_POST, name='dispatch')
 class TaskStatusUpdateAjaxView(LoginRequiredMixin, UpdateView):
