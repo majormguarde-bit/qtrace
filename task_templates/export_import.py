@@ -3,7 +3,7 @@
 """
 import json
 from django.core.serializers.json import DjangoJSONEncoder
-from .models import TaskTemplate, TaskTemplateStage, ActivityCategory, Material, StageMaterial, DurationUnit, Position
+from .models import TaskTemplate, TaskTemplateStage, ActivityCategory, Material, StageMaterial, DurationUnit, Position, UnitOfMeasure
 
 
 class TemplateExporter:
@@ -262,29 +262,50 @@ class TemplateImporter:
             return
         
         # Получаем или создаем единицу измерения материала
+        # ВАЖНО: Используем UnitOfMeasure, а не DurationUnit!
         unit = None
         unit_name = material_data.get('unit')
         if unit_name:
-            unit, created = DurationUnit.objects.get_or_create(
+            unit, created = UnitOfMeasure.objects.get_or_create(
                 name=unit_name,
-                defaults={'unit_type': 'quantity'}
+                defaults={'abbreviation': unit_name[:10]}  # Сокращение обязательно
             )
             if created:
                 self.created_objects['units'].append(unit_name)
         
         # Получаем или создаем материал
-        material, created = Material.objects.get_or_create(
-            name=material_name,
-            defaults={'unit': unit}
-        )
-        if created:
+        # Сначала пытаемся найти по имени
+        try:
+            material = Material.objects.get(name=material_name)
+        except Material.DoesNotExist:
+            # Создаем новый материал с обязательными полями
+            if not unit:
+                # Если единица измерения не указана, используем "шт" по умолчанию
+                unit, _ = UnitOfMeasure.objects.get_or_create(
+                    name='Штука',
+                    defaults={'abbreviation': 'шт'}
+                )
+            
+            # Генерируем уникальный код
+            import uuid
+            code = f"MAT-{uuid.uuid4().hex[:8].upper()}"
+            
+            material = Material.objects.create(
+                name=material_name,
+                code=code,
+                unit=unit,
+                unit_cost=0.00  # По умолчанию 0, можно изменить позже
+            )
             self.created_objects['materials'].append(material_name)
+        except Material.MultipleObjectsReturned:
+            # Если несколько - берем первый
+            material = Material.objects.filter(name=material_name).first()
         
         # Создаем связь материала с этапом
         StageMaterial.objects.create(
             stage=stage,
             material=material,
-            quantity=material_data.get('quantity')
+            quantity=material_data.get('quantity', 1.0)
         )
     
     def _get_result(self):
