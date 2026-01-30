@@ -2,12 +2,12 @@
 
 ## Для опытных администраторов
 
-**Важно:** Миграции базы данных НЕ требуются!
+**Важно:** Проверьте непримененные миграции на хостинге!
 
 ### 1. Резервная копия (обязательно!)
 ```bash
-cd /path/to/skkp_project
-pg_dump -U postgres -d skkp_db > backup_$(date +%Y%m%d_%H%M%S).sql
+cd ~/domains/qtrace.ru/qtrace
+pg_dump -U your_db_user -d skkp_db > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### 2. Получение изменений
@@ -19,8 +19,11 @@ git pull origin feature/diagram-cytoscape
 
 ### 3. Применение
 ```bash
-source venv/bin/activate  # Linux/Mac
+source .venv/bin/activate
+python manage.py showmigrations | grep "\[ \]"  # Проверка непримененных миграций
+python manage.py migrate  # Если есть непримененные
 python manage.py collectstatic --noinput
+chmod -R 755 staticfiles/
 ```
 
 ### 4. Перезапуск

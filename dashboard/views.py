@@ -179,7 +179,7 @@ class TaskForm(forms.ModelForm):
 TaskStageFormSet = inlineformset_factory(
     Task, TaskStage,
     fields=['name', 'duration_value', 'duration_unit', 'order', 'assigned_to', 'position_name', 'duration_text', 'materials_info'],
-    extra=1,
+    extra=0,
     can_delete=True,
     widgets={
         'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),

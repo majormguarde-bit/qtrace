@@ -55,24 +55,28 @@ git pull origin feature/diagram-cytoscape
 
 ```bash
 # Активируйте виртуальное окружение
-source venv/bin/activate  # для Linux/Mac
-# или
-venv\Scripts\activate  # для Windows
+source .venv/bin/activate  # для Linux/Mac (на хостинге обычно .venv)
 
-# Проверьте, нет ли новых зависимостей
-pip install -r requirements.txt
+# Проверьте текущую ветку
+git branch
 
-# Проверьте миграции (для этих изменений миграции НЕ нужны)
-python manage.py showmigrations
+# Проверьте, есть ли непримененные миграции
+python manage.py showmigrations | grep "\[ \]"
 
-# Если есть непримененные миграции (не связанные с этими изменениями):
-# python manage.py migrate
+# Если есть непримененные миграции - примените их
+python manage.py migrate
 
 # Соберите статические файлы
 python manage.py collectstatic --noinput
+
+# Проверьте права доступа к статическим файлам
+chmod -R 755 staticfiles/
 ```
 
-**Важно:** Для этих изменений миграции базы данных **НЕ требуются**, так как мы не изменяли модели. Все изменения только в логике обработки и отображения.
+**Важно:** 
+- Для текущих изменений материалов миграции БД **НЕ требуются** (модели не менялись)
+- Но если на хостинге есть другие непримененные миграции - их нужно применить
+- Команда `python manage.py showmigrations | grep "\[ \]"` покажет непримененные миграции
 
 ### 4. Перезапуск сервера
 

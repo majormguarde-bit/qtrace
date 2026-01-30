@@ -63,69 +63,71 @@
                     {% endfor %}
                     
                     <hr>
-                    <h5 class="mb-3">Этапы выполнения</h5>
-                    {{ stages.management_form }}
-                    <div id="stages-container">
-                        {% for stage_form in stages %}
-                        <div class="stage-form mb-3 border p-3 rounded bg-light">
-                            {{ stage_form.id }}
-                            {{ stage_form.position_name }}
-                            {{ stage_form.materials_info }}
-                            <div class="row g-2">
-                                <div class="col-md-3">
-                                    <label class="form-label small text-muted">Название этапа</label>
-                                    {{ stage_form.name }}
-                                    {% if stage_form.name.errors %}
-                                    <div class="text-danger small">{{ stage_form.name.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Длительность</label>
-                                    <div class="input-group">
-                                        {{ stage_form.duration_value }}
-                                        {{ stage_form.duration_unit }}
+                    <div id="stages-panel" class="d-none">
+                        <h5 class="mb-3">Этапы выполнения</h5>
+                        {{ stages.management_form }}
+                        <div id="stages-container">
+                            {% for stage_form in stages %}
+                            <div class="stage-form mb-3 border p-3 rounded bg-light">
+                                {{ stage_form.id }}
+                                {{ stage_form.position_name }}
+                                {{ stage_form.materials_info }}
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">Название этапа</label>
+                                        {{ stage_form.name }}
+                                        {% if stage_form.name.errors %}
+                                        <div class="text-danger small">{{ stage_form.name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted">Длительность</label>
+                                        <div class="input-group">
+                                            {{ stage_form.duration_value }}
+                                            {{ stage_form.duration_unit }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted">Исполнитель</label>
+                                        {{ stage_form.assigned_to }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted">Должность</label>
+                                        {{ stage_form.position_name }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted">Порядок</label>
+                                        {{ stage_form.order }}
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end justify-content-center">
+                                        {% if stages.can_delete %}
+                                        <div class="form-check mb-2">
+                                            {{ stage_form.DELETE }}
+                                            <label class="form-check-label text-danger" for="{{ stage_form.DELETE.id_for_label }}">
+                                                <i class="bi bi-trash"></i>
+                                            </label>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Исполнитель</label>
-                                    {{ stage_form.assigned_to }}
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Должность</label>
-                                    {{ stage_form.position_name }}
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Порядок</label>
-                                    {{ stage_form.order }}
-                                </div>
-                                <div class="col-md-1 d-flex align-items-end justify-content-center">
-                                    {% if stages.can_delete %}
-                                    <div class="form-check mb-2">
-                                        {{ stage_form.DELETE }}
-                                        <label class="form-check-label text-danger" for="{{ stage_form.DELETE.id_for_label }}">
-                                            <i class="bi bi-trash"></i>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">Длительность (текст)</label>
+                                        {{ stage_form.duration_text }}
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label small text-muted d-flex justify-content-between align-items-center">
+                                            <span>Материалы</span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary edit-materials-btn" data-form-num="{{ forloop.counter0 }}">
+                                                <i class="bi bi-pencil"></i> Редактировать
+                                            </button>
                                         </label>
+                                        <div class="materials-display small text-muted p-2 border rounded bg-white" data-form-num="{{ forloop.counter0 }}"></div>
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
-                            <div class="row g-2 mt-1">
-                                <div class="col-md-3">
-                                    <label class="form-label small text-muted">Длительность (текст)</label>
-                                    {{ stage_form.duration_text }}
-                                </div>
-                                <div class="col-md-8">
-                                    <label class="form-label small text-muted d-flex justify-content-between align-items-center">
-                                        <span>Материалы</span>
-                                        <button type="button" class="btn btn-sm btn-outline-primary edit-materials-btn" data-form-num="{{ forloop.counter0 }}">
-                                            <i class="bi bi-pencil"></i> Редактировать
-                                        </button>
-                                    </label>
-                                    <div class="materials-display small text-muted p-2 border rounded bg-white" data-form-num="{{ forloop.counter0 }}"></div>
-                                </div>
-                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-stage">
                         <i class="bi bi-plus-lg me-1"></i>Добавить этап
@@ -167,14 +169,17 @@
 // Глобальные переменные
 let positionsData = [];
 let materialsData = [];
+let unitsData = [];
 let currentEditingStageNum = null;
 
 // Загрузка справочников при загрузке страницы
 document.addEventListener('DOMContentLoaded', async function() {
     await loadPositions();
     await loadMaterials();
+    await loadUnits();
     updateAllPositionSelects();
     updateAllMaterialsDisplays();
+    updateStagesPanelVisibility();
 });
 
 // Загрузка должностей
@@ -194,6 +199,29 @@ async function loadMaterials() {
         materialsData = await response.json();
     } catch (error) {
         console.error('Ошибка загрузки материалов:', error);
+    }
+}
+
+// Загрузка единиц измерения
+async function loadUnits() {
+    try {
+        const response = await fetch('/api/units/');
+        unitsData = await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки единиц измерения:', error);
+    }
+}
+
+// Обновление видимости панели этапов
+function updateStagesPanelVisibility() {
+    const container = document.getElementById('stages-container');
+    const panel = document.getElementById('stages-panel');
+    const stageCount = container.querySelectorAll('.stage-form').length;
+    
+    if (stageCount > 0) {
+        panel.classList.remove('d-none');
+    } else {
+        panel.classList.add('d-none');
     }
 }
 
@@ -390,6 +418,9 @@ function addStageForm(formNum, stageData = {}) {
     
     // Обновляем отображение материалов
     updateMaterialsDisplay(formNum, materials);
+    
+    // Показываем панель этапов
+    updateStagesPanelVisibility();
 }
 
 // Фильтр "Показать все категории"
@@ -405,6 +436,9 @@ document.getElementById('add-stage').addEventListener('click', function() {
     addStageForm(formNum, {});
     
     totalForms.value = formNum + 1;
+    
+    // Обновляем видимость панели
+    updateStagesPanelVisibility();
 });
 
 // Редактирование материалов
@@ -438,23 +472,32 @@ function addMaterialRow(index, material = {}) {
     row.className = 'material-row mb-2 p-2 border rounded';
     row.dataset.index = index;
     
+    // Формируем опции для выпадающего списка единиц измерения
+    let unitOptions = '<option value="">-- Выберите ед.изм. --</option>';
+    unitsData.forEach(unit => {
+        const selected = unit.id == material.unit_id ? 'selected' : '';
+        unitOptions += `<option value="${unit.id}" data-abbreviation="${unit.abbreviation}" ${selected}>${unit.name} (${unit.abbreviation})</option>`;
+    });
+    
     row.innerHTML = `
         <div class="row g-2">
             <div class="col-md-6">
                 <select class="form-select material-select" data-index="${index}">
                     <option value="">-- Выберите материал --</option>
                     ${materialsData.map(m => `
-                        <option value="${m.id}" data-name="${m.name}" data-unit="${m.unit_abbreviation}" ${m.id == material.id ? 'selected' : ''}>
+                        <option value="${m.id}" data-name="${m.name}" data-unit-id="${m.unit_id}" data-unit-abbreviation="${m.unit_abbreviation}" ${m.id == material.id ? 'selected' : ''}>
                             ${m.name} (${m.code})
                         </option>
                     `).join('')}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <input type="number" class="form-control material-quantity" placeholder="Количество" value="${material.quantity || ''}" step="0.01" min="0">
             </div>
             <div class="col-md-2">
-                <input type="text" class="form-control material-unit" placeholder="Ед.изм." value="${material.unit || ''}" readonly>
+                <select class="form-select material-unit" data-index="${index}">
+                    ${unitOptions}
+                </select>
             </div>
             <div class="col-md-1">
                 <button type="button" class="btn btn-sm btn-danger remove-material-btn">
@@ -469,8 +512,13 @@ function addMaterialRow(index, material = {}) {
     // Обработчик изменения материала
     row.querySelector('.material-select').addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
-        const unitInput = row.querySelector('.material-unit');
-        unitInput.value = selectedOption.dataset.unit || '';
+        const unitSelect = row.querySelector('.material-unit');
+        const unitId = selectedOption.dataset.unitId;
+        
+        // Устанавливаем правильную единицу измерения для материала
+        if (unitId) {
+            unitSelect.value = unitId;
+        }
     });
     
     // Обработчик удаления
@@ -490,15 +538,17 @@ document.getElementById('save-materials-btn').addEventListener('click', function
     document.querySelectorAll('.material-row').forEach(row => {
         const select = row.querySelector('.material-select');
         const quantity = row.querySelector('.material-quantity').value;
-        const unit = row.querySelector('.material-unit').value;
+        const unitSelect = row.querySelector('.material-unit');
         
-        if (select.value && quantity) {
+        if (select.value && quantity && unitSelect.value) {
             const selectedOption = select.options[select.selectedIndex];
+            const unitOption = unitSelect.options[unitSelect.selectedIndex];
             materials.push({
                 id: select.value,
                 name: selectedOption.dataset.name,
                 quantity: parseFloat(quantity),
-                unit: unit
+                unit_id: unitSelect.value,
+                unit: unitOption.dataset.abbreviation || unitOption.text
             });
         }
     });
