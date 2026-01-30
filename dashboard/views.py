@@ -650,14 +650,21 @@ class EmployeeForm(forms.ModelForm):
         self.fields['department'].queryset = Department.objects.all().order_by('name')
         # Заполняем queryset для position
         self.fields['position'].queryset = Position.objects.all().order_by('name')
+        # Email и телефон - необязательные
+        self.fields['email'].required = False
+        self.fields['phone'].required = False
 
     def save(self, commit=True):
         user = super().save(commit=False)
         password = self.cleaned_data.get("password")
+        # Если пароль не указан, используем логин как пароль
         if password:
             user.set_password(password)
+        else:
+            user.set_password(user.username)
         if commit:
             user.save()
+        return user
         return user
 
 class EmployeeListView(LoginRequiredMixin, ListView):

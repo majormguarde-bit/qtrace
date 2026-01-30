@@ -35,6 +35,11 @@
                                 {% if object %}Пароль (оставьте пустым, чтобы не менять){% else %}Пароль{% endif %}
                             </label>
                             {{ form.password }}
+                            {% if not object %}
+                            <div class="alert alert-info small mt-2 mb-0 py-2 px-3">
+                                <strong>По-умолчанию пароль = логину</strong>
+                            </div>
+                            {% endif %}
                             {% if form.password.errors %}
                                 <div class="text-danger small mt-1">{{ form.password.errors }}</div>
                             {% endif %}
