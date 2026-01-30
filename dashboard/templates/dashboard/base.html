@@ -288,7 +288,7 @@
     }
 
     function toggleStage(stageId) {
-        const url = `/dashboard/stages/${stageId}/toggle-ajax/`;
+        const url = `/stages/${stageId}/toggle-ajax/`;
         fetch(url, {
             method: 'POST',
             headers: {
@@ -296,7 +296,15 @@
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                console.error('HTTP error:', response.status, response.statusText);
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Ошибка сервера');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 const stageElements = document.querySelectorAll(`[id="stage-${stageId}"]`);
@@ -331,7 +339,14 @@
                     // Update task status badge if needed
                     updateTaskBadges(stageId, data);
                 });
+            } else {
+                console.error('Error response:', data);
+                alert('Ошибка: ' + (data.message || 'Неизвестная ошибка'));
             }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Ошибка при изменении статуса этапа: ' + error.message);
         });
     }
 
@@ -371,7 +386,14 @@
     }
 
     function toggleStageForm(stageId) {
+        console.log('toggleStageForm called for stage:', stageId);
         const form = document.getElementById(`stage-form-${stageId}`);
+        
+        if (!form) {
+            console.error('Stage form not found:', `stage-form-${stageId}`);
+            return;
+        }
+        
         const allForms = document.querySelectorAll('.stage-detail-form');
         
         // Hide others
@@ -384,16 +406,20 @@
         
         // Rotate chevron
         const stageItem = document.getElementById(`stage-${stageId}`);
-        const chevron = stageItem.querySelector('.bi-chevron-down');
-        if (form.classList.contains('d-none')) {
-            chevron.style.transform = 'rotate(0deg)';
-        } else {
-            chevron.style.transform = 'rotate(180deg)';
+        if (stageItem) {
+            const chevron = stageItem.querySelector('.bi-chevron-down');
+            if (chevron) {
+                if (form.classList.contains('d-none')) {
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
         }
     }
 
     function updateStageStatus(stageId, status) {
-        const url = `/dashboard/stages/${stageId}/status-update-ajax/`;
+        const url = `/stages/${stageId}/status-update-ajax/`;
         const formData = new FormData();
         formData.append('status', status);
 
@@ -404,7 +430,15 @@
             },
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                console.error('HTTP error:', response.status, response.statusText);
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Ошибка сервера');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 // Update status label
@@ -440,7 +474,14 @@
                 
                 // Update task status if it changed
                 updateTaskBadges(stageId, data);
+            } else {
+                console.error('Error response:', data);
+                alert('Ошибка: ' + (data.message || 'Неизвестная ошибка'));
             }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Ошибка при изменении статуса этапа: ' + error.message);
         });
     }
 
@@ -499,7 +540,7 @@
         const formData = new FormData();
         formData.append('file', file);
         
-        const url = `/dashboard/stages/${currentStageId}/media-upload-ajax/`;
+        const url = `/stages/${currentStageId}/media-upload-ajax/`;
         
         const stageItem = document.getElementById(`stage-${currentStageId}`);
         if (stageItem) stageItem.style.opacity = '0.5';
@@ -511,7 +552,17 @@
             },
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                console.error('HTTP error:', response.status, response.statusText);
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Ошибка сервера');
+                }).catch(() => {
+                    throw new Error('Ошибка загрузки файла');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (stageItem) stageItem.style.opacity = '1';
             if (data.status === 'success') {
@@ -538,33 +589,18 @@
                     `;
                     mediaList.insertAdjacentHTML('beforeend', mediaHtml);
                 }
-
-                // Показываем уведомление
-                const toast = document.createElement('div');
-                toast.className = 'position-fixed bottom-0 end-0 p-3';
-                toast.style.zIndex = '1050';
-                toast.innerHTML = `
-                    <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                <i class="bi bi-check-circle me-2"></i> Файл "${data.media_title}" загружен
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
             } else {
-                alert('Ошибка загрузки: ' + (data.message || 'Неизвестная ошибка'));
+                console.error('Error response:', data);
+                alert('Ошибка загрузки файла: ' + (data.message || 'Неизвестная ошибка'));
             }
-            this.value = '';
         })
         .catch(error => {
             if (stageItem) stageItem.style.opacity = '1';
-            alert('Ошибка сети: ' + error);
-            this.value = '';
+            console.error('Upload error:', error);
+            alert('Ошибка при загрузке файла: ' + error.message);
         });
+        
+        this.value = '';
     });
 
     document.addEventListener('click', function(e) {
@@ -572,7 +608,7 @@
             const btn = e.target.closest('.btn-status');
             const taskId = btn.dataset.taskId;
             const status = btn.dataset.status;
-            const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
+            const url = `/tasks/${taskId}/status-update-ajax/`;
             
             const formData = new FormData();
             formData.append('status', status);

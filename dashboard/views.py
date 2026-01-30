@@ -99,10 +99,13 @@ def home(request):
     # Общая статистика и данные по тарифу
     tasks_qs = Task.objects.none()
     if user_role == 'ADMIN':
-        tasks_qs = Task.objects.all().select_related('supervisor__position').prefetch_related('stages', 'assigned_to')
+        tasks_qs = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__assigned_to__position', 'stages', 'assigned_to')
     elif hasattr(user, 'role'):
-        # Worker sees only their own data
-        tasks_qs = Task.objects.filter(assigned_to=user).select_related('supervisor__position').prefetch_related('stages', 'assigned_to')
+        # Worker sees tasks where they are assigned OR have assigned stages
+        from django.db.models import Q
+        tasks_qs = Task.objects.filter(
+            Q(assigned_to=user) | Q(stages__assigned_to=user)
+        ).distinct().select_related('supervisor__position').prefetch_related('stages__assigned_to__position', 'stages', 'assigned_to')
 
     context['tasks_count'] = tasks_qs.count()
     context['media_count'] = Media.objects.count() if user_role == 'ADMIN' else Media.objects.filter(uploaded_by=user).count()
@@ -139,6 +142,10 @@ def home(request):
         'CLOSE': tasks_qs.filter(status='CLOSE'),
     }
     
+    # Для сотрудников передаем информацию о фильтрации этапов
+    context['is_worker'] = user_role == 'WORKER'
+    context['current_user_id'] = user.id if hasattr(user, 'id') else None
+    
     return render(request, 'dashboard/home.html', context)
 
 class TenantLoginView(auth_views.LoginView):
@@ -172,7 +179,7 @@ class TaskForm(forms.ModelForm):
     # Переопределяем поле supervisor для кастомного отображения
     supervisor = forms.ModelChoiceField(
         queryset=TenantUser.objects.none(),
-        required=False,
+        required=True,  # Сделали обязательным
         label='Кто контролирует',
         widget=forms.Select(attrs={'class': 'form-select'})
     )
@@ -200,7 +207,14 @@ class TaskForm(forms.ModelForm):
             if hasattr(user, 'role') and user.role == 'ADMIN':
                 self.fields['supervisor'].queryset = TenantUser.objects.select_related('position').all().order_by('first_name', 'last_name')
             else:
+                # Для сотрудников
                 self.fields['supervisor'].queryset = TenantUser.objects.select_related('position').filter(role='ADMIN').order_by('first_name', 'last_name')
+                
+                # Делаем поля нередактируемыми для сотрудников
+                self.fields['title'].widget.attrs['readonly'] = True
+                self.fields['description'].widget.attrs['readonly'] = True
+                self.fields['is_completed'].widget.attrs['disabled'] = True
+                # supervisor будет отображаться как текст в шаблоне
         
         # Кастомное отображение: имя (должность) вместо имя (роль)
         self.fields['supervisor'].label_from_instance = lambda obj: f"{obj.username} ({obj.position.name if obj.position else 'Без должности'})"
@@ -266,11 +280,15 @@ class TaskListView(LoginRequiredMixin, ListView):
         user = self.request.user
         if hasattr(user, 'role'):
             if user.role == 'ADMIN':
-                queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media')
+                queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media', 'stages__assigned_to__position')
             else:
-                queryset = Task.objects.filter(assigned_to=user).select_related('supervisor__position').prefetch_related('stages__media')
+                # Для сотрудников показываем задачи, где они назначены как исполнители ИЛИ имеют назначенные этапы
+                from django.db.models import Q
+                queryset = Task.objects.filter(
+                    Q(assigned_to=user) | Q(stages__assigned_to=user)
+                ).distinct().select_related('supervisor__position').prefetch_related('stages__media', 'stages__assigned_to__position')
         elif getattr(user, 'is_superuser', False):
-            queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media')
+            queryset = Task.objects.all().select_related('supervisor__position').prefetch_related('stages__media', 'stages__assigned_to__position')
         else:
             return Task.objects.none()
         
@@ -305,6 +323,10 @@ class TaskListView(LoginRequiredMixin, ListView):
         else:
             context['employees'] = TenantUser.objects.none()
         
+        # Для сотрудников передаем информацию о фильтрации этапов
+        context['is_worker'] = hasattr(user, 'role') and user.role == 'WORKER'
+        context['current_user_id'] = user.id if hasattr(user, 'id') else None
+        
         return context
 
 class TaskCreateView(LoginRequiredMixin, CreateView):
@@ -315,6 +337,8 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
+        user = self.request.user
+        
         if self.request.POST:
             data['stages'] = TaskStageFormSet(self.request.POST)
         else:
@@ -325,6 +349,9 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
         data['templates'] = TaskTemplate.objects.filter(
             template_type='local'
         ).prefetch_related('activity_category').order_by('activity_category', 'name')
+        
+        # Передаем информацию о роли пользователя
+        data['is_worker'] = hasattr(user, 'role') and user.role == 'WORKER'
         
         return data
 
@@ -440,16 +467,42 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
+        user = self.request.user
+        
         if self.request.POST:
             data['stages'] = TaskStageFormSet(self.request.POST, instance=self.object)
         else:
-            data['stages'] = TaskStageFormSet(instance=self.object)
+            # Для сотрудников фильтруем этапы
+            if hasattr(user, 'role') and user.role == 'WORKER':
+                # Создаем formset только с этапами сотрудника
+                formset = TaskStageFormSet(
+                    instance=self.object,
+                    queryset=self.object.stages.filter(assigned_to=user)
+                )
+                
+                # Делаем существующие этапы нередактируемыми
+                for form in formset.forms:
+                    if form.instance.pk:  # Существующий этап
+                        for field_name in form.fields:
+                            if field_name not in ['DELETE', 'id']:
+                                # Используем readonly вместо disabled
+                                form.fields[field_name].widget.attrs['readonly'] = True
+                                if hasattr(form.fields[field_name].widget, 'attrs'):
+                                    form.fields[field_name].widget.attrs['class'] = form.fields[field_name].widget.attrs.get('class', '') + ' bg-light'
+                                    form.fields[field_name].widget.attrs['style'] = 'pointer-events: none;'
+                
+                data['stages'] = formset
+            else:
+                data['stages'] = TaskStageFormSet(instance=self.object)
         
         # Добавляем доступные шаблоны
         # В тенанте показываем только локальные шаблоны (template_type='local')
         data['templates'] = TaskTemplate.objects.filter(
             template_type='local'
         ).prefetch_related('activity_category').order_by('activity_category', 'name')
+        
+        # Передаем информацию о роли пользователя
+        data['is_worker'] = hasattr(user, 'role') and user.role == 'WORKER'
         
         return data
 
@@ -487,7 +540,9 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         if hasattr(user, 'role'):
             if user.role == 'ADMIN':
                 return Task.objects.all()
-            return Task.objects.filter(assigned_to=user)
+            # Сотрудник может редактировать задачи, где он назначен ИЛИ имеет назначенные этапы
+            from django.db.models import Q
+            return Task.objects.filter(Q(assigned_to=user) | Q(stages__assigned_to=user)).distinct()
         elif getattr(user, 'is_superuser', False):
             return Task.objects.all()
         return Task.objects.none()
@@ -1209,6 +1264,7 @@ class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
 # --- AJAX Task Management ---
 
 @login_required
+@login_required
 @csrf_exempt
 @require_POST
 def task_status_update_ajax(request, pk):
@@ -1221,17 +1277,25 @@ def task_status_update_ajax(request, pk):
         
         # Проверяем права доступа
         if hasattr(user, 'role'):
-            if user.role != 'ADMIN' and task.assigned_to != user:
+            # Админ может менять любые задачи
+            if user.role == 'ADMIN':
+                pass
+            # Сотрудник может менять задачи, где он назначен как исполнитель ИЛИ имеет назначенные этапы
+            elif task.assigned_to == user or task.stages.filter(assigned_to=user).exists():
+                pass
+            else:
                 return JsonResponse({'status': 'error', 'message': 'Нет прав доступа'}, status=403)
         elif not getattr(user, 'is_superuser', False):
             return JsonResponse({'status': 'error', 'message': 'Нет прав доступа'}, status=403)
         
-        # Получаем новый статус из JSON
-        try:
-            data = json.loads(request.body)
-            new_status = data.get('status')
-        except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'message': 'Неверный JSON'}, status=400)
+        # Получаем новый статус из POST или JSON
+        new_status = request.POST.get('status')
+        if not new_status:
+            try:
+                data = json.loads(request.body)
+                new_status = data.get('status')
+            except (json.JSONDecodeError, ValueError):
+                pass
         
         if not new_status:
             return JsonResponse({'status': 'error', 'message': 'Статус обязателен'}, status=400)
@@ -1306,8 +1370,8 @@ class TaskStageMediaUploadAjaxView(LoginRequiredMixin, TemplateView):
             stage = TaskStage.objects.get(pk=stage_id)
             user = request.user
             
-            # Проверка прав (админ или исполнитель)
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
+            # Проверка прав (админ или исполнитель этапа)
+            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.assigned_to == user))):
                 return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
             
             file = request.FILES.get('file')
@@ -1379,8 +1443,29 @@ class TaskStageStatusUpdateAjaxView(LoginRequiredMixin, TemplateView):
             stage = TaskStage.objects.get(pk=stage_id)
             user = request.user
             
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
-                return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+            # Логируем для отладки
+            import logging
+            logger = logging.getLogger('django')
+            logger.info(f"Stage status update: user={user}, user.role={getattr(user, 'role', None)}, stage.assigned_to={stage.assigned_to}, task.assigned_to={stage.task.assigned_to}")
+            
+            # Проверка прав: админ, исполнитель этапа ИЛИ исполнитель задачи
+            has_permission = False
+            if getattr(user, 'is_superuser', False):
+                has_permission = True
+            elif hasattr(user, 'role'):
+                if user.role == 'ADMIN':
+                    has_permission = True
+                elif stage.assigned_to and stage.assigned_to == user:
+                    has_permission = True
+                elif stage.task.assigned_to and stage.task.assigned_to == user:
+                    has_permission = True
+                elif stage.task.stages.filter(assigned_to=user).exists():
+                    # Сотрудник имеет хотя бы один этап в этой задаче
+                    has_permission = True
+            
+            if not has_permission:
+                logger.warning(f"Permission denied for user {user} to update stage {stage_id}")
+                return JsonResponse({'status': 'error', 'message': 'Нет прав доступа'}, status=403)
             
             status = request.POST.get('status')
             if status not in dict(TaskStage.STAGE_STATUS_CHOICES):
@@ -1414,6 +1499,11 @@ class TaskStageStatusUpdateAjaxView(LoginRequiredMixin, TemplateView):
             })
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('django')
+            logger.error(f"Error updating stage status {stage_id}: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_POST, name='dispatch')
@@ -1422,10 +1512,31 @@ class TaskStageToggleAjaxView(LoginRequiredMixin, TemplateView):
         stage_id = kwargs.get('pk')
         try:
             stage = TaskStage.objects.get(pk=stage_id)
-            # Проверяем права: либо админ, либо исполнитель задачи
             user = request.user
-            if not (getattr(user, 'is_superuser', False) or (hasattr(user, 'role') and (user.role == 'ADMIN' or stage.task.assigned_to == user))):
-                return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+            
+            # Логируем для отладки
+            import logging
+            logger = logging.getLogger('django')
+            logger.info(f"Stage toggle: user={user}, user.role={getattr(user, 'role', None)}, stage.assigned_to={stage.assigned_to}, task.assigned_to={stage.task.assigned_to}")
+            
+            # Проверка прав: админ, исполнитель этапа ИЛИ исполнитель задачи
+            has_permission = False
+            if getattr(user, 'is_superuser', False):
+                has_permission = True
+            elif hasattr(user, 'role'):
+                if user.role == 'ADMIN':
+                    has_permission = True
+                elif stage.assigned_to and stage.assigned_to == user:
+                    has_permission = True
+                elif stage.task.assigned_to and stage.task.assigned_to == user:
+                    has_permission = True
+                elif stage.task.stages.filter(assigned_to=user).exists():
+                    # Сотрудник имеет хотя бы один этап в этой задаче
+                    has_permission = True
+            
+            if not has_permission:
+                logger.warning(f"Permission denied for user {user} to toggle stage {stage_id}")
+                return JsonResponse({'status': 'error', 'message': 'Нет прав доступа'}, status=403)
             
             stage.is_completed = not stage.is_completed
             if stage.is_completed:
@@ -1455,6 +1566,11 @@ class TaskStageToggleAjaxView(LoginRequiredMixin, TemplateView):
             })
         except TaskStage.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Stage not found'}, status=404)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('django')
+            logger.error(f"Error toggling stage {stage_id}: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 # --- Task Templates (Global) ---
 

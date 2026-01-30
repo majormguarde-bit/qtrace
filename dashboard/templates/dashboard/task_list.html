@@ -189,6 +189,7 @@
 
                                                 <div class="task-stages" id="task-stages-list-{{ task.id }}">
                                                     {% for stage in task.stages.all %}
+                                                    {% if not is_worker or stage.assigned_to.id == current_user_id %}
                                                     <div class="stage-container mb-2">
                                                         <div class="stage-item d-flex align-items-center p-2 rounded border bg-white shadow-sm {% if stage.is_worker_added %}border-info-subtle{% endif %}" 
                                                              id="stage-{{ stage.id }}" 
@@ -214,6 +215,11 @@
                                                                         {{ stage.get_status_display }}
                                                                     </span>
                                                                 </div>
+                                                                {% if stage.assigned_to %}
+                                                                <div class="text-muted ultra-small mt-1">
+                                                                    <i class="bi bi-person me-1"></i>{{ stage.assigned_to.get_full_name }}{% if stage.assigned_to.position %} ({{ stage.assigned_to.position.name }}){% endif %}
+                                                                </div>
+                                                                {% endif %}
                                                             </div>
                                                             <div class="ms-2 text-muted">
                                                                 <i class="bi bi-chevron-down small opacity-50"></i>
@@ -268,6 +274,7 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    {% endif %}
                                                     {% endfor %}
                                                 </div>
                                             </div>

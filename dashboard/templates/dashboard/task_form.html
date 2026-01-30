@@ -14,7 +14,8 @@
                     <input type="hidden" name="next" value="{{ request.GET.next }}">
                     {% endif %}
                     
-                    <!-- Выбор шаблона -->
+                    <!-- Выбор шаблона (только для админов) -->
+                    {% if not is_worker %}
                     <div class="mb-4 p-3 bg-light rounded border-start border-primary border-4">
                         <h6 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Использовать шаблон (опционально)</h6>
                         <div class="row g-3">
@@ -40,6 +41,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     
                     {% for field in form %}
                     <div class="mb-3 position-relative">
@@ -51,7 +53,27 @@
                             </button>
                             {% endif %}
                         </label>
-                        {{ field }}
+                        
+                        {% if field.name == 'supervisor' and is_worker %}
+                            <!-- Для сотрудников показываем supervisor как текст -->
+                            <div class="form-control bg-light">
+                                {% if form.instance.supervisor %}
+                                    {{ form.instance.supervisor.get_full_name }} 
+                                    {% if form.instance.supervisor.position %}
+                                        ({{ form.instance.supervisor.position.name }})
+                                    {% else %}
+                                        (Без должности)
+                                    {% endif %}
+                                {% else %}
+                                    Не назначен
+                                {% endif %}
+                            </div>
+                            <!-- Скрытое поле для отправки значения -->
+                            <input type="hidden" name="supervisor" value="{{ form.instance.supervisor.id|default:'' }}">
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+                        
                         {% if field.name == 'description' %}
                         <div id="ai-task-loading" class="position-absolute top-50 start-50 translate-middle d-none">
                             <div class="spinner-border text-primary" role="status"></div>
@@ -66,9 +88,9 @@
                     {% endfor %}
                     
                     <hr>
+                    <h5 class="mb-3">Этапы выполнения</h5>
+                    {{ stages.management_form }}
                     <div id="stages-panel" class="d-none">
-                        <h5 class="mb-3">Этапы выполнения</h5>
-                        {{ stages.management_form }}
                         <div id="stages-container">
                             {% for stage_form in stages %}
                             <div class="stage-form mb-3 border p-3 rounded bg-light">
@@ -121,9 +143,11 @@
                                     <div class="col-md-8">
                                         <label class="form-label small text-muted d-flex justify-content-between align-items-center">
                                             <span>Материалы</span>
+                                            {% if not is_worker or not stage_form.instance.pk %}
                                             <button type="button" class="btn btn-sm btn-outline-primary edit-materials-btn" data-form-num="{{ forloop.counter0 }}">
                                                 <i class="bi bi-pencil"></i> Редактировать
                                             </button>
+                                            {% endif %}
                                         </label>
                                         <div class="materials-display small text-muted p-2 border rounded bg-white" data-form-num="{{ forloop.counter0 }}"></div>
                                     </div>
@@ -189,6 +213,90 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateAllPositionSelects();
     updateAllMaterialsDisplays();
     updateStagesPanelVisibility();
+    
+    // Обработчик кнопки "Добавить этап"
+    const addStageBtn = document.getElementById('add-stage');
+    if (addStageBtn) {
+        addStageBtn.addEventListener('click', function() {
+            console.log('Кнопка "Добавить этап" нажата');
+            const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
+            console.log('totalForms element:', totalForms);
+            console.log('totalForms value:', totalForms ? totalForms.value : 'NOT FOUND');
+            
+            if (!totalForms) {
+                alert('Ошибка: не найден элемент id_stages-TOTAL_FORMS');
+                return;
+            }
+            
+            const formNum = parseInt(totalForms.value);
+            console.log('formNum:', formNum);
+            
+            addStageForm(formNum, {});
+            
+            totalForms.value = formNum + 1;
+            
+            // Обновляем видимость панели
+            updateStagesPanelVisibility();
+        });
+    } else {
+        console.error('Кнопка add-stage не найдена в DOM');
+    }
+    
+    // Обработчик выбора шаблона
+    const templateSelect = document.getElementById('templateSelect');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', async function() {
+            const templateId = this.value;
+            if (!templateId) return;
+            
+            const selectedOption = this.options[this.selectedIndex];
+            const templateName = selectedOption.dataset.name;
+            const templateDescription = selectedOption.dataset.description;
+            
+            // Предзаполняем название и описание
+            const titleField = document.querySelector('input[name="title"]');
+            const descField = document.querySelector('textarea[name="description"]');
+            
+            if (titleField && !titleField.value) {
+                titleField.value = templateName;
+            }
+            if (descField && !descField.value) {
+                descField.value = templateDescription;
+            }
+            
+            // Загружаем этапы из шаблона
+            try {
+                const response = await fetch(`/template/${templateId}/stages/`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.stages && data.stages.length > 0) {
+                    // Очищаем существующие этапы
+                    const container = document.getElementById('stages-container');
+                    container.innerHTML = '';
+                    
+                    const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
+                    
+                    // Добавляем этапы из шаблона
+                    data.stages.forEach((stage, index) => {
+                        addStageForm(index, stage);
+                    });
+                    
+                    totalForms.value = data.stages.length;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки этапов шаблона:', error);
+            }
+        });
+    }
+    
+    // Фильтр "Показать все категории"
+    const showAllCategoriesCheckbox = document.getElementById('showAllCategories');
+    if (showAllCategoriesCheckbox) {
+        showAllCategoriesCheckbox.addEventListener('change', function() {
+            // TODO: Реализовать фильтрацию шаблонов по категориям
+            console.log('Фильтр изменен:', this.checked);
+        });
+    }
 });
 
 // Загрузка должностей
@@ -319,50 +427,6 @@ async function improveDescription() {
     }
 }
 
-// Выбор шаблона
-document.getElementById('templateSelect').addEventListener('change', async function() {
-    const templateId = this.value;
-    if (!templateId) return;
-    
-    const selectedOption = this.options[this.selectedIndex];
-    const templateName = selectedOption.dataset.name;
-    const templateDescription = selectedOption.dataset.description;
-    
-    // Предзаполняем название и описание
-    const titleField = document.querySelector('input[name="title"]');
-    const descField = document.querySelector('textarea[name="description"]');
-    
-    if (titleField && !titleField.value) {
-        titleField.value = templateName;
-    }
-    if (descField && !descField.value) {
-        descField.value = templateDescription;
-    }
-    
-    // Загружаем этапы из шаблона
-    try {
-        const response = await fetch(`/template/${templateId}/stages/`);
-        const data = await response.json();
-        
-        if (data.status === 'success' && data.stages && data.stages.length > 0) {
-            // Очищаем существующие этапы
-            const container = document.getElementById('stages-container');
-            container.innerHTML = '';
-            
-            const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
-            
-            // Добавляем этапы из шаблона
-            data.stages.forEach((stage, index) => {
-                addStageForm(index, stage);
-            });
-            
-            totalForms.value = data.stages.length;
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки этапов шаблона:', error);
-    }
-});
-
 // Функция для добавления формы этапа
 function addStageForm(formNum, stageData = {}) {
     const container = document.getElementById('stages-container');
@@ -449,30 +513,36 @@ function addStageForm(formNum, stageData = {}) {
     
     container.insertAdjacentHTML('beforeend', formHtml);
     
+    // Добавляем обработчик удаления для нового этапа
+    const newStageForm = container.lastElementChild;
+    const deleteCheckbox = newStageForm.querySelector(`#id_stages-${formNum}-DELETE`);
+    if (deleteCheckbox) {
+        deleteCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Для новых этапов (без id) просто удаляем из DOM
+                const stageId = newStageForm.querySelector(`#id_stages-${formNum}-id`).value;
+                if (!stageId) {
+                    // Это новый этап, удаляем его полностью
+                    newStageForm.remove();
+                    // Обновляем видимость панели
+                    updateStagesPanelVisibility();
+                } else {
+                    // Это существующий этап, скрываем его (Django обработает при сохранении)
+                    newStageForm.style.display = 'none';
+                }
+            } else {
+                // Если снят чекбокс, показываем форму обратно
+                newStageForm.style.display = '';
+            }
+        });
+    }
+    
     // Обновляем отображение материалов
     updateMaterialsDisplay(formNum, materials);
     
     // Показываем панель этапов
     updateStagesPanelVisibility();
 }
-
-// Фильтр "Показать все категории"
-document.getElementById('showAllCategories').addEventListener('change', function() {
-    // TODO: Реализовать фильтрацию шаблонов по категориям
-    console.log('Фильтр изменен:', this.checked);
-});
-
-document.getElementById('add-stage').addEventListener('click', function() {
-    const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
-    const formNum = parseInt(totalForms.value);
-    
-    addStageForm(formNum, {});
-    
-    totalForms.value = formNum + 1;
-    
-    // Обновляем видимость панели
-    updateStagesPanelVisibility();
-});
 
 // Редактирование материалов
 document.addEventListener('click', function(e) {
