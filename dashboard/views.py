@@ -665,7 +665,6 @@ class EmployeeForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-        return user
 
 class EmployeeListView(LoginRequiredMixin, ListView):
     model = TenantUser
@@ -740,6 +739,14 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 role_name = role.lower()
                 form.instance.username = f"{tenant_name}-{role_name}-{count}".lower()
         
+        # Получаем пароль ДО сохранения (важно!)
+        password = form.cleaned_data.get('password', '')
+        username = form.cleaned_data.get('username') or form.instance.username
+        
+        # Если пароль не указан, используем username как пароль (как в form.save())
+        if not password:
+            password = username
+        
         # Сохраняем форму
         response = super().form_valid(form)
         
@@ -747,9 +754,6 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
         try:
             from dashboard.models import AdminPasswordLog
             import logging
-            
-            username = form.instance.username
-            password = form.cleaned_data.get('password', '')
             
             # Get client IP
             x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
@@ -761,27 +765,40 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
             # Get User Agent
             user_agent = self.request.META.get('HTTP_USER_AGENT', '')
             
+            # Determine admin user and username
+            admin_user = None
+            admin_username = 'unknown'
+            
+            if hasattr(self.request.user, 'username'):
+                admin_username = self.request.user.username
+            
+            # If it's a Django User (superuser), set admin_user
+            if isinstance(self.request.user, User):
+                admin_user = self.request.user
+            
             # Create log entry
             AdminPasswordLog.objects.create(
-                admin_user=self.request.user,
+                admin_user=admin_user,
+                admin_username=admin_username,
                 employee_username=username,
                 action='generated',
-                password_length=len(password) if password else 0,
+                password_length=len(password),
                 ip_address=ip,
                 user_agent=user_agent,
-                notes=f"Created via employee form"
+                notes="Created via employee form"
             )
             
             # Log to file
             logger = logging.getLogger('admin_password_log')
             logger.info(
-                f"[{timezone.now().isoformat()}] Admin: {self.request.user.username} | "
+                f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
                 f"Action: employee_created | Employee: {username} | "
-                f"Password Length: {len(password) if password else 0} chars | IP: {ip}"
+                f"Password Length: {len(password)} chars | IP: {ip}"
             )
         except Exception as e:
+            import traceback
             logger = logging.getLogger('admin_password_log')
-            logger.error(f"Error logging employee creation: {str(e)}")
+            logger.error(f"Error logging employee creation: {str(e)}\n{traceback.format_exc()}")
         
         return response
 
@@ -822,27 +839,42 @@ class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
                 # Get User Agent
                 user_agent = self.request.META.get('HTTP_USER_AGENT', '')
                 
+                # Determine admin user and username
+                admin_user = None
+                admin_username = 'unknown'
+                
+                if hasattr(self.request.user, 'username'):
+                    admin_username = self.request.user.username
+                
+                # If it's a Django User (superuser), set admin_user
+                if isinstance(self.request.user, User):
+                    admin_user = self.request.user
+                
                 # Create log entry
                 AdminPasswordLog.objects.create(
-                    admin_user=self.request.user,
+                    admin_user=admin_user,
+                    admin_username=admin_username,
                     employee_username=username,
                     action='reset',
                     password_length=len(password),
                     ip_address=ip,
                     user_agent=user_agent,
-                    notes=f"Password reset via employee form"
+                    notes="Password reset via employee form"
                 )
                 
                 # Log to file
                 logger = logging.getLogger('admin_password_log')
                 logger.info(
-                    f"[{timezone.now().isoformat()}] Admin: {self.request.user.username} | "
+                    f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
                     f"Action: password_reset | Employee: {username} | "
                     f"Password Length: {len(password)} chars | IP: {ip}"
                 )
         except Exception as e:
+            import traceback
             logger = logging.getLogger('admin_password_log')
-            logger.error(f"Error logging employee update: {str(e)}")
+            logger.error(f"Error logging employee update: {str(e)}\n{traceback.format_exc()}")
+        
+        return response
         
         return response
 
@@ -2373,6 +2405,7 @@ def import_template(request):
     return redirect('dashboard:local_template_list')
 
 @login_required
+@login_required
 @require_POST
 def log_password_generation(request):
     """API endpoint для логирования генерации пароля"""
@@ -2397,10 +2430,21 @@ def log_password_generation(request):
         # Create logger for password generation
         logger = logging.getLogger('admin_password_log')
         
+        # Determine admin user and username
+        admin_user = None
+        admin_username = 'unknown'
+        
+        if hasattr(request.user, 'username'):
+            admin_username = request.user.username
+        
+        # If it's a Django User (superuser), set admin_user
+        if isinstance(request.user, User):
+            admin_user = request.user
+        
         # Log entry
         log_message = (
             f"[{data.get('timestamp', datetime.now().isoformat())}] "
-            f"Admin: {request.user.username} | "
+            f"Admin: {admin_username} | "
             f"Action: {data.get('action', 'unknown')} | "
             f"Employee: {data.get('username', 'unknown')} | "
             f"Password Length: {len(data.get('password', ''))} chars | "
@@ -2411,13 +2455,14 @@ def log_password_generation(request):
         
         # Save to database
         AdminPasswordLog.objects.create(
-            admin_user=request.user,
+            admin_user=admin_user,
+            admin_username=admin_username,
             employee_username=data.get('username', 'unknown'),
             action='generated',
             password_length=len(data.get('password', '')),
             ip_address=ip,
             user_agent=user_agent,
-            notes=f"Generated via API"
+            notes="Generated via API"
         )
         
         # Also store in Django LogEntry for audit trail
@@ -2425,7 +2470,7 @@ def log_password_generation(request):
         from django.contrib.contenttypes.models import ContentType
         
         LogEntry.objects.create(
-            user=request.user,
+            user=admin_user if admin_user else request.user,
             content_type=ContentType.objects.get_for_model(AdminPasswordLog),
             object_id=0,
             object_repr=f"Password generated for {data.get('username', 'unknown')}",
@@ -2436,8 +2481,9 @@ def log_password_generation(request):
         return JsonResponse({'status': 'success', 'message': 'Log recorded'})
     
     except Exception as e:
+        import traceback
         logger = logging.getLogger('admin_password_log')
-        logger.error(f"Error logging password generation: {str(e)}")
+        logger.error(f"Error logging password generation: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
@@ -2458,7 +2504,7 @@ def admin_log_list(request):
     # Фильтр по администратору
     admin_filter = request.GET.get('admin', '')
     if admin_filter:
-        logs = logs.filter(admin_user__username=admin_filter)
+        logs = logs.filter(admin_username__icontains=admin_filter)
     
     # Фильтр по действию
     action_filter = request.GET.get('action', '')
@@ -2490,9 +2536,8 @@ def admin_log_list(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
-    # Получить список администраторов для фильтра
-    from django.contrib.auth.models import User
-    admins = User.objects.filter(is_staff=True).order_by('username')
+    # Получить список администраторов для фильтра (уникальные admin_username)
+    admins = AdminPasswordLog.objects.values_list('admin_username', flat=True).distinct().order_by('admin_username')
     
     # Получить список действий
     actions = AdminPasswordLog.ACTION_CHOICES

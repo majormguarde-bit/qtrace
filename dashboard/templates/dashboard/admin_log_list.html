@@ -29,8 +29,8 @@
                     <select name="admin" class="form-select">
                         <option value="">Все администраторы</option>
                         {% for admin in admins %}
-                            <option value="{{ admin.username }}" {% if admin.username == admin_filter %}selected{% endif %}>
-                                {{ admin.get_full_name|default:admin.username }}
+                            <option value="{{ admin }}" {% if admin == admin_filter %}selected{% endif %}>
+                                {{ admin }}
                             </option>
                         {% endfor %}
                     </select>
@@ -100,7 +100,7 @@
                             </td>
                             <td>
                                 <span class="badge bg-primary">
-                                    {{ log.admin_user.get_full_name|default:log.admin_user.username }}
+                                    {{ log.admin_username }}
                                 </span>
                             </td>
                             <td>

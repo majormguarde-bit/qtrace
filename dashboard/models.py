@@ -12,7 +12,8 @@ class AdminPasswordLog(models.Model):
         ('viewed', 'Просмотрен'),
     ]
     
-    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Администратор')
+    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Администратор (Django User)')
+    admin_username = models.CharField(max_length=150, default='unknown', verbose_name='Имя администратора')
     employee_username = models.CharField(max_length=150, verbose_name='Логин сотрудника')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES, default='generated', verbose_name='Действие')
     password_length = models.IntegerField(default=16, verbose_name='Длина пароля')
@@ -29,7 +30,9 @@ class AdminPasswordLog(models.Model):
             models.Index(fields=['-timestamp']),
             models.Index(fields=['employee_username']),
             models.Index(fields=['admin_user']),
+            models.Index(fields=['admin_username']),
         ]
     
     def __str__(self):
-        return f"{self.admin_user.username} - {self.employee_username} ({self.get_action_display()}) - {self.timestamp}"
+        admin_name = self.admin_user.username if self.admin_user else self.admin_username
+        return f"{admin_name} - {self.employee_username} ({self.get_action_display()}) - {self.timestamp}"
