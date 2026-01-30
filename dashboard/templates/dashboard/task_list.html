@@ -17,14 +17,14 @@
                 <i class="bi bi-trash me-1"></i> Очистить список
             </button>
         </div>
-        <form method="get" class="row g-3 align-items-end">
+        <form method="get" class="row g-3 align-items-end" id="filter-form">
             <div class="col-md-4">
                 <label class="form-label small text-muted">Поиск по названию</label>
                 <input type="text" name="search" class="form-control" placeholder="Введите название..." value="{{ current_search }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted">Статус</label>
-                <select name="status" class="form-select">
+                <select name="status" class="form-select" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Все статусы --</option>
                     {% for value, label in status_choices %}
                     <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
@@ -34,7 +34,7 @@
             {% if employees %}
             <div class="col-md-3">
                 <label class="form-label small text-muted">Исполнитель</label>
-                <select name="assigned_to" class="form-select">
+                <select name="assigned_to" class="form-select" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Все исполнители --</option>
                     {% for emp in employees %}
                     <option value="{{ emp.id }}" {% if current_assigned_to == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.get_full_name|default:emp.username }}</option>

@@ -48,6 +48,7 @@ class TaskLog(models.Model):
         ('deleted', 'Удалена'),
         ('bulk_deleted', 'Массовое удаление'),
         ('cleared', 'Очищены все'),
+        ('status_changed', 'Изменен статус'),
     ]
     
     admin_username = models.CharField(max_length=150, verbose_name='Администратор')

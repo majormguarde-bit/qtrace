@@ -1241,9 +1241,29 @@ def task_status_update_ajax(request, pk):
         if new_status not in valid_statuses:
             return JsonResponse({'status': 'error', 'message': 'Неверный статус'}, status=400)
         
+        # Сохраняем старый статус для логирования
+        old_status = task.status
+        old_status_display = task.get_status_display()
+        
         # Обновляем статус
         task.status = new_status
         task.save()
+        
+        # Логируем изменение статуса
+        if old_status != new_status:
+            admin_username = user.username if hasattr(user, 'username') else str(user)
+            new_status_display = task.get_status_display()
+            
+            TaskLog.objects.create(
+                admin_username=admin_username,
+                task_title=task.title,
+                task_id=task.id,
+                action='status_changed',
+                count=1,
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                notes=f"Статус изменен: {old_status_display} → {new_status_display}"
+            )
         
         return JsonResponse({
             'status': 'success',
