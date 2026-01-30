@@ -169,6 +169,14 @@ class TenantLogoutView(auth_views.LogoutView):
 # --- Tasks ---
 
 class TaskForm(forms.ModelForm):
+    # Переопределяем поле supervisor для кастомного отображения
+    supervisor = forms.ModelChoiceField(
+        queryset=TenantUser.objects.none(),
+        required=False,
+        label='Кто контролирует',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
     class Meta:
         model = Task
         fields = ['title', 'description', 'supervisor', 'is_completed']
@@ -181,7 +189,6 @@ class TaskForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'supervisor': forms.Select(attrs={'class': 'form-select'}),
             'is_completed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -191,10 +198,12 @@ class TaskForm(forms.ModelForm):
         # Заполняем список сотрудников для выбора контролирующего
         if user:
             if hasattr(user, 'role') and user.role == 'ADMIN':
-                self.fields['supervisor'].queryset = TenantUser.objects.all().order_by('first_name', 'last_name')
+                self.fields['supervisor'].queryset = TenantUser.objects.select_related('position').all().order_by('first_name', 'last_name')
             else:
-                self.fields['supervisor'].queryset = TenantUser.objects.filter(role='ADMIN').order_by('first_name', 'last_name')
-        self.fields['supervisor'].required = False
+                self.fields['supervisor'].queryset = TenantUser.objects.select_related('position').filter(role='ADMIN').order_by('first_name', 'last_name')
+        
+        # Кастомное отображение: имя (должность) вместо имя (роль)
+        self.fields['supervisor'].label_from_instance = lambda obj: f"{obj.username} ({obj.position.name if obj.position else 'Без должности'})"
 
 class TaskStageForm(forms.ModelForm):
     """Форма для этапа задачи с опциональными полями длительности"""
