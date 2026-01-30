@@ -1169,8 +1169,27 @@ class LocalTemplateListView(LoginRequiredMixin, ListView):
         
         return queryset.order_by('-created_at')
     
+    def _sync_positions_from_templates(self):
+        """Синхронизирует должности из всех этапов шаблонов в справочник должностей"""
+        # Получаем все должности из этапов шаблонов
+        template_stages = TaskTemplateStage.objects.filter(
+            position__isnull=False
+        ).values_list('position__name', flat=True).distinct()
+        
+        # Для каждой должности проверяем, есть ли она в локальном справочнике
+        for position_name in template_stages:
+            if position_name:
+                # Создаём должность, если её нет
+                Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'description': f'Должность из шаблонов задач'}
+                )
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Синхронизируем должности из всех шаблонов
+        self._sync_positions_from_templates()
         
         # Получаем фильтры
         category_id = self.request.GET.get('category')
