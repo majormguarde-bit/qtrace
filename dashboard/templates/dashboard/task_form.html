@@ -152,7 +152,7 @@ async function improveDescription() {
 }
 
 // Выбор шаблона
-document.getElementById('templateSelect').addEventListener('change', function() {
+document.getElementById('templateSelect').addEventListener('change', async function() {
     const templateId = this.value;
     if (!templateId) return;
     
@@ -171,9 +171,64 @@ document.getElementById('templateSelect').addEventListener('change', function() 
         descField.value = templateDescription;
     }
     
-    // TODO: Загрузить этапы из шаблона
-    console.log('Выбран шаблон:', templateId);
+    // Загружаем этапы из шаблона
+    try {
+        const response = await fetch(`/template/${templateId}/stages/`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.stages && data.stages.length > 0) {
+            // Очищаем существующие этапы
+            const container = document.getElementById('stages-container');
+            container.innerHTML = '';
+            
+            const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
+            
+            // Добавляем этапы из шаблона
+            data.stages.forEach((stage, index) => {
+                addStageForm(index, stage.name, stage.duration_minutes, stage.order);
+            });
+            
+            totalForms.value = data.stages.length;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки этапов шаблона:', error);
+    }
 });
+
+// Функция для добавления формы этапа
+function addStageForm(formNum, name = '', duration = 0, order = 0) {
+    const container = document.getElementById('stages-container');
+    
+    const formHtml = `
+        <div class="stage-form mb-3 border p-3 rounded bg-light">
+            <input type="hidden" name="stages-${formNum}-id" id="id_stages-${formNum}-id">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label small text-muted">Название этапа</label>
+                    <input type="text" name="stages-${formNum}-name" value="${name}" class="form-control" maxlength="200" required id="id_stages-${formNum}-name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Мин</label>
+                    <input type="number" name="stages-${formNum}-duration_minutes" value="${duration}" class="form-control" min="0" id="id_stages-${formNum}-duration_minutes">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Порядок</label>
+                    <input type="number" name="stages-${formNum}-order" value="${order || formNum}" class="form-control" min="0" id="id_stages-${formNum}-order">
+                </div>
+                <div class="col-md-1 d-flex align-items-end justify-content-center">
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="stages-${formNum}-DELETE" class="form-check-input" id="id_stages-${formNum}-DELETE">
+                        <label class="form-check-label text-danger" for="id_stages-${formNum}-DELETE">
+                            <i class="bi bi-trash"></i>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', formHtml);
+}
 
 // Фильтр "Показать все категории"
 document.getElementById('showAllCategories').addEventListener('change', function() {
@@ -182,44 +237,11 @@ document.getElementById('showAllCategories').addEventListener('change', function
 });
 
 document.getElementById('add-stage').addEventListener('click', function() {
-    const container = document.getElementById('stages-container');
     const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
     const formNum = parseInt(totalForms.value);
     
-    // Клонируем первую форму (или пустую)
-    const firstForm = container.querySelector('.stage-form');
-    const newForm = firstForm.cloneNode(true);
+    addStageForm(formNum, '', 0, formNum);
     
-    // Очищаем значения и обновляем ID/имена
-    newForm.querySelectorAll('input').forEach(input => {
-        const name = input.getAttribute('name');
-        if (name) {
-            input.setAttribute('name', name.replace(/stages-\d+-/, `stages-${formNum}-`));
-            input.setAttribute('id', input.getAttribute('id').replace(/stages-\d+-/, `stages-${formNum}-`));
-            if (input.type !== 'hidden' && input.type !== 'checkbox') {
-                input.value = '';
-            }
-            if (input.type === 'checkbox') {
-                input.checked = false;
-            }
-        }
-    });
-    
-    // Обновляем labels
-    newForm.querySelectorAll('label').forEach(label => {
-        const forAttr = label.getAttribute('for');
-        if (forAttr) {
-            label.setAttribute('for', forAttr.replace(/stages-\d+-/, `stages-${formNum}-`));
-        }
-    });
-
-    // Устанавливаем порядок по умолчанию
-    const orderInput = newForm.querySelector('input[name$="-order"]');
-    if (orderInput) {
-        orderInput.value = formNum;
-    }
-
-    container.appendChild(newForm);
     totalForms.value = formNum + 1;
 });
 </script>

@@ -1776,17 +1776,32 @@ def withdraw_proposal(request, pk):
 def get_template_stages(request, pk):
     """Получить этапы шаблона (AJAX)"""
     try:
-        template = TaskTemplate.objects.prefetch_related('stages').get(pk=pk)
-        stages = [
-            {
-                'id': stage.id,
+        template = TaskTemplate.objects.prefetch_related('stages__duration_unit').get(pk=pk)
+        stages = []
+        for stage in template.stages.all().order_by('sequence_number'):
+            # Конвертируем длительность в минуты (берем среднее между duration_from и duration_to)
+            duration_minutes = 0
+            if stage.duration_from and stage.duration_to and stage.duration_unit:
+                avg_duration = (stage.duration_from + stage.duration_to) / 2
+                
+                # Конвертируем в минуты в зависимости от единицы времени
+                if stage.duration_unit.unit_type == 'minute':
+                    duration_minutes = int(avg_duration)
+                elif stage.duration_unit.unit_type == 'hour':
+                    duration_minutes = int(avg_duration * 60)
+                elif stage.duration_unit.unit_type == 'day':
+                    duration_minutes = int(avg_duration * 60 * 8)  # 8-часовой рабочий день
+                elif stage.duration_unit.unit_type == 'second':
+                    duration_minutes = int(avg_duration / 60)
+                else:
+                    duration_minutes = int(avg_duration)
+            
+            stages.append({
                 'name': stage.name,
-                'description': stage.description,
-                'estimated_duration_hours': stage.estimated_duration_hours,
-                'sequence_number': stage.sequence_number
-            }
-            for stage in template.stages.all().order_by('sequence_number')
-        ]
+                'duration_minutes': duration_minutes,
+                'order': stage.sequence_number
+            })
+        
         return JsonResponse({'status': 'success', 'stages': stages})
     except TaskTemplate.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Template not found'}, status=404)
