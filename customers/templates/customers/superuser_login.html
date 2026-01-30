@@ -183,14 +183,23 @@
                         <label for="id_password" class="form-label">
                             <i class="bi bi-key me-2"></i>Пароль
                         </label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            id="id_password"
-                            class="form-control" 
-                            required
-                            placeholder="••••••••"
-                        >
+                        <div class="input-group">
+                            <input 
+                                type="password" 
+                                name="password" 
+                                id="id_password"
+                                class="form-control" 
+                                required
+                                autocomplete="current-password"
+                                placeholder="••••••••"
+                            >
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordAdmin()">
+                                <i class="bi bi-eye" id="toggleIconAdmin"></i>
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            <a href="#" class="text-decoration-none">Забыли пароль?</a>
+                        </div>
                     </div>
                     
                     <button type="submit" class="btn-login">
@@ -205,5 +214,19 @@
             </div>
         </div>
     </div>
+    <script>
+        function togglePasswordAdmin() {
+            const input = document.getElementById('id_password');
+            const icon = document.getElementById('toggleIconAdmin');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
+        }
+    </script>
 </body>
 </html>

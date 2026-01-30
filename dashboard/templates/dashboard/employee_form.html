@@ -34,7 +34,18 @@
                             <label for="{{ form.password.id_for_label }}" class="form-label fw-bold small text-uppercase text-muted">
                                 {% if object %}Пароль (оставьте пустым, чтобы не менять){% else %}Пароль{% endif %}
                             </label>
-                            {{ form.password }}
+                            <div class="input-group">
+                                {{ form.password }}
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePasswordField()" title="Показать/скрыть пароль">
+                                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="resetPasswordBtn" onclick="resetPasswordField()" title="Сбросить пароль">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                                <button class="btn btn-outline-success" type="button" id="generatePasswordBtn" onclick="generateSecurePassword()" title="Сгенерировать криптостойкий пароль">
+                                    <i class="bi bi-shield-lock"></i>
+                                </button>
+                            </div>
                             {% if not object %}
                             <div class="alert alert-info small mt-2 mb-0 py-2 px-3">
                                 <strong>По-умолчанию пароль = логину</strong>
@@ -156,7 +167,161 @@
 
 {% block extra_js %}
 <script>
+// Password field functions
+function togglePasswordField() {
+    const passwordInput = document.querySelector('input[name="password"]');
+    const icon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+}
+
+function resetPasswordField() {
+    const usernameInput = document.querySelector('input[name="username"]');
+    const passwordInput = document.querySelector('input[name="password"]');
+    
+    if (usernameInput.value) {
+        passwordInput.value = usernameInput.value;
+        // Show success feedback
+        const btn = document.getElementById('resetPasswordBtn');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check-circle"></i>';
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+        }, 1500);
+    }
+}
+
+function generateSecurePassword() {
+    // Generate cryptographically secure password > 8 characters
+    const length = 16;
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+    let password = '';
+    
+    // Use crypto API for secure random generation
+    const randomValues = new Uint8Array(length);
+    crypto.getRandomValues(randomValues);
+    
+    for (let i = 0; i < length; i++) {
+        password += charset[randomValues[i] % charset.length];
+    }
+    
+    const passwordInput = document.querySelector('input[name="password"]');
+    const usernameInput = document.querySelector('input[name="username"]');
+    const username = usernameInput.value || 'unknown';
+    
+    passwordInput.value = password;
+    
+    // Log to admin journal
+    logPasswordGeneration(username, password);
+    
+    // Show success feedback
+    const btn = document.getElementById('generatePasswordBtn');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+    }, 1500);
+    
+    // Show notification
+    showPasswordNotification(password);
+}
+
+function logPasswordGeneration(username, password) {
+    // Get existing logs from localStorage
+    let logs = JSON.parse(localStorage.getItem('admin_password_logs') || '[]');
+    
+    // Add new log entry
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        username: username,
+        password: password,
+        action: 'password_generated',
+        admin: getCurrentAdminName()
+    };
+    
+    logs.push(logEntry);
+    
+    // Keep only last 100 entries
+    if (logs.length > 100) {
+        logs = logs.slice(-100);
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('admin_password_logs', JSON.stringify(logs));
+    
+    // Also send to server for backup
+    sendLogToServer(logEntry);
+}
+
+function sendLogToServer(logEntry) {
+    // Send log to server endpoint
+    fetch('{% url "dashboard:log_password_generation" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(logEntry)
+    }).catch(error => {
+        console.error('Failed to send log to server:', error);
+    });
+}
+
+function getCurrentAdminName() {
+    // Get admin name from page or localStorage
+    const adminElement = document.querySelector('[data-admin-name]');
+    if (adminElement) {
+        return adminElement.getAttribute('data-admin-name');
+    }
+    return localStorage.getItem('admin_name') || 'unknown';
+}
+
+function showPasswordNotification(password) {
+    // Create and show notification with generated password
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    notification.innerHTML = `
+        <strong>✓ Пароль сгенерирован!</strong>
+        <div class="mt-2 p-2 bg-white rounded font-monospace small" style="word-break: break-all;">
+            ${password}
+        </div>
+        <small class="text-muted d-block mt-2">Пароль скопирован в буфер обмена</small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(password).catch(err => {
+        console.error('Failed to copy to clipboard:', err);
+    });
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill password when username is entered
+    const usernameInput = document.querySelector('input[name="username"]');
+    const passwordInput = document.querySelector('input[name="password"]');
+    
+    if (usernameInput && passwordInput) {
+        usernameInput.addEventListener('input', function() {
+            // Only auto-fill if password is empty
+            if (!passwordInput.value && this.value) {
+                passwordInput.value = this.value;
+            }
+        });
+    }
+    
     const saveBtn = document.getElementById('savePositionBtn');
     const nameInput = document.getElementById('new_position_name');
     const errorDiv = document.getElementById('position_error');

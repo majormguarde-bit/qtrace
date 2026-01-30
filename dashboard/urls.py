@@ -8,12 +8,12 @@ urlpatterns = [
     path('login/', views.TenantLoginView.as_view(), name='login'),
     path('logout/', views.TenantLogoutView.as_view(), name='logout'),
     path('help/', views.HelpView.as_view(), name='help'),
-    
+
     # Tasks
     path('tasks/', views.TaskListView.as_view(), name='task_list'),
     path('tasks/create/', views.TaskCreateView.as_view(), name='task_create'),
     path('tasks/<int:pk>/edit/', views.TaskUpdateView.as_view(), name='task_edit'),
-    
+
     # Media
     path('media/', views.MediaListView.as_view(), name='media_list'),
     path('media/upload/', views.MediaCreateView.as_view(), name='media_create'),
@@ -94,4 +94,8 @@ urlpatterns = [
     path('api/materials/', views.api_get_materials, name='api_get_materials'),
     path('api/units/', views.api_get_units, name='api_get_units'),
     path('api/employees/', views.api_get_employees, name='api_get_employees'),
+    
+    # Admin logging
+    path('api/log-password-generation/', views.log_password_generation, name='log_password_generation'),
+    path('logs/', views.admin_log_list, name='admin_log_list'),
 ]

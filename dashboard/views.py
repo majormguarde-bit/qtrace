@@ -2279,3 +2279,143 @@ def import_template(request):
             messages.error(request, error)
     
     return redirect('dashboard:local_template_list')
+
+@login_required
+@require_POST
+def log_password_generation(request):
+    """API endpoint для логирования генерации пароля"""
+    import json
+    import logging
+    from datetime import datetime
+    from dashboard.models import AdminPasswordLog
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Get client IP
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        
+        # Get User Agent
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        
+        # Create logger for password generation
+        logger = logging.getLogger('admin_password_log')
+        
+        # Log entry
+        log_message = (
+            f"[{data.get('timestamp', datetime.now().isoformat())}] "
+            f"Admin: {request.user.username} | "
+            f"Action: {data.get('action', 'unknown')} | "
+            f"Employee: {data.get('username', 'unknown')} | "
+            f"Password Length: {len(data.get('password', ''))} chars | "
+            f"IP: {ip}"
+        )
+        
+        logger.info(log_message)
+        
+        # Save to database
+        AdminPasswordLog.objects.create(
+            admin_user=request.user,
+            employee_username=data.get('username', 'unknown'),
+            action='generated',
+            password_length=len(data.get('password', '')),
+            ip_address=ip,
+            user_agent=user_agent,
+            notes=f"Generated via API"
+        )
+        
+        # Also store in Django LogEntry for audit trail
+        from django.contrib.admin.models import LogEntry, ADDITION
+        from django.contrib.contenttypes.models import ContentType
+        
+        LogEntry.objects.create(
+            user=request.user,
+            content_type=ContentType.objects.get_for_model(AdminPasswordLog),
+            object_id=0,
+            object_repr=f"Password generated for {data.get('username', 'unknown')}",
+            action_flag=ADDITION,
+            change_message=f"Generated secure password for employee {data.get('username', 'unknown')}"
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Log recorded'})
+    
+    except Exception as e:
+        logger = logging.getLogger('admin_password_log')
+        logger.error(f"Error logging password generation: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+def admin_log_list(request):
+    """Страница журнала администратора с пагинацией, поиском и фильтрами"""
+    from django.core.paginator import Paginator
+    from dashboard.models import AdminPasswordLog
+    
+    # Получить все логи
+    logs = AdminPasswordLog.objects.all()
+    
+    # Поиск по логину сотрудника
+    search_query = request.GET.get('search', '')
+    if search_query:
+        logs = logs.filter(employee_username__icontains=search_query)
+    
+    # Фильтр по администратору
+    admin_filter = request.GET.get('admin', '')
+    if admin_filter:
+        logs = logs.filter(admin_user__username=admin_filter)
+    
+    # Фильтр по действию
+    action_filter = request.GET.get('action', '')
+    if action_filter:
+        logs = logs.filter(action=action_filter)
+    
+    # Фильтр по дате (от)
+    date_from = request.GET.get('date_from', '')
+    if date_from:
+        from datetime import datetime
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            logs = logs.filter(timestamp__date__gte=date_from_obj.date())
+        except ValueError:
+            pass
+    
+    # Фильтр по дате (до)
+    date_to = request.GET.get('date_to', '')
+    if date_to:
+        from datetime import datetime
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            logs = logs.filter(timestamp__date__lte=date_to_obj.date())
+        except ValueError:
+            pass
+    
+    # Пагинация
+    paginator = Paginator(logs, 25)  # 25 записей на странице
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Получить список администраторов для фильтра
+    from django.contrib.auth.models import User
+    admins = User.objects.filter(is_staff=True).order_by('username')
+    
+    # Получить список действий
+    actions = AdminPasswordLog.ACTION_CHOICES
+    
+    context = {
+        'page_obj': page_obj,
+        'logs': page_obj.object_list,
+        'search_query': search_query,
+        'admin_filter': admin_filter,
+        'action_filter': action_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'admins': admins,
+        'actions': actions,
+        'total_logs': paginator.count,
+    }
+    
+    return render(request, 'dashboard/admin_log_list.html', context)

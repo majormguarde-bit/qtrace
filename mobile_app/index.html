@@ -35,7 +35,15 @@
                         </div>
                         <div class="mb-4">
                             <label class="form-label small text-muted text-uppercase">Пароль</label>
-                            <input type="password" id="password" class="form-control" required>
+                            <div class="input-group">
+                                <input type="password" id="password" class="form-control" required autocomplete="current-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordMobile()">
+                                    <i class="bi bi-eye" id="toggleIconMobile"></i>
+                                </button>
+                            </div>
+                            <div class="form-text mt-2">
+                                <a href="#" class="text-decoration-none">Забыли пароль?</a>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold">ВОЙТИ</button>
                     </form>

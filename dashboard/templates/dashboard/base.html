@@ -181,6 +181,9 @@
                     <a href="{% url 'dashboard:all_proposals' %}" class="sidebar-link {% if 'all_proposals' in request.resolver_match.view_name %}active{% endif %}">
                         <i class="bi bi-inbox me-2"></i> Управление предложениями
                     </a>
+                    <a href="{% url 'dashboard:admin_log_list' %}" class="sidebar-link {% if 'admin_log_list' in request.resolver_match.view_name %}active{% endif %}">
+                        <i class="bi bi-journal-text me-2"></i> Журнал
+                    </a>
                     <hr>
                     <div class="text-uppercase px-3 mt-3 mb-1 fw-bold text-white" style="font-size: 0.85rem; letter-spacing: 0.5px;">Система</div>
                     <a href="/admin/" target="_blank" class="sidebar-link">

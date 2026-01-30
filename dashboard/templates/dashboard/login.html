@@ -61,7 +61,15 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Пароль</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <div class="input-group">
+                        <input type="password" name="password" id="passwordInput" class="form-control" required autocomplete="current-password">
+                        <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePassword()">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        <a href="#" class="text-decoration-none">Забыли пароль?</a>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100" {% if request.tenant and not request.tenant.is_active and request.tenant.schema_name != 'public' %}disabled{% endif %}>
                     {% if request.tenant and not request.tenant.is_active and request.tenant.schema_name != 'public' %}
@@ -79,5 +87,19 @@
             </div>
         </div>
     </div>
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('passwordInput');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
+        }
+    </script>
 </body>
 </html>
