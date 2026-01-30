@@ -191,13 +191,16 @@ class TaskForm(forms.ModelForm):
 
 TaskStageFormSet = inlineformset_factory(
     Task, TaskStage,
-    fields=['name', 'duration_minutes', 'order'],
+    fields=['name', 'duration_minutes', 'order', 'position_name', 'duration_text', 'materials_info'],
     extra=1,
     can_delete=True,
     widgets={
         'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название этапа'}),
         'duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Мин'}),
         'order': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '№'}),
+        'position_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Должность'}),
+        'duration_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Длительность'}),
+        'materials_info': forms.HiddenInput(),
     }
 )
 
@@ -1776,11 +1779,17 @@ def withdraw_proposal(request, pk):
 def get_template_stages(request, pk):
     """Получить этапы шаблона (AJAX)"""
     try:
-        template = TaskTemplate.objects.prefetch_related('stages__duration_unit').get(pk=pk)
+        template = TaskTemplate.objects.prefetch_related(
+            'stages__duration_unit',
+            'stages__position',
+            'stages__materials__material__unit'
+        ).get(pk=pk)
+        
         stages = []
         for stage in template.stages.all().order_by('sequence_number'):
             # Конвертируем длительность в минуты (берем среднее между duration_from и duration_to)
             duration_minutes = 0
+            duration_text = ''
             if stage.duration_from and stage.duration_to and stage.duration_unit:
                 avg_duration = (stage.duration_from + stage.duration_to) / 2
                 
@@ -1795,12 +1804,30 @@ def get_template_stages(request, pk):
                     duration_minutes = int(avg_duration / 60)
                 else:
                     duration_minutes = int(avg_duration)
+                
+                # Формируем текстовое описание длительности
+                duration_text = f"{stage.duration_from}-{stage.duration_to} {stage.duration_unit.abbreviation}"
             
-            stages.append({
+            # Собираем информацию о материалах
+            materials = []
+            for stage_material in stage.materials.all():
+                materials.append({
+                    'name': stage_material.material.name,
+                    'quantity': float(stage_material.quantity),
+                    'unit': stage_material.material.unit.abbreviation
+                })
+            
+            stage_data = {
                 'name': stage.name,
                 'duration_minutes': duration_minutes,
-                'order': stage.sequence_number
-            })
+                'duration_text': duration_text,
+                'order': stage.sequence_number,
+                'position': stage.position.name if stage.position else None,
+                'materials': materials,
+                'has_materials': len(materials) > 0
+            }
+            
+            stages.append(stage_data)
         
         return JsonResponse({'status': 'success', 'stages': stages})
     except TaskTemplate.DoesNotExist:

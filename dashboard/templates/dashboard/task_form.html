@@ -69,20 +69,25 @@
                         {% for stage_form in stages %}
                         <div class="stage-form mb-3 border p-3 rounded bg-light">
                             {{ stage_form.id }}
-                            <div class="row">
-                                <div class="col-md-6">
+                            {{ stage_form.materials_info }}
+                            <div class="row g-2">
+                                <div class="col-md-5">
                                     <label class="form-label small text-muted">Название этапа</label>
                                     {{ stage_form.name }}
                                     {% if stage_form.name.errors %}
                                     <div class="text-danger small">{{ stage_form.name.errors.0 }}</div>
                                     {% endif %}
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label small text-muted">Мин</label>
                                     {{ stage_form.duration_minutes }}
                                     {% if stage_form.duration_minutes.errors %}
                                     <div class="text-danger small">{{ stage_form.duration_minutes.errors.0 }}</div>
                                     {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Должность</label>
+                                    {{ stage_form.position_name }}
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Порядок</label>
@@ -97,6 +102,16 @@
                                         </label>
                                     </div>
                                     {% endif %}
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Длительность (текст)</label>
+                                    {{ stage_form.duration_text }}
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label small text-muted">Материалы</label>
+                                    <div class="materials-display small text-muted" data-form-num="{{ forloop.counter0 }}"></div>
                                 </div>
                             </div>
                         </div>
@@ -185,7 +200,7 @@ document.getElementById('templateSelect').addEventListener('change', async funct
             
             // Добавляем этапы из шаблона
             data.stages.forEach((stage, index) => {
-                addStageForm(index, stage.name, stage.duration_minutes, stage.order);
+                addStageForm(index, stage);
             });
             
             totalForms.value = data.stages.length;
@@ -196,24 +211,44 @@ document.getElementById('templateSelect').addEventListener('change', async funct
 });
 
 // Функция для добавления формы этапа
-function addStageForm(formNum, name = '', duration = 0, order = 0) {
+function addStageForm(formNum, stageData = {}) {
     const container = document.getElementById('stages-container');
+    
+    const name = stageData.name || '';
+    const duration = stageData.duration_minutes || 0;
+    const order = stageData.order || formNum;
+    const position = stageData.position || '';
+    const durationText = stageData.duration_text || '';
+    const materials = stageData.materials || [];
+    
+    // Формируем текст материалов для отображения
+    let materialsHtml = '';
+    if (materials.length > 0) {
+        materialsHtml = materials.map(m => `${m.name}: ${m.quantity} ${m.unit}`).join(', ');
+    } else {
+        materialsHtml = '<span class="text-muted fst-italic">Нет материалов</span>';
+    }
     
     const formHtml = `
         <div class="stage-form mb-3 border p-3 rounded bg-light">
             <input type="hidden" name="stages-${formNum}-id" id="id_stages-${formNum}-id">
-            <div class="row">
-                <div class="col-md-6">
+            <input type="hidden" name="stages-${formNum}-materials_info" value='${JSON.stringify(materials)}' id="id_stages-${formNum}-materials_info">
+            <div class="row g-2">
+                <div class="col-md-5">
                     <label class="form-label small text-muted">Название этапа</label>
                     <input type="text" name="stages-${formNum}-name" value="${name}" class="form-control" maxlength="200" required id="id_stages-${formNum}-name">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small text-muted">Мин</label>
                     <input type="number" name="stages-${formNum}-duration_minutes" value="${duration}" class="form-control" min="0" id="id_stages-${formNum}-duration_minutes">
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label small text-muted">Должность</label>
+                    <input type="text" name="stages-${formNum}-position_name" value="${position}" class="form-control" maxlength="255" id="id_stages-${formNum}-position_name">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small text-muted">Порядок</label>
-                    <input type="number" name="stages-${formNum}-order" value="${order || formNum}" class="form-control" min="0" id="id_stages-${formNum}-order">
+                    <input type="number" name="stages-${formNum}-order" value="${order}" class="form-control" min="0" id="id_stages-${formNum}-order">
                 </div>
                 <div class="col-md-1 d-flex align-items-end justify-content-center">
                     <div class="form-check mb-2">
@@ -222,6 +257,16 @@ function addStageForm(formNum, name = '', duration = 0, order = 0) {
                             <i class="bi bi-trash"></i>
                         </label>
                     </div>
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Длительность (текст)</label>
+                    <input type="text" name="stages-${formNum}-duration_text" value="${durationText}" class="form-control" maxlength="100" id="id_stages-${formNum}-duration_text">
+                </div>
+                <div class="col-md-9">
+                    <label class="form-label small text-muted">Материалы</label>
+                    <div class="materials-display small text-muted">${materialsHtml}</div>
                 </div>
             </div>
         </div>
@@ -240,7 +285,7 @@ document.getElementById('add-stage').addEventListener('click', function() {
     const totalForms = document.getElementById('id_stages-TOTAL_FORMS');
     const formNum = parseInt(totalForms.value);
     
-    addStageForm(formNum, '', 0, formNum);
+    addStageForm(formNum, {});
     
     totalForms.value = formNum + 1;
 });
