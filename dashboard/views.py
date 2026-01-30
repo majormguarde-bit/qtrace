@@ -456,6 +456,10 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
             self.object = form.save()
             stages.instance = self.object
             stages.save()
+            # Возвращаемся на предыдущую страницу или на список задач
+            referer = self.request.META.get('HTTP_REFERER', '')
+            if 'dashboard' in referer or referer.endswith('/'):
+                return redirect(referer)
             return redirect(self.success_url)
         else:
             # Проверяем, есть ли ошибки в formset (кроме пустых форм)
@@ -467,6 +471,10 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
                 self.object = form.save()
                 stages.instance = self.object
                 stages.save()
+                # Возвращаемся на предыдущую страницу или на список задач
+                referer = self.request.META.get('HTTP_REFERER', '')
+                if 'dashboard' in referer or referer.endswith('/'):
+                    return redirect(referer)
                 return redirect(self.success_url)
 
     def get_queryset(self):

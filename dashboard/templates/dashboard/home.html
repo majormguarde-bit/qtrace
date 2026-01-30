@@ -380,6 +380,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Обработчик двойного клика на карточку задачи
+    document.addEventListener('dblclick', function(e) {
+        const kanbanCard = e.target.closest('.kanban-card');
+        if (kanbanCard) {
+            const taskId = kanbanCard.dataset.taskId;
+            if (taskId) {
+                window.location.href = `/tasks/${taskId}/edit/`;
+            }
+        }
+    });
+
     function updateTaskStatus(taskId, status, item) {
         const url = `/tasks/${taskId}/status-update-ajax/`;
         
