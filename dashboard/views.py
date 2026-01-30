@@ -171,21 +171,30 @@ class TenantLogoutView(auth_views.LogoutView):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'is_completed']
+        fields = ['title', 'description', 'supervisor', 'is_completed']
         labels = {
             'title': 'Заголовок',
             'description': 'Описание',
+            'supervisor': 'Кто контролирует',
             'is_completed': 'Выполнено',
         }
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'supervisor': forms.Select(attrs={'class': 'form-select'}),
             'is_completed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # Заполняем список сотрудников для выбора контролирующего
+        if user:
+            if hasattr(user, 'role') and user.role == 'ADMIN':
+                self.fields['supervisor'].queryset = TenantUser.objects.all().order_by('first_name', 'last_name')
+            else:
+                self.fields['supervisor'].queryset = TenantUser.objects.filter(role='ADMIN').order_by('first_name', 'last_name')
+        self.fields['supervisor'].required = False
 
 class TaskStageForm(forms.ModelForm):
     """Форма для этапа задачи с опциональными полями длительности"""
@@ -1186,10 +1195,9 @@ class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
 
 # --- AJAX Task Management ---
 
-@method_decorator(csrf_exempt, name='dispatch')
+@login_required
 @csrf_exempt
 @require_POST
-@login_required
 def task_status_update_ajax(request, pk):
     """AJAX endpoint для обновления статуса задачи"""
     import json

@@ -29,13 +29,13 @@
         
         <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
             <div class="d-flex align-items-center">
-                {% if task.assigned_to %}
+                {% if task.supervisor %}
                     <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-2" 
                          style="width: 24px; height: 24px; font-size: 0.7rem;" 
-                         title="{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}">
-                        {{ task.assigned_to.username|slice:":1"|upper }}
+                         title="{{ task.supervisor.get_full_name|default:task.supervisor.username }}">
+                        {{ task.supervisor.username|slice:":1"|upper }}
                     </div>
-                    <span class="small text-muted" style="font-size: 0.75rem;">{{ task.assigned_to.username }}</span>
+                    <span class="small text-muted" style="font-size: 0.75rem;">{{ task.supervisor.username }}</span>
                 {% else %}
                     <span class="small text-muted" style="font-size: 0.75rem;">Не назначен</span>
                 {% endif %}

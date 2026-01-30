@@ -87,7 +87,7 @@
                         <th class="ps-4" style="width: 40px;"></th>
                         <th>Заголовок</th>
                         <th>Статус</th>
-                        <th>Исполнитель</th>
+                        <th>Контролирует</th>
                         <th class="pe-4">Создано</th>
                     </tr>
                 </thead>
@@ -117,7 +117,7 @@
                             <span class="badge bg-success-soft text-success border border-success-subtle px-3 rounded-pill">Закрыта</span>
                             {% endif %}
                         </td>
-                        <td class="text-muted">{% if task.assigned_to %}{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}{% else %}<span class="text-muted-50">Не назначена</span>{% endif %}</td>
+                        <td class="text-muted">{% if task.supervisor %}{{ task.supervisor.get_full_name|default:task.supervisor.username }}{% else %}<span class="text-muted-50">Не назначен</span>{% endif %}</td>
                         <td class="pe-4 text-muted small">{{ task.created_at|date:"d.m.Y H:i" }}</td>
                     </tr>
                     
