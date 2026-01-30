@@ -1187,6 +1187,7 @@ class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
 # --- AJAX Task Management ---
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(require_POST, name='dispatch')
 class TaskStatusUpdateAjaxView(LoginRequiredMixin, UpdateView):
     model = Task
@@ -2779,59 +2780,55 @@ def log_password_generation(request):
 def admin_log_list(request):
     """Страница журнала администратора с пагинацией, поиском и фильтрами"""
     from django.core.paginator import Paginator
-    from django.db.models import Q
     from dashboard.models import AdminPasswordLog, TaskLog
     
     # Получить все логи паролей
-    password_logs = AdminPasswordLog.objects.all().values(
+    password_logs = list(AdminPasswordLog.objects.all().values(
         'id', 'admin_username', 'employee_username', 'action', 'timestamp', 
         'ip_address', 'notes', 'password_length'
-    ).annotate(log_type=django_models.Value('password', output_field=django_models.CharField()))
+    ))
     
     # Получить все логи задач
-    task_logs = TaskLog.objects.all().values(
+    task_logs = list(TaskLog.objects.all().values(
         'id', 'admin_username', 'task_title', 'action', 'timestamp', 
         'ip_address', 'notes', 'count'
-    ).annotate(
-        employee_username=django_models.F('task_title'),
-        password_length=django_models.F('count'),
-        log_type=django_models.Value('task', output_field=django_models.CharField())
-    )
+    ))
+    
+    # Преобразуем логи задач в формат, совместимый с логами паролей
+    for log in task_logs:
+        log['employee_username'] = log.pop('task_title')
+        log['password_length'] = log.pop('count')
+        log['log_type'] = 'task'
+    
+    for log in password_logs:
+        log['log_type'] = 'password'
     
     # Объединяем оба набора логов
-    from django.db.models import Q, Value, CharField
-    from django.db.models.functions import Cast
-    
-    # Используем union для объединения
-    logs = AdminPasswordLog.objects.all() | TaskLog.objects.all()
+    all_logs = password_logs + task_logs
     
     # Поиск по логину сотрудника или названию задачи
     search_query = request.GET.get('search', '')
     if search_query:
-        logs = AdminPasswordLog.objects.filter(employee_username__icontains=search_query) | \
-               TaskLog.objects.filter(task_title__icontains=search_query)
+        all_logs = [log for log in all_logs if search_query.lower() in log['employee_username'].lower()]
     
     # Фильтр по администратору
     admin_filter = request.GET.get('admin', '')
     if admin_filter:
-        logs = AdminPasswordLog.objects.filter(admin_username__icontains=admin_filter) | \
-               TaskLog.objects.filter(admin_username__icontains=admin_filter)
+        all_logs = [log for log in all_logs if admin_filter.lower() in log['admin_username'].lower()]
     
     # Фильтр по действию
     action_filter = request.GET.get('action', '')
     if action_filter:
-        logs = AdminPasswordLog.objects.filter(action=action_filter) | \
-               TaskLog.objects.filter(action=action_filter)
+        all_logs = [log for log in all_logs if log['action'] == action_filter]
     
     # Фильтр по дате (от)
     date_from = request.GET.get('date_from', '')
     if date_from:
         from datetime import datetime
         try:
-            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-            logs = AdminPasswordLog.objects.filter(timestamp__date__gte=date_from_obj.date()) | \
-                   TaskLog.objects.filter(timestamp__date__gte=date_from_obj.date())
-        except ValueError:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            all_logs = [log for log in all_logs if log['timestamp'].date() >= date_from_obj]
+        except (ValueError, AttributeError):
             pass
     
     # Фильтр по дате (до)
@@ -2839,22 +2836,16 @@ def admin_log_list(request):
     if date_to:
         from datetime import datetime
         try:
-            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-            logs = AdminPasswordLog.objects.filter(timestamp__date__lte=date_to_obj.date()) | \
-                   TaskLog.objects.filter(timestamp__date__lte=date_to_obj.date())
-        except ValueError:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            all_logs = [log for log in all_logs if log['timestamp'].date() <= date_to_obj]
+        except (ValueError, AttributeError):
             pass
     
-    # Если нет фильтров, получаем все логи
-    if not search_query and not admin_filter and not action_filter and not date_from and not date_to:
-        logs = list(AdminPasswordLog.objects.all()) + list(TaskLog.objects.all())
-        logs.sort(key=lambda x: x.timestamp, reverse=True)
-    else:
-        logs = list(logs)
-        logs.sort(key=lambda x: x.timestamp, reverse=True)
+    # Сортируем по времени (новые сверху)
+    all_logs.sort(key=lambda x: x['timestamp'], reverse=True)
     
     # Пагинация
-    paginator = Paginator(logs, 25)  # 25 записей на странице
+    paginator = Paginator(all_logs, 25)  # 25 записей на странице
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
