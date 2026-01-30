@@ -114,3 +114,34 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.email}"
+
+
+class UserFeedback(models.Model):
+    """Модель для обратной связи пользователей о улучшении продукта"""
+    
+    STATUS_CHOICES = [
+        ('NEW', 'Новое'),
+        ('REVIEWED', 'Рассмотрено'),
+        ('PLANNED', 'Запланировано'),
+        ('IN_PROGRESS', 'В разработке'),
+        ('COMPLETED', 'Завершено'),
+        ('REJECTED', 'Отклонено'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks')
+    tenant = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='feedbacks')
+    title = models.CharField(max_length=255, verbose_name='Заголовок')
+    description = models.TextField(verbose_name='Описание')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NEW', verbose_name='Статус')
+    priority = models.IntegerField(default=0, verbose_name='Приоритет (0-10)')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    admin_notes = models.TextField(blank=True, null=True, verbose_name='Заметки администратора')
+    
+    class Meta:
+        verbose_name = 'Предложение пользователя'
+        verbose_name_plural = 'Предложения пользователей'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"

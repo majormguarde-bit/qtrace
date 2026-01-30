@@ -38,6 +38,19 @@
             padding: 20px;
         }
         
+        /* Readonly field styling */
+        input[readonly], textarea[readonly], select[readonly] {
+            background-color: #f8f9fa !important;
+            color: #6c757d;
+            cursor: not-allowed;
+            border-color: #dee2e6 !important;
+        }
+        input[readonly]:focus, textarea[readonly]:focus, select[readonly]:focus {
+            background-color: #f8f9fa !important;
+            border-color: #dee2e6 !important;
+            box-shadow: none !important;
+        }
+        
         /* Task & Stage styles */
         .stage-item { transition: all 0.2s; border-radius: 8px; }
         .stage-item:hover { background-color: rgba(0,0,0,0.05); }
