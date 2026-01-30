@@ -740,7 +740,50 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 role_name = role.lower()
                 form.instance.username = f"{tenant_name}-{role_name}-{count}".lower()
         
-        return super().form_valid(form)
+        # Сохраняем форму
+        response = super().form_valid(form)
+        
+        # Логируем создание сотрудника
+        try:
+            from dashboard.models import AdminPasswordLog
+            import logging
+            
+            username = form.instance.username
+            password = form.cleaned_data.get('password', '')
+            
+            # Get client IP
+            x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = self.request.META.get('REMOTE_ADDR')
+            
+            # Get User Agent
+            user_agent = self.request.META.get('HTTP_USER_AGENT', '')
+            
+            # Create log entry
+            AdminPasswordLog.objects.create(
+                admin_user=self.request.user,
+                employee_username=username,
+                action='generated',
+                password_length=len(password) if password else 0,
+                ip_address=ip,
+                user_agent=user_agent,
+                notes=f"Created via employee form"
+            )
+            
+            # Log to file
+            logger = logging.getLogger('admin_password_log')
+            logger.info(
+                f"[{timezone.now().isoformat()}] Admin: {self.request.user.username} | "
+                f"Action: employee_created | Employee: {username} | "
+                f"Password Length: {len(password) if password else 0} chars | IP: {ip}"
+            )
+        except Exception as e:
+            logger = logging.getLogger('admin_password_log')
+            logger.error(f"Error logging employee creation: {str(e)}")
+        
+        return response
 
 class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
     model = TenantUser
@@ -753,6 +796,55 @@ class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
         if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
             return super().dispatch(request, *args, **kwargs)
         return redirect('dashboard:home')
+    
+    def form_valid(self, form):
+        # Сохраняем форму
+        response = super().form_valid(form)
+        
+        # Логируем обновление сотрудника (если был изменен пароль)
+        try:
+            from dashboard.models import AdminPasswordLog
+            import logging
+            
+            password = form.cleaned_data.get('password', '')
+            
+            # Логируем только если пароль был изменен
+            if password:
+                username = form.instance.username
+                
+                # Get client IP
+                x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+                if x_forwarded_for:
+                    ip = x_forwarded_for.split(',')[0]
+                else:
+                    ip = self.request.META.get('REMOTE_ADDR')
+                
+                # Get User Agent
+                user_agent = self.request.META.get('HTTP_USER_AGENT', '')
+                
+                # Create log entry
+                AdminPasswordLog.objects.create(
+                    admin_user=self.request.user,
+                    employee_username=username,
+                    action='reset',
+                    password_length=len(password),
+                    ip_address=ip,
+                    user_agent=user_agent,
+                    notes=f"Password reset via employee form"
+                )
+                
+                # Log to file
+                logger = logging.getLogger('admin_password_log')
+                logger.info(
+                    f"[{timezone.now().isoformat()}] Admin: {self.request.user.username} | "
+                    f"Action: password_reset | Employee: {username} | "
+                    f"Password Length: {len(password)} chars | IP: {ip}"
+                )
+        except Exception as e:
+            logger = logging.getLogger('admin_password_log')
+            logger.error(f"Error logging employee update: {str(e)}")
+        
+        return response
 
 class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
     model = TenantUser
