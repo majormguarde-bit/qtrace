@@ -2973,7 +2973,7 @@ def admin_log_list(request):
 @require_POST
 def clear_admin_logs_filtered(request):
     """Очистить журнал администратора с применением фильтров"""
-    from dashboard.models import AdminPasswordLog
+    from dashboard.models import AdminPasswordLog, TaskLog
     import logging
     
     # Проверка прав доступа
@@ -2983,59 +2983,98 @@ def clear_admin_logs_filtered(request):
         return redirect('dashboard:admin_log_list')
     
     try:
-        # Получить все логи
-        logs = AdminPasswordLog.objects.all()
-        
-        # Применить фильтры
+        # Получить параметры фильтров
         search_query = request.POST.get('search', '')
-        if search_query:
-            logs = logs.filter(employee_username__icontains=search_query)
-        
         admin_filter = request.POST.get('admin', '')
-        if admin_filter:
-            logs = logs.filter(admin_username__icontains=admin_filter)
-        
         action_filter = request.POST.get('action', '')
-        if action_filter:
-            logs = logs.filter(action=action_filter)
-        
+        log_type_filter = request.POST.get('log_type', '')
         date_from = request.POST.get('date_from', '')
-        if date_from:
-            from datetime import datetime
-            try:
-                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-                logs = logs.filter(timestamp__date__gte=date_from_obj.date())
-            except ValueError:
-                pass
-        
         date_to = request.POST.get('date_to', '')
-        if date_to:
-            from datetime import datetime
-            try:
-                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-                logs = logs.filter(timestamp__date__lte=date_to_obj.date())
-            except ValueError:
-                pass
         
-        # Подсчитаем количество записей для удаления
-        count = logs.count()
+        password_count = 0
+        task_count = 0
         
-        if count == 0:
+        # Очистка логов паролей
+        if not log_type_filter or log_type_filter == 'password':
+            password_logs = AdminPasswordLog.objects.all()
+            
+            if search_query:
+                password_logs = password_logs.filter(employee_username__icontains=search_query)
+            
+            if admin_filter:
+                password_logs = password_logs.filter(admin_username__icontains=admin_filter)
+            
+            if action_filter:
+                password_logs = password_logs.filter(action=action_filter)
+            
+            if date_from:
+                from datetime import datetime
+                try:
+                    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                    password_logs = password_logs.filter(timestamp__date__gte=date_from_obj.date())
+                except ValueError:
+                    pass
+            
+            if date_to:
+                from datetime import datetime
+                try:
+                    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                    password_logs = password_logs.filter(timestamp__date__lte=date_to_obj.date())
+                except ValueError:
+                    pass
+            
+            password_count = password_logs.count()
+            if password_count > 0:
+                password_logs.delete()
+        
+        # Очистка логов задач
+        if not log_type_filter or log_type_filter == 'task':
+            task_logs = TaskLog.objects.all()
+            
+            if search_query:
+                task_logs = task_logs.filter(task_title__icontains=search_query)
+            
+            if admin_filter:
+                task_logs = task_logs.filter(admin_username__icontains=admin_filter)
+            
+            if action_filter:
+                task_logs = task_logs.filter(action=action_filter)
+            
+            if date_from:
+                from datetime import datetime
+                try:
+                    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                    task_logs = task_logs.filter(timestamp__date__gte=date_from_obj.date())
+                except ValueError:
+                    pass
+            
+            if date_to:
+                from datetime import datetime
+                try:
+                    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                    task_logs = task_logs.filter(timestamp__date__lte=date_to_obj.date())
+                except ValueError:
+                    pass
+            
+            task_count = task_logs.count()
+            if task_count > 0:
+                task_logs.delete()
+        
+        total_count = password_count + task_count
+        
+        if total_count == 0:
             messages.warning(request, 'Нет записей для удаления по выбранным фильтрам.')
             return redirect('dashboard:admin_log_list')
-        
-        # Удаляем записи
-        logs.delete()
         
         # Логируем очистку
         logger = logging.getLogger('admin_password_log')
         admin_username = request.user.username if hasattr(request.user, 'username') else 'unknown'
         logger.info(
             f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
-            f"Action: logs_cleared_filtered | Records deleted: {count}"
+            f"Action: logs_cleared_filtered | Password logs: {password_count}, Task logs: {task_count}, Total: {total_count}"
         )
         
-        messages.success(request, f'Удалено {count} записей из журнала.')
+        messages.success(request, f'Удалено {total_count} записей из журнала (паролей: {password_count}, задач: {task_count}).')
         return redirect('dashboard:admin_log_list')
     
     except Exception as e:
@@ -3050,7 +3089,7 @@ def clear_admin_logs_filtered(request):
 @require_POST
 def clear_admin_logs_all(request):
     """Очистить весь журнал администратора"""
-    from dashboard.models import AdminPasswordLog
+    from dashboard.models import AdminPasswordLog, TaskLog
     import logging
     
     # Проверка прав доступа
@@ -3061,24 +3100,27 @@ def clear_admin_logs_all(request):
     
     try:
         # Подсчитаем количество записей
-        count = AdminPasswordLog.objects.count()
+        password_count = AdminPasswordLog.objects.count()
+        task_count = TaskLog.objects.count()
+        total_count = password_count + task_count
         
-        if count == 0:
+        if total_count == 0:
             messages.warning(request, 'Журнал уже пуст.')
             return redirect('dashboard:admin_log_list')
         
-        # Удаляем все записи
+        # Удаляем все записи из обоих журналов
         AdminPasswordLog.objects.all().delete()
+        TaskLog.objects.all().delete()
         
         # Логируем очистку
         logger = logging.getLogger('admin_password_log')
         admin_username = request.user.username if hasattr(request.user, 'username') else 'unknown'
         logger.info(
             f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
-            f"Action: logs_cleared_all | Records deleted: {count}"
+            f"Action: logs_cleared_all | Password logs: {password_count}, Task logs: {task_count}, Total: {total_count}"
         )
         
-        messages.success(request, f'Журнал полностью очищен. Удалено {count} записей.')
+        messages.success(request, f'Журнал полностью очищен. Удалено {total_count} записей (паролей: {password_count}, задач: {task_count}).')
         return redirect('dashboard:admin_log_list')
     
     except Exception as e:
