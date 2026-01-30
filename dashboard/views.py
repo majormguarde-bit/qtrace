@@ -253,34 +253,51 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
         return kwargs
 
     def form_valid(self, form):
-        context = self.get_context_data()
-        stages = context['stages']
-        user = self.request.user
+        import logging
+        logger = logging.getLogger('django')
         
-        if hasattr(user, 'role'):
-            if user.role != 'ADMIN':
-                form.instance.assigned_to = user
-        elif getattr(user, 'is_superuser', False):
-            pass
-        else:
-            return redirect('dashboard:home')
+        try:
+            context = self.get_context_data()
+            stages = context['stages']
+            user = self.request.user
             
-        if stages.is_valid():
-            self.object = form.save()
-            stages.instance = self.object
-            stages.save()
-            return redirect(self.success_url)
-        else:
-            # Проверяем, есть ли ошибки в formset (кроме пустых форм)
-            has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
-            if has_errors:
-                return self.render_to_response(self.get_context_data(form=form))
+            if hasattr(user, 'role'):
+                if user.role != 'ADMIN':
+                    form.instance.assigned_to = user
+            elif getattr(user, 'is_superuser', False):
+                pass
             else:
-                # Если ошибок нет, сохраняем задачу без этапов
+                return redirect('dashboard:home')
+            
+            # Проверяем валидность формы перед сохранением
+            if not form.is_valid():
+                logger.error(f"Form validation failed: {form.errors}")
+                return self.render_to_response(self.get_context_data(form=form))
+                
+            if stages.is_valid():
                 self.object = form.save()
                 stages.instance = self.object
                 stages.save()
+                logger.info(f"Task created successfully: {self.object.id} - {self.object.title}")
                 return redirect(self.success_url)
+            else:
+                # Проверяем, есть ли ошибки в formset (кроме пустых форм)
+                has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
+                if has_errors:
+                    logger.error(f"Stages formset validation failed: {stages.errors}")
+                    return self.render_to_response(self.get_context_data(form=form))
+                else:
+                    # Если ошибок нет, сохраняем задачу без этапов
+                    self.object = form.save()
+                    stages.instance = self.object
+                    stages.save()
+                    logger.info(f"Task created without stages: {self.object.id} - {self.object.title}")
+                    return redirect(self.success_url)
+        except Exception as e:
+            import traceback
+            logger.error(f"Error creating task: {str(e)}\n{traceback.format_exc()}")
+            messages.error(self.request, f"Ошибка при создании задачи: {str(e)}")
+            return self.render_to_response(self.get_context_data(form=form))
 
 class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
