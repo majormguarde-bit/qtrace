@@ -2779,25 +2779,49 @@ def log_password_generation(request):
 def admin_log_list(request):
     """Страница журнала администратора с пагинацией, поиском и фильтрами"""
     from django.core.paginator import Paginator
-    from dashboard.models import AdminPasswordLog
+    from django.db.models import Q
+    from dashboard.models import AdminPasswordLog, TaskLog
     
-    # Получить все логи
-    logs = AdminPasswordLog.objects.all()
+    # Получить все логи паролей
+    password_logs = AdminPasswordLog.objects.all().values(
+        'id', 'admin_username', 'employee_username', 'action', 'timestamp', 
+        'ip_address', 'notes', 'password_length'
+    ).annotate(log_type=django_models.Value('password', output_field=django_models.CharField()))
     
-    # Поиск по логину сотрудника
+    # Получить все логи задач
+    task_logs = TaskLog.objects.all().values(
+        'id', 'admin_username', 'task_title', 'action', 'timestamp', 
+        'ip_address', 'notes', 'count'
+    ).annotate(
+        employee_username=django_models.F('task_title'),
+        password_length=django_models.F('count'),
+        log_type=django_models.Value('task', output_field=django_models.CharField())
+    )
+    
+    # Объединяем оба набора логов
+    from django.db.models import Q, Value, CharField
+    from django.db.models.functions import Cast
+    
+    # Используем union для объединения
+    logs = AdminPasswordLog.objects.all() | TaskLog.objects.all()
+    
+    # Поиск по логину сотрудника или названию задачи
     search_query = request.GET.get('search', '')
     if search_query:
-        logs = logs.filter(employee_username__icontains=search_query)
+        logs = AdminPasswordLog.objects.filter(employee_username__icontains=search_query) | \
+               TaskLog.objects.filter(task_title__icontains=search_query)
     
     # Фильтр по администратору
     admin_filter = request.GET.get('admin', '')
     if admin_filter:
-        logs = logs.filter(admin_username__icontains=admin_filter)
+        logs = AdminPasswordLog.objects.filter(admin_username__icontains=admin_filter) | \
+               TaskLog.objects.filter(admin_username__icontains=admin_filter)
     
     # Фильтр по действию
     action_filter = request.GET.get('action', '')
     if action_filter:
-        logs = logs.filter(action=action_filter)
+        logs = AdminPasswordLog.objects.filter(action=action_filter) | \
+               TaskLog.objects.filter(action=action_filter)
     
     # Фильтр по дате (от)
     date_from = request.GET.get('date_from', '')
@@ -2805,7 +2829,8 @@ def admin_log_list(request):
         from datetime import datetime
         try:
             date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-            logs = logs.filter(timestamp__date__gte=date_from_obj.date())
+            logs = AdminPasswordLog.objects.filter(timestamp__date__gte=date_from_obj.date()) | \
+                   TaskLog.objects.filter(timestamp__date__gte=date_from_obj.date())
         except ValueError:
             pass
     
@@ -2815,9 +2840,18 @@ def admin_log_list(request):
         from datetime import datetime
         try:
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-            logs = logs.filter(timestamp__date__lte=date_to_obj.date())
+            logs = AdminPasswordLog.objects.filter(timestamp__date__lte=date_to_obj.date()) | \
+                   TaskLog.objects.filter(timestamp__date__lte=date_to_obj.date())
         except ValueError:
             pass
+    
+    # Если нет фильтров, получаем все логи
+    if not search_query and not admin_filter and not action_filter and not date_from and not date_to:
+        logs = list(AdminPasswordLog.objects.all()) + list(TaskLog.objects.all())
+        logs.sort(key=lambda x: x.timestamp, reverse=True)
+    else:
+        logs = list(logs)
+        logs.sort(key=lambda x: x.timestamp, reverse=True)
     
     # Пагинация
     paginator = Paginator(logs, 25)  # 25 записей на странице
@@ -2825,10 +2859,15 @@ def admin_log_list(request):
     page_obj = paginator.get_page(page_number)
     
     # Получить список администраторов для фильтра (уникальные admin_username)
-    admins = AdminPasswordLog.objects.values_list('admin_username', flat=True).distinct().order_by('admin_username')
+    admins = set()
+    admins.update(AdminPasswordLog.objects.values_list('admin_username', flat=True).distinct())
+    admins.update(TaskLog.objects.values_list('admin_username', flat=True).distinct())
+    admins = sorted(list(admins))
     
-    # Получить список действий
-    actions = AdminPasswordLog.ACTION_CHOICES
+    # Получить список действий (объединенные)
+    password_actions = AdminPasswordLog.ACTION_CHOICES
+    task_actions = TaskLog.ACTION_CHOICES
+    all_actions = list(set(password_actions + task_actions))
     
     context = {
         'page_obj': page_obj,
@@ -2839,7 +2878,7 @@ def admin_log_list(request):
         'date_from': date_from,
         'date_to': date_to,
         'admins': admins,
-        'actions': actions,
+        'actions': all_actions,
         'total_logs': paginator.count,
     }
     

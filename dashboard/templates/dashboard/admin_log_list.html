@@ -88,9 +88,9 @@
                     <tr>
                         <th class="fw-bold small text-uppercase text-muted">Время</th>
                         <th class="fw-bold small text-uppercase text-muted">Администратор</th>
-                        <th class="fw-bold small text-uppercase text-muted">Сотрудник</th>
+                        <th class="fw-bold small text-uppercase text-muted">Объект</th>
                         <th class="fw-bold small text-uppercase text-muted">Действие</th>
-                        <th class="fw-bold small text-uppercase text-muted">Длина пароля</th>
+                        <th class="fw-bold small text-uppercase text-muted">Тип</th>
                         <th class="fw-bold small text-uppercase text-muted">IP адрес</th>
                         <th class="fw-bold small text-uppercase text-muted">Примечания</th>
                     </tr>
@@ -110,21 +110,39 @@
                                 </span>
                             </td>
                             <td>
-                                <code class="bg-light px-2 py-1 rounded">{{ log.employee_username }}</code>
-                            </td>
-                            <td>
-                                {% if log.action == 'generated' %}
-                                    <span class="badge bg-success">{{ log.get_action_display }}</span>
-                                {% elif log.action == 'reset' %}
-                                    <span class="badge bg-warning">{{ log.get_action_display }}</span>
-                                {% elif log.action == 'deleted' %}
-                                    <span class="badge bg-danger">{{ log.get_action_display }}</span>
+                                {% if log|add:"" == log %}
+                                    {# Это TaskLog #}
+                                    <code class="bg-light px-2 py-1 rounded">{{ log.task_title }}</code>
                                 {% else %}
-                                    <span class="badge bg-info">{{ log.get_action_display }}</span>
+                                    {# Это AdminPasswordLog #}
+                                    <code class="bg-light px-2 py-1 rounded">{{ log.employee_username }}</code>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark">{{ log.password_length }} символов</span>
+                                {% if log.action == 'generated' %}
+                                    <span class="badge bg-success">Сгенерирован</span>
+                                {% elif log.action == 'reset' %}
+                                    <span class="badge bg-warning">Сброшен</span>
+                                {% elif log.action == 'deleted' %}
+                                    <span class="badge bg-danger">Удалена</span>
+                                {% elif log.action == 'created' %}
+                                    <span class="badge bg-info">Создана</span>
+                                {% elif log.action == 'bulk_deleted' %}
+                                    <span class="badge bg-danger">Массовое удаление</span>
+                                {% elif log.action == 'cleared' %}
+                                    <span class="badge bg-danger">Очищены все</span>
+                                {% elif log.action == 'updated' %}
+                                    <span class="badge bg-warning">Обновлена</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ log.get_action_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log|add:"" == log %}
+                                    <span class="badge bg-light text-dark">Задача</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">Пароль</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <small class="text-muted font-monospace">{{ log.ip_address|default:"—" }}</small>
