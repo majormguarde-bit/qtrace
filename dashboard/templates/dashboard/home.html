@@ -343,6 +343,21 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const columns = document.querySelectorAll('.kanban-tasks-list');
     
@@ -353,12 +368,13 @@ document.addEventListener('DOMContentLoaded', function() {
             ghostClass: 'bg-light',
             dragClass: 'sortable-drag',
             onEnd: function(evt) {
-                const taskId = evt.item.dataset.taskId;
+                const taskCard = evt.item;
+                const taskId = taskCard.dataset.taskId;
                 const newStatus = evt.to.dataset.status;
                 const oldStatus = evt.from.dataset.status;
                 
-                if (newStatus !== oldStatus) {
-                    updateTaskStatus(taskId, newStatus, evt.item);
+                if (newStatus !== oldStatus && taskId) {
+                    updateTaskStatus(taskId, newStatus, taskCard);
                 }
             }
         });
@@ -366,22 +382,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateTaskStatus(taskId, status, item) {
         const url = `/dashboard/tasks/${taskId}/status-update-ajax/`;
-        const formData = new FormData();
-        formData.append('status', status);
         
         // Показываем индикатор загрузки на карточке
         item.style.opacity = '0.5';
+        item.style.pointerEvents = 'none';
         
         fetch(url, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify({ status: status })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             item.style.opacity = '1';
+            item.style.pointerEvents = 'auto';
+            
             if (data.status === 'success') {
                 // Обновляем бейдж статуса на карточке
                 const badge = item.querySelector('.badge');
@@ -403,14 +426,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Обновляем счетчики колонок
                 updateColumnCounters();
             } else {
+                console.error('Error response:', data);
                 alert('Ошибка при обновлении статуса: ' + (data.errors ? JSON.stringify(data.errors) : 'Неизвестная ошибка'));
-                location.reload(); // Перезагружаем страницу в случае ошибки, чтобы вернуть карточку на место
+                location.reload();
             }
         })
         .catch(error => {
             item.style.opacity = '1';
+            item.style.pointerEvents = 'auto';
             console.error('Error:', error);
-            alert('Ошибка сети при обновлении статуса');
+            alert('Ошибка сети при обновлении статуса: ' + error.message);
             location.reload();
         });
     }
