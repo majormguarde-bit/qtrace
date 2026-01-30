@@ -238,11 +238,46 @@ class TaskListView(LoginRequiredMixin, ListView):
         user = self.request.user
         if hasattr(user, 'role'):
             if user.role == 'ADMIN':
-                return Task.objects.all().prefetch_related('stages__media').order_by('-created_at')
-            return Task.objects.filter(assigned_to=user).prefetch_related('stages__media').order_by('-created_at')
+                queryset = Task.objects.all().prefetch_related('stages__media')
+            else:
+                queryset = Task.objects.filter(assigned_to=user).prefetch_related('stages__media')
         elif getattr(user, 'is_superuser', False):
-            return Task.objects.all().prefetch_related('stages__media').order_by('-created_at')
-        return Task.objects.none()
+            queryset = Task.objects.all().prefetch_related('stages__media')
+        else:
+            return Task.objects.none()
+        
+        # Apply filters
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        assigned_to = self.request.GET.get('assigned_to')
+        if assigned_to:
+            queryset = queryset.filter(assigned_to_id=assigned_to)
+        
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(title__icontains=search)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Add filter options
+        context['status_choices'] = Task.STATUS_CHOICES
+        context['current_status'] = self.request.GET.get('status', '')
+        context['current_search'] = self.request.GET.get('search', '')
+        context['current_assigned_to'] = self.request.GET.get('assigned_to', '')
+        
+        # Get available employees for filter
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            context['employees'] = TenantUser.objects.filter(role='WORKER').order_by('first_name', 'last_name')
+        else:
+            context['employees'] = TenantUser.objects.none()
+        
+        return context
 
 class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
@@ -411,6 +446,79 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         elif getattr(user, 'is_superuser', False):
             return Task.objects.all()
         return Task.objects.none()
+
+@require_POST
+@login_required
+def delete_selected_tasks(request):
+    """Удаление выбранных задач"""
+    import logging
+    logger = logging.getLogger('django')
+    
+    try:
+        user = request.user
+        task_ids = request.POST.getlist('task_ids')
+        
+        if not task_ids:
+            messages.warning(request, 'Не выбраны задачи для удаления')
+            return redirect('dashboard:task_list')
+        
+        # Проверяем права доступа
+        if hasattr(user, 'role'):
+            if user.role == 'ADMIN':
+                tasks = Task.objects.filter(id__in=task_ids)
+            else:
+                tasks = Task.objects.filter(id__in=task_ids, assigned_to=user)
+        elif getattr(user, 'is_superuser', False):
+            tasks = Task.objects.filter(id__in=task_ids)
+        else:
+            messages.error(request, 'У вас нет прав для удаления задач')
+            return redirect('dashboard:task_list')
+        
+        count = tasks.count()
+        tasks.delete()
+        
+        logger.info(f"User {user} deleted {count} tasks")
+        messages.success(request, f"✓ Удалено {count} задач")
+        
+    except Exception as e:
+        logger.error(f"Error deleting tasks: {str(e)}")
+        messages.error(request, f"❌ Ошибка при удалении задач: {str(e)}")
+    
+    return redirect('dashboard:task_list')
+
+@require_POST
+@login_required
+def clear_all_tasks(request):
+    """Очистить все задачи"""
+    import logging
+    logger = logging.getLogger('django')
+    
+    try:
+        user = request.user
+        
+        # Проверяем права доступа - только админ может очищать все задачи
+        if hasattr(user, 'role'):
+            if user.role != 'ADMIN':
+                messages.error(request, 'Только администратор может очищать все задачи')
+                return redirect('dashboard:task_list')
+            tasks = Task.objects.all()
+        elif getattr(user, 'is_superuser', False):
+            tasks = Task.objects.all()
+        else:
+            messages.error(request, 'У вас нет прав для очистки задач')
+            return redirect('dashboard:task_list')
+        
+        count = tasks.count()
+        tasks.delete()
+        
+        logger.info(f"User {user} cleared all {count} tasks")
+        messages.success(request, f"✓ Очищено {count} задач")
+        
+    except Exception as e:
+        logger.error(f"Error clearing tasks: {str(e)}")
+        messages.error(request, f"❌ Ошибка при очистке задач: {str(e)}")
+    
+    return redirect('dashboard:task_list')
 
 # --- Media ---
 

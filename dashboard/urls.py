@@ -13,6 +13,8 @@ urlpatterns = [
     path('tasks/', views.TaskListView.as_view(), name='task_list'),
     path('tasks/create/', views.TaskCreateView.as_view(), name='task_create'),
     path('tasks/<int:pk>/edit/', views.TaskUpdateView.as_view(), name='task_edit'),
+    path('tasks/delete-selected/', views.delete_selected_tasks, name='delete_selected_tasks'),
+    path('tasks/clear-all/', views.clear_all_tasks, name='clear_all_tasks'),
 
     # Media
     path('media/', views.MediaListView.as_view(), name='media_list'),

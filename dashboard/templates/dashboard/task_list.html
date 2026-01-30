@@ -8,12 +8,82 @@
     </a>
 </div>
 
+<!-- Filters Panel -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 text-muted small text-uppercase fw-bold">Фильтры и поиск</h6>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearAllModal" title="Удалить все задачи">
+                <i class="bi bi-trash me-1"></i> Очистить список
+            </button>
+        </div>
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted">Поиск по названию</label>
+                <input type="text" name="search" class="form-control" placeholder="Введите название..." value="{{ current_search }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">-- Все статусы --</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if employees %}
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Исполнитель</label>
+                <select name="assigned_to" class="form-select">
+                    <option value="">-- Все исполнители --</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}" {% if current_assigned_to == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.get_full_name|default:emp.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Фильтр
+                </button>
+            </div>
+            {% if current_search or current_status or current_assigned_to %}
+            <div class="col-md-2">
+                <a href="{% url 'dashboard:task_list' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-circle me-1"></i> Сброс
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Actions Panel -->
+<div class="card shadow-sm border-0 mb-4 d-none" id="bulk-actions-panel">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+            <span id="selected-count">0</span> задач выбрано
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-danger btn-sm" id="delete-selected-btn" data-bs-toggle="modal" data-bs-target="#deleteSelectedModal">
+                <i class="bi bi-trash me-1"></i> Удалить выбранные
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-selection-btn">
+                <i class="bi bi-x-circle me-1"></i> Отменить выбор
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light text-muted small text-uppercase">
                     <tr>
+                        <th class="ps-4" style="width: 40px;">
+                            <input type="checkbox" id="select-all-checkbox" class="form-check-input">
+                        </th>
                         <th class="ps-4" style="width: 40px;"></th>
                         <th>Заголовок</th>
                         <th>Статус</th>
@@ -25,6 +95,9 @@
                     {% for task in tasks %}
                     <!-- Main Row -->
                     <tr class="task-row cursor-pointer" data-bs-toggle="collapse" data-bs-target="#task-details-{{ task.id }}" aria-expanded="false">
+                        <td class="ps-4" onclick="event.stopPropagation();">
+                            <input type="checkbox" class="form-check-input task-checkbox" value="{{ task.id }}" data-task-id="{{ task.id }}">
+                        </td>
                         <td class="ps-4">
                             <i class="bi bi-chevron-right chevron-icon transition-300"></i>
                         </td>
@@ -243,4 +316,118 @@
     </ul>
 </nav>
 {% endif %}
+
+<!-- Delete Selected Modal -->
+<div class="modal fade" id="deleteSelectedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удаление выбранных задач</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить <strong id="delete-count">0</strong> выбранных задач?</p>
+                <p class="text-muted small">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'dashboard:delete_selected_tasks' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <div id="task-ids-container"></div>
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear All Modal -->
+<div class="modal fade" id="clearAllModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Очистить все задачи</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>⚠️ Внимание!</strong></p>
+                <p>Вы уверены, что хотите удалить <strong>ВСЕ</strong> задачи?</p>
+                <p class="text-muted small">Это действие нельзя отменить и удалит все задачи в системе.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'dashboard:clear_all_tasks' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Удалить все</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Управление выбором задач
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+    const bulkActionsPanel = document.getElementById('bulk-actions-panel');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+    const clearSelectionBtn = document.getElementById('clear-selection-btn');
+    const deleteCountSpan = document.getElementById('delete-count');
+    const taskIdsContainer = document.getElementById('task-ids-container');
+    
+    function updateBulkActionsPanel() {
+        const selectedCount = document.querySelectorAll('.task-checkbox:checked').length;
+        
+        if (selectedCount > 0) {
+            bulkActionsPanel.classList.remove('d-none');
+            selectedCountSpan.textContent = selectedCount;
+            deleteCountSpan.textContent = selectedCount;
+            
+            // Обновляем скрытые поля с ID задач
+            taskIdsContainer.innerHTML = '';
+            document.querySelectorAll('.task-checkbox:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'task_ids';
+                input.value = checkbox.value;
+                taskIdsContainer.appendChild(input);
+            });
+        } else {
+            bulkActionsPanel.classList.add('d-none');
+        }
+    }
+    
+    // Select all checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        taskCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBulkActionsPanel();
+    });
+    
+    // Individual checkboxes
+    taskCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkActionsPanel();
+            
+            // Update select all checkbox state
+            const allChecked = Array.from(taskCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(taskCheckboxes).some(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        });
+    });
+    
+    // Clear selection button
+    clearSelectionBtn.addEventListener('click', function() {
+        selectAllCheckbox.checked = false;
+        taskCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateBulkActionsPanel();
+    });
+});
+</script>
 {% endblock %}
