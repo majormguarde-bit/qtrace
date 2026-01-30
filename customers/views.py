@@ -1789,10 +1789,12 @@ def superuser_template_edit(request, template_id):
             
             # Обработка новых этапов и материалов
             stages_data = request.POST.get('stages_data')
+            print(f"DEBUG SUPERUSER: stages_data = {stages_data}")  # DEBUG
             if stages_data:
                 try:
                     from task_templates.models import DurationUnit
                     stages = json.loads(stages_data)
+                    print(f"DEBUG SUPERUSER: Parsed stages = {stages}")  # DEBUG
                     for stage_data in stages:
                         # Получаем duration_unit по ID или используем default (hour)
                         duration_unit_id = stage_data.get('duration_unit_id')
@@ -1820,20 +1822,26 @@ def superuser_template_edit(request, template_id):
                         
                         # Обработка материалов для этапа
                         materials = stage_data.get('materials', [])
+                        print(f"DEBUG SUPERUSER: Stage '{stage.name}' materials = {materials}")  # DEBUG
                         for material_data in materials:
                             material_id = material_data.get('id')
+                            quantity = material_data.get('quantity', 1)
+                            print(f"DEBUG SUPERUSER: Creating StageMaterial - material_id={material_id}, quantity={quantity}")  # DEBUG
                             if material_id:
                                 try:
                                     material = Material.objects.get(id=material_id)
                                     # Создаём связь материала с этапом
-                                    StageMaterial.objects.create(
+                                    stage_material = StageMaterial.objects.create(
                                         stage=stage,
                                         material=material,
-                                        quantity=float(material_data.get('quantity', 1))
+                                        quantity=float(quantity)
                                     )
+                                    print(f"DEBUG SUPERUSER: Created StageMaterial id={stage_material.id}, quantity={stage_material.quantity}")  # DEBUG
                                 except Material.DoesNotExist:
+                                    print(f"DEBUG SUPERUSER: Material with id={material_id} not found")  # DEBUG
                                     pass  # Пропускаем несуществующие материалы
                 except (json.JSONDecodeError, ValueError) as e:
+                    print(f"DEBUG SUPERUSER: Error parsing stages_data: {e}")  # DEBUG
                     messages.warning(request, f'Ошибка при сохранении этапов: {e}')
             
             messages.success(request, f'Шаблон "{template.name}" успешно обновлен.')

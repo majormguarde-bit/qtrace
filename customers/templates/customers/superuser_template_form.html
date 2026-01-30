@@ -1,5 +1,6 @@
 {% extends "customers/superuser_base.html" %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}{% if is_create %}Создание шаблона{% else %}Редактирование шаблона{% endif %} - Панель управления{% endblock %}
 {% block header_title %}{% if is_create %}Создание нового шаблона{% else %}Редактирование шаблона{% endif %}{% endblock %}
@@ -134,7 +135,7 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <small class="form-text text-muted">Кол-во</small>
-                                                <input type="number" class="form-control form-control-sm material-quantity" value="{{ material.quantity }}" step="0.01" min="0.01">
+                                                <input type="number" class="form-control form-control-sm material-quantity" value="{{ material.quantity|unlocalize }}" step="0.01" min="0.01">
                                             </div>
                                             <div class="col-md-2">
                                                 <small class="form-text text-muted">Ед. изм.</small>
@@ -265,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateMaterialSelect(select) {
         const currentValue = select.value || select.dataset.materialId;
+        console.log('DEBUG: updateMaterialSelect called, currentValue=', currentValue, 'dataset.materialId=', select.dataset.materialId);  // DEBUG
         select.innerHTML = '<option value="">-- Выберите материал --</option>';
         
         materials.forEach(material => {
@@ -274,6 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
             option.dataset.unit = material.unit_abbreviation;
             if (material.id == currentValue) {
                 option.selected = true;
+                console.log('DEBUG: Selected material', material.id, material.name);  // DEBUG
             }
             select.appendChild(option);
         });
@@ -483,12 +486,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
+        console.log('DEBUG SUPERUSER: Submitting form with stages:', stages);  // DEBUG
+        
         // Store stages data in hidden field
         const stagesInput = document.createElement('input');
         stagesInput.type = 'hidden';
         stagesInput.name = 'stages_data';
         stagesInput.value = JSON.stringify(stages);
         this.appendChild(stagesInput);
+        
+        console.log('DEBUG SUPERUSER: stages_data field value:', stagesInput.value);  // DEBUG
     });
 });
 </script>

@@ -1276,9 +1276,11 @@ class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
         
         # Обработка этапов и материалов из JSON
         stages_data = self.request.POST.get('stages_data')
+        print(f"DEBUG: stages_data = {stages_data}")  # DEBUG
         if stages_data:
             try:
                 stages = json.loads(stages_data)
+                print(f"DEBUG: Parsed stages = {stages}")  # DEBUG
                 for stage_data in stages:
                     # Получаем duration_unit по ID или используем default (hour)
                     duration_unit_id = stage_data.get('duration_unit_id')
@@ -1306,20 +1308,26 @@ class LocalTemplateEditView(LoginRequiredMixin, UpdateView):
                     
                     # Обработка материалов для этапа
                     materials = stage_data.get('materials', [])
+                    print(f"DEBUG: Stage '{stage.name}' materials = {materials}")  # DEBUG
                     for material_data in materials:
                         material_id = material_data.get('id')
+                        quantity = material_data.get('quantity', 1)
+                        print(f"DEBUG: Creating StageMaterial - material_id={material_id}, quantity={quantity}")  # DEBUG
                         if material_id:
                             try:
                                 material = Material.objects.get(id=material_id)
                                 # Создаём связь материала с этапом
-                                StageMaterial.objects.create(
+                                stage_material = StageMaterial.objects.create(
                                     stage=stage,
                                     material=material,
-                                    quantity=float(material_data.get('quantity', 1))
+                                    quantity=float(quantity)
                                 )
+                                print(f"DEBUG: Created StageMaterial id={stage_material.id}, quantity={stage_material.quantity}")  # DEBUG
                             except Material.DoesNotExist:
+                                print(f"DEBUG: Material with id={material_id} not found")  # DEBUG
                                 pass  # Пропускаем несуществующие материалы
             except (json.JSONDecodeError, ValueError) as e:
+                print(f"DEBUG: Error parsing stages_data: {e}")  # DEBUG
                 messages.warning(self.request, f'Ошибка при сохранении этапов: {e}')
         
         messages.success(self.request, 'Мой шаблон успешно обновлен.')
