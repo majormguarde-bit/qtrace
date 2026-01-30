@@ -271,32 +271,53 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
             
             # Проверяем валидность формы перед сохранением
             if not form.is_valid():
+                error_msg = f"Ошибка в форме: {', '.join([f'{k}: {v[0]}' for k, v in form.errors.items()])}"
                 logger.error(f"Form validation failed: {form.errors}")
+                messages.error(self.request, error_msg)
                 return self.render_to_response(self.get_context_data(form=form))
-                
-            if stages.is_valid():
-                self.object = form.save()
-                stages.instance = self.object
-                stages.save()
-                logger.info(f"Task created successfully: {self.object.id} - {self.object.title}")
-                return redirect(self.success_url)
-            else:
-                # Проверяем, есть ли ошибки в formset (кроме пустых форм)
-                has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
-                if has_errors:
-                    logger.error(f"Stages formset validation failed: {stages.errors}")
-                    return self.render_to_response(self.get_context_data(form=form))
-                else:
-                    # Если ошибок нет, сохраняем задачу без этапов
-                    self.object = form.save()
-                    stages.instance = self.object
-                    stages.save()
-                    logger.info(f"Task created without stages: {self.object.id} - {self.object.title}")
-                    return redirect(self.success_url)
+            
+            # Фильтруем пустые формы в formset
+            # Оставляем только те формы, которые имеют данные
+            valid_forms = []
+            for stage_form in stages.forms:
+                # Пропускаем пустые формы (DELETE отмечена или все поля пусты)
+                if stage_form.cleaned_data and not stage_form.cleaned_data.get('DELETE', False):
+                    valid_forms.append(stage_form)
+            
+            # Если есть ошибки в заполненных формах
+            has_errors = False
+            error_details = []
+            for idx, stage_form in enumerate(stages.forms):
+                if stage_form.cleaned_data and not stage_form.cleaned_data.get('DELETE', False):
+                    if stage_form.errors:
+                        has_errors = True
+                        error_msg = f"Этап {idx + 1}: {', '.join([f'{k}: {v[0]}' for k, v in stage_form.errors.items()])}"
+                        error_details.append(error_msg)
+                        logger.error(f"Stage form {idx} errors: {stage_form.errors}")
+            
+            if has_errors:
+                full_error = "Ошибки в этапах: " + "; ".join(error_details)
+                logger.error(f"Stages formset validation failed: {stages.errors}")
+                messages.error(self.request, full_error)
+                return self.render_to_response(self.get_context_data(form=form))
+            
+            # Сохраняем задачу
+            self.object = form.save()
+            
+            # Сохраняем только заполненные этапы
+            for stage_form in valid_forms:
+                stage = stage_form.save(commit=False)
+                stage.task = self.object
+                stage.save()
+            
+            logger.info(f"Task created successfully: {self.object.id} - {self.object.title} with {len(valid_forms)} stages")
+            messages.success(self.request, f"✓ Задача '{self.object.title}' успешно создана с {len(valid_forms)} этапами!")
+            return redirect(self.success_url)
+            
         except Exception as e:
             import traceback
             logger.error(f"Error creating task: {str(e)}\n{traceback.format_exc()}")
-            messages.error(self.request, f"Ошибка при создании задачи: {str(e)}")
+            messages.error(self.request, f"❌ Ошибка при создании задачи: {str(e)}")
             return self.render_to_response(self.get_context_data(form=form))
 
 class TaskUpdateView(LoginRequiredMixin, UpdateView):
