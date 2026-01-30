@@ -896,6 +896,63 @@ class EmployeeDeleteView(LoginRequiredMixin, DeleteView):
         if (hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False):
             return super().dispatch(request, *args, **kwargs)
         return redirect('dashboard:home')
+    
+    def delete(self, request, *args, **kwargs):
+        # Получаем объект ДО удаления для логирования
+        employee = self.get_object()
+        employee_username = employee.username
+        
+        # Логируем удаление
+        try:
+            from dashboard.models import AdminPasswordLog
+            import logging
+            
+            # Get client IP
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            
+            # Get User Agent
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            
+            # Determine admin user and username
+            admin_user = None
+            admin_username = 'unknown'
+            
+            if hasattr(request.user, 'username'):
+                admin_username = request.user.username
+            
+            # If it's a Django User (superuser), set admin_user
+            if isinstance(request.user, User):
+                admin_user = request.user
+            
+            # Create log entry
+            AdminPasswordLog.objects.create(
+                admin_user=admin_user,
+                admin_username=admin_username,
+                employee_username=employee_username,
+                action='deleted',
+                password_length=0,
+                ip_address=ip,
+                user_agent=user_agent,
+                notes="Employee deleted"
+            )
+            
+            # Log to file
+            logger = logging.getLogger('admin_password_log')
+            logger.info(
+                f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
+                f"Action: employee_deleted | Employee: {employee_username} | IP: {ip}"
+            )
+        except Exception as e:
+            import traceback
+            logger = logging.getLogger('admin_password_log')
+            logger.error(f"Error logging employee deletion: {str(e)}\n{traceback.format_exc()}")
+        
+        # Вызываем оригинальный delete
+        return super().delete(request, *args, **kwargs)
 
 # --- AJAX Task Management ---
 
@@ -2557,3 +2614,123 @@ def admin_log_list(request):
     }
     
     return render(request, 'dashboard/admin_log_list.html', context)
+
+
+@login_required
+@require_POST
+def clear_admin_logs_filtered(request):
+    """Очистить журнал администратора с применением фильтров"""
+    from dashboard.models import AdminPasswordLog
+    import logging
+    
+    # Проверка прав доступа
+    user = request.user
+    if not ((hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)):
+        messages.error(request, 'У вас нет прав для очистки журнала.')
+        return redirect('dashboard:admin_log_list')
+    
+    try:
+        # Получить все логи
+        logs = AdminPasswordLog.objects.all()
+        
+        # Применить фильтры
+        search_query = request.POST.get('search', '')
+        if search_query:
+            logs = logs.filter(employee_username__icontains=search_query)
+        
+        admin_filter = request.POST.get('admin', '')
+        if admin_filter:
+            logs = logs.filter(admin_username__icontains=admin_filter)
+        
+        action_filter = request.POST.get('action', '')
+        if action_filter:
+            logs = logs.filter(action=action_filter)
+        
+        date_from = request.POST.get('date_from', '')
+        if date_from:
+            from datetime import datetime
+            try:
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                logs = logs.filter(timestamp__date__gte=date_from_obj.date())
+            except ValueError:
+                pass
+        
+        date_to = request.POST.get('date_to', '')
+        if date_to:
+            from datetime import datetime
+            try:
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                logs = logs.filter(timestamp__date__lte=date_to_obj.date())
+            except ValueError:
+                pass
+        
+        # Подсчитаем количество записей для удаления
+        count = logs.count()
+        
+        if count == 0:
+            messages.warning(request, 'Нет записей для удаления по выбранным фильтрам.')
+            return redirect('dashboard:admin_log_list')
+        
+        # Удаляем записи
+        logs.delete()
+        
+        # Логируем очистку
+        logger = logging.getLogger('admin_password_log')
+        admin_username = request.user.username if hasattr(request.user, 'username') else 'unknown'
+        logger.info(
+            f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
+            f"Action: logs_cleared_filtered | Records deleted: {count}"
+        )
+        
+        messages.success(request, f'Удалено {count} записей из журнала.')
+        return redirect('dashboard:admin_log_list')
+    
+    except Exception as e:
+        import traceback
+        logger = logging.getLogger('admin_password_log')
+        logger.error(f"Error clearing filtered logs: {str(e)}\n{traceback.format_exc()}")
+        messages.error(request, f'Ошибка при очистке журнала: {str(e)}')
+        return redirect('dashboard:admin_log_list')
+
+
+@login_required
+@require_POST
+def clear_admin_logs_all(request):
+    """Очистить весь журнал администратора"""
+    from dashboard.models import AdminPasswordLog
+    import logging
+    
+    # Проверка прав доступа
+    user = request.user
+    if not ((hasattr(user, 'role') and user.role == 'ADMIN') or getattr(user, 'is_superuser', False)):
+        messages.error(request, 'У вас нет прав для очистки журнала.')
+        return redirect('dashboard:admin_log_list')
+    
+    try:
+        # Подсчитаем количество записей
+        count = AdminPasswordLog.objects.count()
+        
+        if count == 0:
+            messages.warning(request, 'Журнал уже пуст.')
+            return redirect('dashboard:admin_log_list')
+        
+        # Удаляем все записи
+        AdminPasswordLog.objects.all().delete()
+        
+        # Логируем очистку
+        logger = logging.getLogger('admin_password_log')
+        admin_username = request.user.username if hasattr(request.user, 'username') else 'unknown'
+        logger.info(
+            f"[{timezone.now().isoformat()}] Admin: {admin_username} | "
+            f"Action: logs_cleared_all | Records deleted: {count}"
+        )
+        
+        messages.success(request, f'Журнал полностью очищен. Удалено {count} записей.')
+        return redirect('dashboard:admin_log_list')
+    
+    except Exception as e:
+        import traceback
+        logger = logging.getLogger('admin_password_log')
+        logger.error(f"Error clearing all logs: {str(e)}\n{traceback.format_exc()}")
+        messages.error(request, f'Ошибка при очистке журнала: {str(e)}')
+        return redirect('dashboard:admin_log_list')

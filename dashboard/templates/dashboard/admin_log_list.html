@@ -69,6 +69,12 @@
                     <a href="{% url 'dashboard:admin_log_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
                         <i class="bi bi-arrow-clockwise me-1"></i>Сбросить
                     </a>
+                    <button type="button" class="btn btn-outline-warning rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#clearFilteredModal" title="Очистить записи по фильтрам">
+                        <i class="bi bi-trash me-1"></i>Очистить по фильтрам
+                    </button>
+                    <button type="button" class="btn btn-outline-danger rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#clearAllModal" title="Очистить весь журнал">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Очистить всё
+                    </button>
                 </div>
             </form>
         </div>
@@ -111,6 +117,8 @@
                                     <span class="badge bg-success">{{ log.get_action_display }}</span>
                                 {% elif log.action == 'reset' %}
                                     <span class="badge bg-warning">{{ log.get_action_display }}</span>
+                                {% elif log.action == 'deleted' %}
+                                    <span class="badge bg-danger">{{ log.get_action_display }}</span>
                                 {% else %}
                                     <span class="badge bg-info">{{ log.get_action_display }}</span>
                                 {% endif %}
@@ -199,4 +207,75 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modal для очистки по фильтрам -->
+<div class="modal fade" id="clearFilteredModal" tabindex="-1" aria-labelledby="clearFilteredModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0 bg-warning bg-opacity-10">
+                <h5 class="modal-title fw-bold" id="clearFilteredModalLabel">
+                    <i class="bi bi-exclamation-circle me-2 text-warning"></i>Очистить записи по фильтрам
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    Вы уверены, что хотите удалить все записи журнала, соответствующие текущим фильтрам?
+                </p>
+                <div class="alert alert-info small mt-3 mb-0">
+                    <strong>Это действие необратимо!</strong> Удаленные записи невозможно восстановить.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'dashboard:clear_admin_logs_filtered' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="search" value="{{ search_query }}">
+                    <input type="hidden" name="admin" value="{{ admin_filter }}">
+                    <input type="hidden" name="action" value="{{ action_filter }}">
+                    <input type="hidden" name="date_from" value="{{ date_from }}">
+                    <input type="hidden" name="date_to" value="{{ date_to }}">
+                    <button type="submit" class="btn btn-warning rounded-pill px-4">
+                        <i class="bi bi-trash me-1"></i>Удалить записи
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для полной очистки -->
+<div class="modal fade" id="clearAllModal" tabindex="-1" aria-labelledby="clearAllModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0 bg-danger bg-opacity-10">
+                <h5 class="modal-title fw-bold" id="clearAllModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2 text-danger"></i>Полная очистка журнала
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">
+                    <strong class="text-danger">⚠️ ВНИМАНИЕ!</strong>
+                </p>
+                <p class="mb-0">
+                    Вы уверены, что хотите удалить <strong>ВСЕ {{ total_logs }} записей</strong> из журнала администратора?
+                </p>
+                <div class="alert alert-danger small mt-3 mb-0">
+                    <strong>Это действие необратимо!</strong> Все данные о паролях, действиях администраторов и сотрудников будут удалены.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'dashboard:clear_admin_logs_all' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Удалить всё
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

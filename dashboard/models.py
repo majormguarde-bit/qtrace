@@ -10,6 +10,7 @@ class AdminPasswordLog(models.Model):
         ('generated', 'Сгенерирован'),
         ('reset', 'Сброшен'),
         ('viewed', 'Просмотрен'),
+        ('deleted', 'Удален'),
     ]
     
     admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Администратор (Django User)')
