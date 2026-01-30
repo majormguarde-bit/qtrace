@@ -10,6 +10,9 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    {% if request.GET.next %}
+                    <input type="hidden" name="next" value="{{ request.GET.next }}">
+                    {% endif %}
                     
                     <!-- Выбор шаблона -->
                     <div class="mb-4 p-3 bg-light rounded border-start border-primary border-4">
@@ -134,7 +137,11 @@
                     </button>
 
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="javascript:history.back()" class="btn btn-secondary">Назад</a>
+                        {% if request.GET.next %}
+                        <a href="{{ request.GET.next }}" class="btn btn-secondary">Назад</a>
+                        {% else %}
+                        <a href="{% url 'dashboard:task_list' %}" class="btn btn-secondary">Назад</a>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Сохранить{% else %}Создать{% endif %}</button>
                     </div>
                 </form>

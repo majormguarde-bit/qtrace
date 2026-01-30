@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (kanbanCard) {
             const taskId = kanbanCard.dataset.taskId;
             if (taskId) {
-                window.location.href = `/tasks/${taskId}/edit/`;
+                window.location.href = `/tasks/${taskId}/edit/?next=/`;
             }
         }
     });

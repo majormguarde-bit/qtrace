@@ -15,7 +15,7 @@
                     <i class="bi bi-three-dots-vertical" style="font-size: 0.8rem;"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
-                    <li><a class="dropdown-item" href="{% url 'dashboard:task_edit' task.id %}"><i class="bi bi-pencil me-2"></i>Изменить</a></li>
+                    <li><a class="dropdown-item" href="{% url 'dashboard:task_edit' task.id %}?next=/"><i class="bi bi-pencil me-2"></i>Изменить</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Удалить</a></li>
                 </ul>
@@ -32,10 +32,17 @@
                 {% if task.supervisor %}
                     <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-2" 
                          style="width: 24px; height: 24px; font-size: 0.7rem;" 
-                         title="{{ task.supervisor.get_full_name|default:task.supervisor.username }}">
-                        {{ task.supervisor.username|slice:":1"|upper }}
+                         title="{{ task.supervisor.get_full_name }} ({{ task.supervisor.position.name|default:'Без должности' }})">
+                        {{ task.supervisor.first_name|slice:":1"|upper }}{{ task.supervisor.last_name|slice:":1"|upper }}
                     </div>
-                    <span class="small text-muted" style="font-size: 0.75rem;">{{ task.supervisor.username }}</span>
+                    <span class="small text-muted" style="font-size: 0.75rem;">
+                        {{ task.supervisor.get_full_name }} 
+                        {% if task.supervisor.position %}
+                            ({{ task.supervisor.position.name }})
+                        {% else %}
+                            (Без должности)
+                        {% endif %}
+                    </span>
                 {% else %}
                     <span class="small text-muted" style="font-size: 0.75rem;">Не назначен</span>
                 {% endif %}

@@ -99,10 +99,10 @@ def home(request):
     # Общая статистика и данные по тарифу
     tasks_qs = Task.objects.none()
     if user_role == 'ADMIN':
-        tasks_qs = Task.objects.all().prefetch_related('stages', 'assigned_to')
+        tasks_qs = Task.objects.all().select_related('supervisor__position').prefetch_related('stages', 'assigned_to')
     elif hasattr(user, 'role'):
         # Worker sees only their own data
-        tasks_qs = Task.objects.filter(assigned_to=user).prefetch_related('stages', 'assigned_to')
+        tasks_qs = Task.objects.filter(assigned_to=user).select_related('supervisor__position').prefetch_related('stages', 'assigned_to')
 
     context['tasks_count'] = tasks_qs.count()
     context['media_count'] = Media.objects.count() if user_role == 'ADMIN' else Media.objects.filter(uploaded_by=user).count()
@@ -461,15 +461,15 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         context = self.get_context_data()
         stages = context['stages']
+        
+        # Определяем URL для возврата
+        next_url = self.request.GET.get('next') or self.request.POST.get('next') or self.success_url
+        
         if stages.is_valid():
             self.object = form.save()
             stages.instance = self.object
             stages.save()
-            # Возвращаемся на предыдущую страницу или на список задач
-            referer = self.request.META.get('HTTP_REFERER', '')
-            if 'dashboard' in referer or referer.endswith('/'):
-                return redirect(referer)
-            return redirect(self.success_url)
+            return redirect(next_url)
         else:
             # Проверяем, есть ли ошибки в formset (кроме пустых форм)
             has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
@@ -480,11 +480,7 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
                 self.object = form.save()
                 stages.instance = self.object
                 stages.save()
-                # Возвращаемся на предыдущую страницу или на список задач
-                referer = self.request.META.get('HTTP_REFERER', '')
-                if 'dashboard' in referer or referer.endswith('/'):
-                    return redirect(referer)
-                return redirect(self.success_url)
+                return redirect(next_url)
 
     def get_queryset(self):
         user = self.request.user
