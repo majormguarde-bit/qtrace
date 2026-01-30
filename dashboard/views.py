@@ -699,6 +699,21 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Генерируем предложенный логин
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            role = self.request.POST.get('role', 'WORKER') if self.request.method == 'POST' else 'WORKER'
+            # Получаем количество сотрудников с этой ролью
+            count = TenantUser.objects.filter(role=role).count() + 1
+            # Формируем логин: Предприятие-Роль-N
+            tenant_name = tenant.name.replace(' ', '-').lower()
+            role_name = role.lower()
+            suggested_username = f"{tenant_name}-{role_name}-{count}"
+            context['suggested_username'] = suggested_username
+        return context
+
     def form_valid(self, form):
         # Повторная проверка при сохранении формы (на случай одновременных запросов)
         tenant = getattr(self.request, 'tenant', None)
@@ -707,6 +722,17 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
             if current_user_count >= tenant.subscription_plan.max_users:
                 messages.error(self.request, f"Превышен лимит пользователей для вашего тарифа ({tenant.subscription_plan.max_users}).")
                 return redirect('dashboard:employee_list')
+        
+        # Если логин не заполнен, генерируем его автоматически
+        if not form.cleaned_data.get('username'):
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                role = form.cleaned_data.get('role', 'WORKER')
+                count = TenantUser.objects.filter(role=role).count() + 1
+                tenant_name = tenant.name.replace(' ', '-').lower()
+                role_name = role.lower()
+                form.instance.username = f"{tenant_name}-{role_name}-{count}"
+        
         return super().form_valid(form)
 
 class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
