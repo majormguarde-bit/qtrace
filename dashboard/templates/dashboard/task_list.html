@@ -44,7 +44,7 @@
                             <span class="badge bg-success-soft text-success border border-success-subtle px-3 rounded-pill">Закрыта</span>
                             {% endif %}
                         </td>
-                        <td class="text-muted">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                        <td class="text-muted">{% if task.assigned_to %}{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}{% else %}<span class="text-muted-50">Не назначена</span>{% endif %}</td>
                         <td class="pe-4 text-muted small">{{ task.created_at|date:"d.m.Y H:i" }}</td>
                     </tr>
                     
