@@ -270,7 +270,16 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
             stages.save()
             return redirect(self.success_url)
         else:
-            return self.render_to_response(self.get_context_data(form=form))
+            # Проверяем, есть ли ошибки в formset (кроме пустых форм)
+            has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
+            if has_errors:
+                return self.render_to_response(self.get_context_data(form=form))
+            else:
+                # Если ошибок нет, сохраняем задачу без этапов
+                self.object = form.save()
+                stages.instance = self.object
+                stages.save()
+                return redirect(self.success_url)
 
 class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
@@ -307,7 +316,16 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
             stages.save()
             return redirect(self.success_url)
         else:
-            return self.render_to_response(self.get_context_data(form=form))
+            # Проверяем, есть ли ошибки в formset (кроме пустых форм)
+            has_errors = any(form.errors for form in stages.forms if form.cleaned_data)
+            if has_errors:
+                return self.render_to_response(self.get_context_data(form=form))
+            else:
+                # Если ошибок нет, сохраняем задачу без этапов
+                self.object = form.save()
+                stages.instance = self.object
+                stages.save()
+                return redirect(self.success_url)
 
     def get_queryset(self):
         user = self.request.user
