@@ -170,6 +170,7 @@
 let positionsData = [];
 let materialsData = [];
 let unitsData = [];
+let employeesData = [];
 let currentEditingStageNum = null;
 
 // Загрузка справочников при загрузке страницы
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadPositions();
     await loadMaterials();
     await loadUnits();
+    await loadEmployees();
     updateAllPositionSelects();
     updateAllMaterialsDisplays();
     updateStagesPanelVisibility();
@@ -209,6 +211,16 @@ async function loadUnits() {
         unitsData = await response.json();
     } catch (error) {
         console.error('Ошибка загрузки единиц измерения:', error);
+    }
+}
+
+// Загрузка сотрудников
+async function loadEmployees() {
+    try {
+        const response = await fetch('/api/employees/');
+        employeesData = await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки сотрудников:', error);
     }
 }
 
@@ -355,6 +367,7 @@ function addStageForm(formNum, stageData = {}) {
     const positionName = stageData.position || '';
     const durationText = stageData.duration_text || '';
     const materials = stageData.materials || [];
+    const assignedToId = stageData.assigned_to_id || '';
     
     // Формируем опции для выпадающего списка должностей
     let positionOptions = '<option value="">-- Не выбрано --</option>';
@@ -363,13 +376,20 @@ function addStageForm(formNum, stageData = {}) {
         positionOptions += `<option value="${pos.id}" ${selected}>${pos.name}</option>`;
     });
     
+    // Формируем опции для выпадающего списка сотрудников
+    let employeeOptions = '<option value="">-- Не выбран --</option>';
+    employeesData.forEach(emp => {
+        const selected = emp.id == assignedToId ? 'selected' : '';
+        employeeOptions += `<option value="${emp.id}" ${selected}>${emp.name}${emp.position ? ' (' + emp.position + ')' : ''}</option>`;
+    });
+    
     const formHtml = `
         <div class="stage-form mb-3 border p-3 rounded bg-light">
             <input type="hidden" name="stages-${formNum}-id" id="id_stages-${formNum}-id">
             <input type="hidden" name="stages-${formNum}-position_name" value="${positionName}" id="id_stages-${formNum}-position_name">
             <input type="hidden" name="stages-${formNum}-materials_info" value='${JSON.stringify(materials)}' id="id_stages-${formNum}-materials_info">
             <div class="row g-2">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label small text-muted">Название этапа</label>
                     <input type="text" name="stages-${formNum}-name" value="${name}" class="form-control" maxlength="200" required id="id_stages-${formNum}-name">
                 </div>
@@ -377,7 +397,13 @@ function addStageForm(formNum, stageData = {}) {
                     <label class="form-label small text-muted">Мин</label>
                     <input type="number" name="stages-${formNum}-duration_minutes" value="${duration}" class="form-control" min="0" id="id_stages-${formNum}-duration_minutes">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Исполнитель</label>
+                    <select name="stages-${formNum}-assigned_to" class="form-select" id="id_stages-${formNum}-assigned_to">
+                        ${employeeOptions}
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small text-muted">Должность</label>
                     <select name="stages-${formNum}-position_id" class="form-select position-select" id="id_stages-${formNum}-position_id">
                         ${positionOptions}

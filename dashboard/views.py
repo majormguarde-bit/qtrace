@@ -2069,6 +2069,19 @@ def api_get_units(request):
     return JsonResponse(data, safe=False)
 
 @login_required
+def api_get_employees(request):
+    """API для получения списка сотрудников тенанта"""
+    employees = TenantUser.objects.filter(is_active=True).order_by('first_name', 'last_name')
+    data = [{
+        'id': e.id,
+        'name': e.get_full_name() or e.username,
+        'username': e.username,
+        'position': e.position.name if e.position else '',
+    } for e in employees]
+    
+    return JsonResponse(data, safe=False)
+
+@login_required
 def api_create_position(request):
     """API для создания новой должности"""
     if request.method != 'POST':

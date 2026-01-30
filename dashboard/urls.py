@@ -93,4 +93,5 @@ urlpatterns = [
     path('api/duration-units/', views.api_get_duration_units, name='api_get_duration_units'),
     path('api/materials/', views.api_get_materials, name='api_get_materials'),
     path('api/units/', views.api_get_units, name='api_get_units'),
+    path('api/employees/', views.api_get_employees, name='api_get_employees'),
 ]
