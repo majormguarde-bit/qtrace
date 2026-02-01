@@ -20,6 +20,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import subprocess
 import os
+import zipfile
+import io
+import json
 from datetime import datetime
 from django.db import connection
 from django.conf import settings
@@ -32,6 +35,7 @@ from users_app.models import TenantUser
 from .serializers import TenantRegistrationSerializer
 from django.db.models import Sum, Max, F
 from task_templates.models import DurationUnit, Material, UnitOfMeasure
+from task_templates.services import TemplateService
 
 
 def superuser_required(user):
@@ -1411,8 +1415,8 @@ def superuser_template_create(request):
                 except (json.JSONDecodeError, ValueError) as e:
                     messages.warning(request, f'Ошибка при сохранении этапов: {e}')
             
-            messages.success(request, f'Шаблон "{template.name}" успешно создан.')
-            return redirect('superuser_templates')
+            messages.success(request, f'Шаблон "{template.name}" успешно создан. Теперь вы можете настроить диаграмму процесса.')
+            return redirect('superuser_template_diagram', template_id=template.id)
     else:
         form = TemplateForm()
 
@@ -1425,7 +1429,7 @@ def superuser_template_create(request):
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_save_stage(request, template_id):
     """API endpoint для сохранения изменений этапа"""
-    from task_templates.models import TaskTemplate, TaskTemplateStage, Position
+    from task_templates.models import TaskTemplate, TaskTemplateStage, Position, DurationUnit
     
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1435,6 +1439,11 @@ def superuser_template_save_stage(request, template_id):
     stage_id = request.POST.get('stage_id')
     parent_stage_id = request.POST.get('parent_stage_id') or None
     position_id = request.POST.get('position_id') or None
+    
+    # Получаем данные о времени
+    duration_min = request.POST.get('duration_min')
+    duration_max = request.POST.get('duration_max')
+    duration_unit_id = request.POST.get('duration_unit_id')
     
     try:
         stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
@@ -1455,6 +1464,20 @@ def superuser_template_save_stage(request, template_id):
                 stage.position = None
         else:
             stage.position = None
+            
+        # Обновляем время
+        if duration_min:
+            stage.duration_from = float(duration_min)
+        if duration_max:
+            stage.duration_to = float(duration_max)
+            
+        if duration_unit_id:
+            try:
+                stage.duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+            except DurationUnit.DoesNotExist:
+                pass
+        elif duration_unit_id == '':
+             stage.duration_unit = None
         
         stage.save()
         
@@ -1472,6 +1495,85 @@ def superuser_template_save_stage(request, template_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_material_create_api(request):
+    """API endpoint для создания материала из диаграммы"""
+    from task_templates.models import Material, UnitOfMeasure
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    name = request.POST.get('name')
+    code = request.POST.get('code')
+    unit_id = request.POST.get('unit_id')
+    
+    if not name or not code or not unit_id:
+        return JsonResponse({'success': False, 'error': 'Все поля обязательны (Название, Код, Ед. измерения)'})
+    
+    # Проверка на дубликаты кода
+    if Material.objects.filter(code__iexact=code).exists():
+        return JsonResponse({'success': False, 'error': 'Материал с таким кодом уже существует'})
+        
+    try:
+        unit = UnitOfMeasure.objects.get(id=unit_id)
+        material = Material.objects.create(
+            name=name, 
+            code=code, 
+            unit=unit,
+            unit_cost=0, # По умолчанию 0
+            is_active=True
+        )
+        return JsonResponse({
+            'success': True, 
+            'id': material.id, 
+            'name': material.name,
+            'code': material.code,
+            'unit': unit.abbreviation,
+            'unit_id': unit.id
+        })
+    except UnitOfMeasure.DoesNotExist:
+         return JsonResponse({'success': False, 'error': 'Единица измерения не найдена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_unit_create_api(request):
+    """API endpoint для создания единицы измерения из диаграммы"""
+    from task_templates.models import UnitOfMeasure
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    name = request.POST.get('name')
+    abbreviation = request.POST.get('abbreviation')
+    
+    if not name or not abbreviation:
+        return JsonResponse({'success': False, 'error': 'Все поля обязательны (Название, Сокращение)'})
+    
+    # Проверка на дубликаты
+    if UnitOfMeasure.objects.filter(name__iexact=name).exists():
+        return JsonResponse({'success': False, 'error': 'Единица измерения с таким названием уже существует'})
+    
+    if UnitOfMeasure.objects.filter(abbreviation__iexact=abbreviation).exists():
+        return JsonResponse({'success': False, 'error': 'Единица измерения с таким сокращением уже существует'})
+        
+    try:
+        unit = UnitOfMeasure.objects.create(
+            name=name, 
+            abbreviation=abbreviation,
+            is_active=True
+        )
+        return JsonResponse({
+            'success': True, 
+            'id': unit.id, 
+            'name': unit.name,
+            'abbreviation': unit.abbreviation
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_save_connection(request, template_id):
@@ -1582,8 +1684,8 @@ def superuser_template_add_stage(request, template_id):
                 'id': stage.id,
                 'name': stage.name,
                 'sequence_number': stage.sequence_number,
-                'duration_min': stage.duration_min,
-                'duration_max': stage.duration_max
+                'duration_min': stage.duration_from,
+                'duration_max': stage.duration_to
             }
         })
     except Exception as e:
@@ -1625,7 +1727,7 @@ def superuser_template_delete_stage(request, template_id, stage_id):
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_update_duration(request, template_id, stage_id):
     """API endpoint для обновления времени этапа"""
-    from task_templates.models import TaskTemplate, TaskTemplateStage
+    from task_templates.models import TaskTemplate, TaskTemplateStage, DurationUnit
     
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1637,11 +1739,18 @@ def superuser_template_update_duration(request, template_id, stage_id):
         
         duration_min = request.POST.get('duration_min')
         duration_max = request.POST.get('duration_max')
+        duration_unit_id = request.POST.get('duration_unit_id')
         
         if duration_min:
             stage.duration_from = float(duration_min)
         if duration_max:
             stage.duration_to = float(duration_max)
+            
+        if duration_unit_id:
+            try:
+                stage.duration_unit = DurationUnit.objects.get(id=duration_unit_id)
+            except DurationUnit.DoesNotExist:
+                pass
         
         stage.save()
         
@@ -1651,7 +1760,8 @@ def superuser_template_update_duration(request, template_id, stage_id):
             'stage': {
                 'id': stage.id,
                 'duration_min': stage.duration_from,
-                'duration_max': stage.duration_to
+                'duration_max': stage.duration_to,
+                'duration_unit': stage.duration_unit.abbreviation if stage.duration_unit else ''
             }
         })
     except TaskTemplateStage.DoesNotExist:
@@ -1682,6 +1792,7 @@ def superuser_template_save_diagram(request, template_id):
     
     try:
         svg_data = request.POST.get('svg_data', '')
+        layout_data = request.POST.get('layout_data', '')
         
         if not svg_data:
             return JsonResponse({
@@ -1691,6 +1802,15 @@ def superuser_template_save_diagram(request, template_id):
         
         # Сохраняем SVG в базу
         template.diagram_svg = svg_data
+        
+        # Сохраняем layout если передан
+        if layout_data:
+            import json
+            try:
+                template.diagram_layout = json.loads(layout_data)
+            except json.JSONDecodeError:
+                pass
+                
         template.save()
         
         return JsonResponse({
@@ -1702,6 +1822,81 @@ def superuser_template_save_diagram(request, template_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_add_stage_material(request, template_id, stage_id):
+    """API endpoint для добавления материала к этапу"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage, Material, StageMaterial
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    stage = get_object_or_404(TaskTemplateStage, id=stage_id, template=template)
+    
+    material_id = request.POST.get('material_id')
+    quantity = float(request.POST.get('quantity', 1))
+    
+    if not material_id:
+        return JsonResponse({'success': False, 'error': 'Не указан материал'}, status=400)
+        
+    try:
+        material = Material.objects.get(id=material_id)
+        
+        # Check if already exists
+        stage_material, created = StageMaterial.objects.get_or_create(
+            stage=stage,
+            material=material,
+            defaults={'quantity': quantity}
+        )
+        
+        if not created:
+            stage_material.quantity = quantity
+            stage_material.save()
+            
+        return JsonResponse({
+            'success': True, 
+            'message': 'Материал добавлен',
+            'material': {
+                'id': material.id,
+                'name': material.name,
+                'code': material.code,
+                'quantity': float(stage_material.quantity),
+                'unit': material.unit.abbreviation
+            }
+        })
+    except Material.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Материал не найден'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_remove_stage_material(request, template_id, stage_id):
+    """API endpoint для удаления материала из этапа"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage, StageMaterial
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    stage = get_object_or_404(TaskTemplateStage, id=stage_id, template=template)
+    
+    material_id = request.POST.get('material_id')
+    
+    if not material_id:
+        return JsonResponse({'success': False, 'error': 'Не указан материал'}, status=400)
+        
+    try:
+        # Find stage material by material_id
+        stage_material = StageMaterial.objects.get(stage=stage, material_id=material_id)
+        stage_material.delete()
+        
+        return JsonResponse({'success': True, 'message': 'Материал удален'})
+    except StageMaterial.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Материал не найден в этапе'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_edit(request, template_id):
@@ -1784,12 +1979,15 @@ def superuser_template_edit(request, template_id):
         if form.is_valid():
             form.save()
             
-            # Удаляем старые этапы и материалы
-            template.stages.all().delete()
-            
-            # Обработка новых этапов и материалов
+            # Обработка этапов (только если переданы данные этапов)
+            # В режиме редактирования мы обычно не меняем этапы через форму, чтобы не сломать диаграмму
             stages_data = request.POST.get('stages_data')
-            print(f"DEBUG SUPERUSER: stages_data = {stages_data}")  # DEBUG
+            if stages_data:
+                # Если пришли данные этапов, значит пользователь редактирует их через форму
+                # В этом случае удаляем старые и создаем новые
+                template.stages.all().delete()
+                
+                print(f"DEBUG SUPERUSER: stages_data = {stages_data}")  # DEBUG
             if stages_data:
                 try:
                     from task_templates.models import DurationUnit
@@ -1905,6 +2103,88 @@ def superuser_proposals(request):
     }
     return render(request, 'customers/superuser_proposals.html', context)
 
+
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_diagram(request, template_id):
+    """Редактор диаграммы шаблона"""
+    from task_templates.models import TaskTemplate, TaskTemplateStage, Material, Position, DurationUnit
+    import json
+    
+    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    stages = template.stages.all().order_by('sequence_number').prefetch_related('materials__material__unit', 'position', 'duration_unit')
+    
+    # Подготовка данных для JS
+    stages_data = []
+    
+    # Сбор данных для сводки
+    total_min_hours = 0
+    total_max_hours = 0
+    unique_pos = set()
+    
+    # Коэффициенты перевода в часы
+    factors_to_hours = {
+        'second': 1.0/3600,
+        'minute': 1.0/60,
+        'hour': 1.0,
+        'day': 24.0,
+        'year': 24.0 * 365
+    }
+    
+    for stage in stages:
+        # Определяем коэффициент (по умолчанию считаем минуты)
+        factor = 1.0/60
+        if stage.duration_unit:
+            factor = factors_to_hours.get(stage.duration_unit.unit_type, 1.0/60)
+            
+        total_min_hours += float(stage.duration_from) * factor
+        total_max_hours += float(stage.duration_to) * factor
+        
+        if stage.position:
+            unique_pos.add(stage.position.name)
+            
+        materials = []
+        for sm in stage.materials.all():
+            materials.append({
+                'id': sm.material.id,
+                'name': sm.material.name,
+                'code': sm.material.code,
+                'quantity': float(sm.quantity),
+                'unit': sm.material.unit.abbreviation
+            })
+            
+        stages_data.append({
+            'id': stage.id,
+            'name': stage.name,
+            'duration_from': float(stage.duration_from),
+            'duration_to': float(stage.duration_to),
+            'duration_unit_id': stage.duration_unit.id if stage.duration_unit else None,
+            'duration_unit_name': stage.duration_unit.abbreviation if stage.duration_unit else '',
+            'position_id': stage.position.id if stage.position else None,
+            'position_name': stage.position.name if stage.position else '',
+            'sequence_number': stage.sequence_number,
+            'parent_stage_id': stage.parent_stage.id if stage.parent_stage else None,
+            'leads_to_stop': stage.leads_to_stop,
+            'materials': materials
+        })
+    
+    materials = Material.objects.filter(is_active=True).select_related('unit')
+    positions = Position.objects.filter(is_active=True)
+    duration_units = DurationUnit.objects.all().order_by('id')
+    
+    context = {
+        'template': template,
+        'stages_json': json.dumps(stages_data),
+        'diagram_layout_json': json.dumps(template.diagram_layout) if template.diagram_layout else '{}',
+        'materials': materials,
+        'positions': positions,
+        'duration_units': duration_units,
+        'all_stages': stages,
+        'total_duration_min': round(total_min_hours, 2),
+        'total_duration_max': round(total_max_hours, 2),
+        'unique_positions': sorted(list(unique_pos)),
+    }
+    return render(request, 'customers/superuser_template_diagram.html', context)
 
 
 # API endpoints for template form data
@@ -2402,257 +2682,78 @@ def superuser_position_delete(request, position_id):
     })
 
 
+
 @user_passes_test(superuser_required, login_url='/admin/login/')
-def superuser_template_diagram(request, template_id):
-    """Диаграмма этапов шаблона"""
-    from task_templates.models import TaskTemplate, Position
-    import json
+def superuser_position_create_api(request):
+    """API endpoint для быстрого создания должности"""
+    from task_templates.models import Position
     
-    template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
     
-    # Получаем все этапы
-    stages = template.stages.all().order_by('sequence_number')
+    name = request.POST.get('name', '').strip()
+    if not name:
+        return JsonResponse({'success': False, 'error': 'Название не может быть пустым'}, status=400)
     
-    # Получаем все должности
-    positions = Position.objects.filter(is_active=True).order_by('name')
-    
-    # Подготавливаем JSON данные для JavaScript
-    stages_data = []
-    total_duration_min = 0
-    total_duration_max = 0
-    positions_set = set()
-    
-    for stage in stages:
-        # Формируем строку длительности
-        duration_str = ''
-        if stage.duration_from and stage.duration_unit:
-            if stage.duration_from == stage.duration_to:
-                duration_str = f"{stage.duration_from} {stage.duration_unit.abbreviation}"
-            else:
-                duration_str = f"{stage.duration_from}-{stage.duration_to} {stage.duration_unit.abbreviation}"
-            
-            # Суммируем длительность (используем минимум и максимум)
-            total_duration_min += float(stage.duration_from)
-            total_duration_max += float(stage.duration_to)
+    try:
+        position, created = Position.objects.get_or_create(
+            name__iexact=name,
+            defaults={'name': name, 'is_active': True}
+        )
         
-        # Получаем должность
-        position_name = stage.position.name if stage.position else 'Не указана'
-        if stage.position:
-            positions_set.add(position_name)
-        
-        stages_data.append({
-            'id': stage.id,
-            'name': stage.name,
-            'sequence_number': stage.sequence_number,
-            'parent_stage_id': stage.parent_stage_id if stage.parent_stage else None,
-            'position': position_name,
-            'position_id': stage.position_id if stage.position else None,
-            'duration': duration_str,
-            'duration_from': float(stage.duration_from) if stage.duration_from else 1,
-            'duration_to': float(stage.duration_to) if stage.duration_to else 1,
-            'duration_unit': stage.duration_unit.abbreviation if stage.duration_unit else '',
-            'leads_to_stop': stage.leads_to_stop,
-            'materials': [
-                {
-                    'name': m.material.name,
-                    'quantity': float(m.quantity),
-                    'unit': m.material.unit.abbreviation if m.material.unit else 'шт'
-                }
-                for m in stage.materials.all()
-            ]
+        return JsonResponse({
+            'success': True,
+            'position': {
+                'id': position.id,
+                'name': position.name
+            },
+            'exists': not created
         })
-    
-    context = {
-        'template': template,
-        'all_stages': stages,
-        'stages_json': json.dumps(stages_data),
-        'positions': positions,
-        'positions_json': json.dumps([{'id': p.id, 'name': p.name} for p in positions]),
-        'total_duration_min': total_duration_min,
-        'total_duration_max': total_duration_max,
-        'unique_positions': sorted(list(positions_set)),
-    }
-    return render(request, 'customers/superuser_template_diagram.html', context)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
-
-
-# --- Template Export/Import для суперпользователя ---
-
-from task_templates.export_import import TemplateExporter, TemplateImporter
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_export_template(request, template_id):
-    """Экспорт шаблона суперпользователем"""
-    from task_templates.models import TaskTemplate
-    from urllib.parse import quote
-    import json
-    
-    template = get_object_or_404(TaskTemplate, pk=template_id, template_type='global')
-    
-    # Экспортируем шаблон
-    json_data = TemplateExporter.export_to_json(template)
-    
-    # Формируем имя файла: категория_имя_шаблона.tpl
-    category_name = template.activity_category.name if template.activity_category else 'General'
-    # Очищаем имена от спецсимволов
-    category_clean = category_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    template_clean = template.name.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    filename = f"{category_clean}_{template_clean}.tpl"
-    
-    # Создаем HTTP ответ с файлом
-    response = HttpResponse(json_data, content_type='application/octet-stream')
-    # Используем quote для правильного кодирования имени файла
-    encoded_filename = quote(filename.encode('utf-8'))
-    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
-    
-    return response
+    return JsonResponse({'error': 'Function restored from backup, implementation missing'}, status=501)
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_import_template(request):
-    """Импорт шаблона суперпользователем"""
-    if request.method != 'POST':
-        return redirect('superuser_templates')
-    
-    # Получаем файл
-    uploaded_file = request.FILES.get('template_file')
-    if not uploaded_file:
-        messages.error(request, 'Файл не выбран.')
-        return redirect('superuser_templates')
-    
-    # Проверяем расширение файла
-    if not (uploaded_file.name.endswith('.tpl') or uploaded_file.name.endswith('.json')):
-        messages.error(request, 'Неверный формат файла. Ожидается .tpl или .json')
-        return redirect('superuser_templates')
-    
-    # Читаем содержимое файла
-    try:
-        json_string = uploaded_file.read().decode('utf-8')
-    except Exception as e:
-        messages.error(request, f'Ошибка чтения файла: {str(e)}')
-        return redirect('superuser_templates')
-    
-    # Получаем параметры импорта
-    conflict_strategy = request.POST.get('conflict_strategy', 'rename')
-    
-    # Импортируем в глобальные шаблоны
-    try:
-        importer = TemplateImporter(user=request.user, tenant=None)
-        result = importer.import_from_json(json_string, 'global', conflict_strategy)
-        
-        # Показываем результат
-        if result['success']:
-            created_count = len(result['created']['templates'])
-            messages.success(request, f'Успешно импортировано шаблонов: {created_count}')
-            
-            if result['warnings']:
-                for warning in result['warnings']:
-                    messages.warning(request, warning)
-        else:
-            messages.error(request, 'Ошибка импорта:')
-            for error in result['errors']:
-                messages.error(request, error)
-    except Exception as e:
-        messages.error(request, f'Ошибка при импорте: {str(e)}')
-        import traceback
-        print(traceback.format_exc())
-    
-    return redirect('superuser_templates')
+    return JsonResponse({'error': 'Function restored from backup, implementation missing'}, status=501)
+
+@user_passes_test(superuser_required, login_url='/admin/login/')
+def superuser_template_export_n8n(request, template_id):
+    return JsonResponse({'error': 'Function restored from backup, implementation missing'}, status=501)
 
 
-# ============================================================================
-# FEEDBACK VIEWS - Журнал предложений пользователей
-# ============================================================================
-
+# Restored Feedback Views
 from django.views.generic import ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
-from django import forms
-
+from .models import UserFeedback
 
 class SuperuserRequiredMixin(UserPassesTestMixin):
-    """Миксин для проверки, что пользователь - суперпользователь"""
     def test_func(self):
         return self.request.user.is_superuser
 
-
 class FeedbackListView(LoginRequiredMixin, SuperuserRequiredMixin, ListView):
-    """Журнал предложений пользователей для суперпользователя"""
     model = UserFeedback
     template_name = 'customers/feedback_list.html'
     context_object_name = 'feedbacks'
-    paginate_by = 20
-    
-    def get_queryset(self):
-        queryset = UserFeedback.objects.all().select_related('user', 'tenant')
-        
-        # Фильтр по статусу
-        status = self.request.GET.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
-        
-        # Фильтр по приоритету
-        priority = self.request.GET.get('priority')
-        if priority:
-            queryset = queryset.filter(priority__gte=int(priority))
-        
-        # Поиск по заголовку и описанию
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) | Q(description__icontains=search)
-            )
-        
-        # Сортировка
-        sort_by = self.request.GET.get('sort', '-created_at')
-        queryset = queryset.order_by(sort_by)
-        
-        return queryset
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['status_choices'] = UserFeedback.STATUS_CHOICES
-        context['current_status'] = self.request.GET.get('status', '')
-        context['current_search'] = self.request.GET.get('search', '')
-        context['current_priority'] = self.request.GET.get('priority', '')
-        context['current_sort'] = self.request.GET.get('sort', '-created_at')
-        return context
-
+    ordering = ['-created_at']
 
 class FeedbackDetailView(LoginRequiredMixin, SuperuserRequiredMixin, DetailView):
-    """Детальный просмотр предложения"""
     model = UserFeedback
     template_name = 'customers/feedback_detail.html'
     context_object_name = 'feedback'
 
-
-class FeedbackForm(forms.ModelForm):
-    class Meta:
-        model = UserFeedback
-        fields = ['status', 'priority', 'admin_notes']
-        labels = {
-            'status': 'Статус',
-            'priority': 'Приоритет (0-10)',
-            'admin_notes': 'Заметки администратора',
-        }
-        widgets = {
-            'status': forms.Select(attrs={'class': 'form-select'}),
-            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '10'}),
-            'admin_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-        }
-
-
 class FeedbackUpdateView(LoginRequiredMixin, SuperuserRequiredMixin, UpdateView):
-    """Обновление статуса и заметок предложения"""
     model = UserFeedback
-    form_class = FeedbackForm
+    fields = ['status', 'admin_comment']
     template_name = 'customers/feedback_form.html'
-    success_url = reverse_lazy('superuser_feedback_list')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = f'Редактирование предложения: {self.object.title}'
-        return context
-
+    success_url = '/superuser/feedback/'
 
 def create_feedback(request):
     """API endpoint для создания предложения пользователем"""

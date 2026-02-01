@@ -91,9 +91,30 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <small class="text-muted d-block mb-2">Создан: {{ template.created_at|date:"d.m.Y H:i" }} | Этапов: {{ template.stages.count }}</small>
-                                <a href="{% url 'superuser_export_template' template.id %}" class="btn btn-sm btn-outline-success" title="Экспорт">
-                                    <i class="bi bi-download"></i> Экспорт
-                                </a>
+                                
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-download"></i> Экспорт
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'superuser_export_template' template.id %}">
+                                                <i class="bi bi-file-earmark-code me-2"></i>Формат Q-Trace (.tpl)
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'superuser_template_export_n8n' template.id %}">
+                                                <i class="bi bi-diagram-2 me-2"></i>Совместимо с n8n (.json)
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'superuser_template_export_n8n' template.id %}?format=zip">
+                                                <i class="bi bi-file-zip me-2"></i>n8n (.json) + Диаграмма (.svg)
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
                                 <a href="{% url 'superuser_template_diagram' template.id %}" class="btn btn-sm btn-outline-info" title="Диаграмма">
                                     <i class="bi bi-diagram-3"></i> Диаграмма
                                 </a>
@@ -242,9 +263,9 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Файл шаблона (TPL/JSON)</label>
-                        <input type="file" name="template_file" class="form-control" accept=".tpl,.json" required>
-                        <div class="form-text">Выберите TPL или JSON файл с экспортированным шаблоном</div>
+                        <label class="form-label">Файл шаблона (ZIP, TPL, JSON)</label>
+                        <input type="file" name="template_file" class="form-control" accept=".tpl,.json,.zip" required>
+                        <div class="form-text">Выберите ZIP архив, TPL или JSON файл с шаблоном</div>
                     </div>
                     
                     <div class="mb-3">
@@ -264,7 +285,7 @@
                             <li>Шаблон с описанием</li>
                             <li>Все этапы с параметрами</li>
                             <li>Материалы и их связи</li>
-                            <li>Диаграмма (если есть)</li>
+                            <li>Диаграмма (SVG)</li>
                         </ul>
                     </div>
                 </div>

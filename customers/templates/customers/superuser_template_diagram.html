@@ -136,21 +136,34 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label">Исполнитель (должность):</label>
-                        <select name="position_id" class="form-select form-select-sm" id="positionSelect">
-                            <option value="">-- Не указана --</option>
-                            {% for position in positions %}
-                            <option value="{{ position.id }}">{{ position.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="input-group input-group-sm">
+                            <select name="position_id" class="form-select" id="positionSelect">
+                                <option value="">-- Не указана --</option>
+                                {% for position in positions %}
+                                <option value="{{ position.id }}">{{ position.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" id="addNewPositionBtn" title="Добавить новую должность">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Время (часов):</label>
+                        <label class="form-label">Время:</label>
                         <div class="row g-2">
-                            <div class="col-6">
+                            <div class="col-4">
                                 <input type="number" class="form-control form-control-sm" id="durationMin" placeholder="Мин" min="1" value="1">
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <input type="number" class="form-control form-control-sm" id="durationMax" placeholder="Макс" min="1" value="1">
+                            </div>
+                            <div class="col-4">
+                                <select class="form-select form-select-sm" id="durationUnit">
+                                    <option value="">--</option>
+                                    {% for unit in duration_units %}
+                                    <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -184,6 +197,38 @@
             </div>
         </div>
         
+        <!-- Управление материалами (скрыто по умолчанию) -->
+        <div class="card mb-3" id="materialsCard" style="display: none;">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Материалы этапа</h6>
+                <button type="button" class="btn-close btn-sm" aria-label="Close" onclick="document.getElementById('materialsCard').style.display='none'"></button>
+            </div>
+            <div class="card-body">
+                <div id="stageMaterialsList" class="mb-3">
+                    <!-- Список материалов будет здесь -->
+                </div>
+                
+                <div class="border-top pt-2">
+                    <label class="form-label small">Добавить материал:</label>
+                    <div class="input-group input-group-sm mb-2">
+                        <select class="form-select" id="newMaterialSelect">
+                            <option value="">-- Выберите материал --</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" id="openAddMaterialModalBtn" title="Создать новый материал">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="number" class="form-control" id="newMaterialQuantity" placeholder="Кол-во" min="0.1" step="0.1" value="1">
+                        <span class="input-group-text" id="newMaterialUnit">ед.</span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm w-100" id="addMaterialBtn">
+                        <i class="bi bi-plus"></i> Добавить
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Кнопка печати -->
         <div class="card mb-3">
             <div class="card-body">
@@ -233,7 +278,97 @@
     </div>
 </div>
 
+<!-- Modal for Adding Position -->
+<div class="modal fade" id="addPositionModal" tabindex="-1" aria-labelledby="addPositionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addPositionModalLabel">Добавить новую должность</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addPositionForm">
+          <div class="mb-3">
+            <label for="newPositionName" class="form-label">Название должности</label>
+            <input type="text" class="form-control" id="newPositionName" required>
+            <div class="form-text">Если должность с таким названием уже существует, она будет выбрана автоматически.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="saveNewPositionBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- Modal for Adding Material -->
+<div class="modal fade" id="addMaterialModal" tabindex="-1" aria-labelledby="addMaterialModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addMaterialModalLabel">Добавить новый материал</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addMaterialForm">
+          <div class="mb-3">
+            <label for="newMaterialName" class="form-label">Название материала</label>
+            <input type="text" class="form-control" id="newMaterialName" required>
+          </div>
+          <div class="mb-3">
+            <label for="newMaterialCode" class="form-label">Код материала</label>
+            <input type="text" class="form-control" id="newMaterialCode" required>
+          </div>
+          <div class="mb-3">
+            <label for="newMaterialUnitSelect" class="form-label">Единица измерения</label>
+            <div class="input-group">
+                <select class="form-select" id="newMaterialUnitSelect" required>
+                    <option value="">-- Выберите --</option>
+                </select>
+                <button class="btn btn-outline-secondary" type="button" id="openAddUnitModalBtn" title="Создать новую ед. изм.">
+                    <i class="bi bi-plus"></i>
+                </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="saveNewMaterialBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Adding Unit -->
+<div class="modal fade" id="addUnitModal" tabindex="-1" aria-labelledby="addUnitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addUnitModalLabel">Новая ед. изм.</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addUnitForm">
+          <div class="mb-3">
+            <label for="newUnitName" class="form-label">Название</label>
+            <input type="text" class="form-control" id="newUnitName" placeholder="Штука" required>
+          </div>
+          <div class="mb-3">
+            <label for="newUnitAbbreviation" class="form-label">Сокращение</label>
+            <input type="text" class="form-control" id="newUnitAbbreviation" placeholder="шт" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="saveNewUnitBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cytoscape-canvas@3.0.1/build/cytoscape-canvas.cjs.js"></script>
@@ -244,11 +379,178 @@ const stagesDataJson = '{{ stages_json|escapejs }}';
 const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
 
 // Данные о должностях
-const positionsDataJson = '{{ positions_json|escapejs }}';
-const positionsData = positionsDataJson ? JSON.parse(positionsDataJson) : [];
+    const positionsDataJson = '{{ positions_json|escapejs }}';
+    const positionsData = positionsDataJson ? JSON.parse(positionsDataJson) : [];
+    
+    // Глобальные переменные для материалов
+    let allMaterials = [
+        {% for m in materials %}
+        {
+            id: {{ m.id }},
+            name: "{{ m.name|escapejs }}",
+            code: "{{ m.code|escapejs }}",
+            unit_id: {{ m.unit.id }},
+            unit_abbreviation: "{{ m.unit.abbreviation|escapejs }}"
+        },
+        {% endfor %}
+    ];
+    let allUnits = [];
+    
+    // Функция обновления селекта материалов
+    function updateMaterialSelect() {
+        const select = document.getElementById('newMaterialSelect');
+        if (!select) return;
+        
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Выберите материал --</option>';
+        allMaterials.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.name} (${m.code})`;
+            opt.dataset.unitId = m.unit_id;
+            if (m.unit_abbreviation) {
+                opt.dataset.unitAbbreviation = m.unit_abbreviation;
+            }
+            select.appendChild(opt);
+        });
+        if (currentVal) select.value = currentVal;
+    }
 
-document.addEventListener('DOMContentLoaded', function() {
+    // Загрузка справочников (асинхронно для allUnits)
+    fetch('/api/customers/units-of-measure/')
+        .then(r => r.json())
+        .then(data => {
+            allUnits = data;
+        });
+
+    // Инициализация после загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        updateMaterialSelect();
+        
+        const matSelect = document.getElementById('newMaterialSelect');
+        if (matSelect) {
+            matSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (!selectedOption) return;
+                
+                const unitAbbr = selectedOption.dataset.unitAbbreviation;
+                const unitId = selectedOption.dataset.unitId;
+                const unitSpan = document.getElementById('newMaterialUnit');
+                
+                if (unitAbbr) {
+                    unitSpan.textContent = unitAbbr;
+                } else if (unitId && allUnits.length) {
+                    const unit = allUnits.find(u => u.id == unitId);
+                    if (unit) unitSpan.textContent = unit.abbreviation;
+                } else {
+                    unitSpan.textContent = 'ед.';
+                }
+            });
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+    
+    // Logic for Add Position
+    const addPositionBtn = document.getElementById('addNewPositionBtn');
+    const savePositionBtn = document.getElementById('saveNewPositionBtn');
+    const modalElement = document.getElementById('addPositionModal');
+    let positionModal;
+
+    if (modalElement) {
+        if (typeof bootstrap !== 'undefined') {
+            positionModal = new bootstrap.Modal(modalElement);
+        }
+    }
+
+    if (addPositionBtn && modalElement) {
+        addPositionBtn.addEventListener('click', function() {
+            document.getElementById('newPositionName').value = '';
+            if (positionModal) {
+                positionModal.show();
+            } else {
+                // Fallback
+                $(modalElement).modal('show'); 
+            }
+        });
+    }
+
+    if (savePositionBtn) {
+        savePositionBtn.addEventListener('click', function() {
+            const name = document.getElementById('newPositionName').value.trim();
+            if (!name) {
+                alert('Введите название должности');
+                return;
+            }
+
+            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            fetch('/superuser/positions/create-api/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('positionSelect');
+                    
+                    // Check if option already exists
+                    let exists = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value == data.position.id) {
+                            select.selectedIndex = i;
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists) {
+                        const option = document.createElement('option');
+                        option.value = data.position.id;
+                        option.text = data.position.name;
+                        select.add(option);
+                        select.value = data.position.id;
+                    }
+
+                    if (positionModal) {
+                        positionModal.hide();
+                    } else {
+                         $(modalElement).modal('hide');
+                    }
+                    
+                    if (data.exists) {
+                        // Assuming showStatus is defined elsewhere or we can alert
+                        if (typeof showStatus === 'function') {
+                            showStatus('Такая должность уже существует, она была выбрана.', 'info');
+                        } else {
+                            alert('Такая должность уже существует, она была выбрана.');
+                        }
+                    } else {
+                        if (typeof showStatus === 'function') {
+                            showStatus('Должность успешно создана', 'success');
+                        } else {
+                            alert('Должность успешно создана');
+                        }
+                    }
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при создании должности');
+            });
+        });
+    }
+
     const templateId = parseInt('{{ template.id }}');
+    const serverLayout = {{ diagram_layout_json|safe }};
     
     // Переменные для режима редактирования связей
     let editMode = false;
@@ -527,20 +829,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Загружаем сохранённые позиции блоков
-    const savedPositions = localStorage.getItem('diagramPositions_' + templateId);
-    if (savedPositions) {
+    let positionsLoaded = false;
+    let loadedPositions = {}; // Keep track of loaded positions
+    
+    // 1. Проверяем сохраненную на сервере раскладку
+    if (serverLayout && Object.keys(serverLayout).length > 0) {
         try {
-            const positions = JSON.parse(savedPositions);
             cy.nodes().forEach(node => {
-                if (positions[node.id()]) {
-                    node.position(positions[node.id()]);
+                if (serverLayout[node.id()]) {
+                    node.position(serverLayout[node.id()]);
                 }
             });
-            console.log('Positions restored from localStorage');
+            console.log('Positions restored from server');
+            positionsLoaded = true;
+            loadedPositions = serverLayout;
+            
+            // Обновляем localStorage чтобы он соответствовал серверу
+            localStorage.setItem('diagramPositions_' + templateId, JSON.stringify(serverLayout));
         } catch (e) {
-            console.error('Error loading saved positions:', e);
+            console.error('Error loading server positions:', e);
         }
-    } else {
+    }
+    
+    // 2. Если на сервере нет, проверяем localStorage
+    if (!positionsLoaded) {
+        const savedPositions = localStorage.getItem('diagramPositions_' + templateId);
+        if (savedPositions) {
+            try {
+                const positions = JSON.parse(savedPositions);
+                cy.nodes().forEach(node => {
+                    if (positions[node.id()]) {
+                        node.position(positions[node.id()]);
+                    }
+                });
+                console.log('Positions restored from localStorage');
+                positionsLoaded = true;
+                loadedPositions = positions;
+            } catch (e) {
+                console.error('Error loading saved positions:', e);
+            }
+        }
+    }
+
+    // 3. Обработка новых узлов (например, только что добавленных материалов), для которых нет позиций
+    if (positionsLoaded) {
+        cy.nodes('.materials').forEach(matNode => {
+            const id = matNode.id();
+            // Если для этого узла нет сохраненной позиции
+            if (!loadedPositions[id]) {
+                // Находим родительский этап
+                const stageId = id.replace('materials_', 'stage_');
+                const stageNode = cy.getElementById(stageId);
+                
+                if (stageNode.length > 0) {
+                    const stagePos = stageNode.position();
+                    // Размещаем справа от этапа
+                    matNode.position({
+                        x: stagePos.x + 350,
+                        y: stagePos.y
+                    });
+                    console.log('Positioned new material node:', id);
+                }
+            }
+        });
+    }
+    
+    if (!positionsLoaded) {
         // Если нет сохранённых позиций, запускаем layout
         cy.layout({ name: 'breadthfirst', directed: true, animate: true, animationDuration: 500, spacingFactor: 1.5, roots: '#start' }).run();
     }
@@ -681,10 +1035,145 @@ document.addEventListener('DOMContentLoaded', function() {
             // Заполняем поля времени
             document.getElementById('durationMin').value = stage.duration_from || 1;
             document.getElementById('durationMax').value = stage.duration_to || 1;
+            document.getElementById('durationUnit').value = stage.duration_unit_id || '';
+            
+            // Показываем карточку материалов и обновляем список
+            const materialsCard = document.getElementById('materialsCard');
+            if (materialsCard) {
+                materialsCard.style.display = 'block';
+                updateStageMaterialsList(stage);
+            }
         }
         
         showStatus('Этап выбран. Отредактируйте параметры и нажмите "Сохранить"', 'info');
     });
+    
+    // Скрываем карточку материалов при клике на пустое место
+    cy.on('tap', function(evt) {
+        if (evt.target === cy) {
+            const materialsCard = document.getElementById('materialsCard');
+            if (materialsCard) materialsCard.style.display = 'none';
+        }
+    });
+
+    // Функция обновления списка материалов
+    function updateStageMaterialsList(stage) {
+        const listContainer = document.getElementById('stageMaterialsList');
+        if (!listContainer) return;
+        
+        listContainer.innerHTML = '';
+        
+        if (!stage.materials || stage.materials.length === 0) {
+            listContainer.innerHTML = '<div class="text-muted small text-center">Нет материалов</div>';
+            return;
+        }
+        
+        const list = document.createElement('ul');
+        list.className = 'list-group list-group-flush small';
+        
+        stage.materials.forEach(m => {
+            const item = document.createElement('li');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-1';
+            item.innerHTML = `
+                <div>
+                    <div>${m.name}</div>
+                    <div class="text-muted" style="font-size: 0.8em;">${m.quantity} ${m.unit}</div>
+                </div>
+                <button class="btn btn-link text-danger btn-sm p-0 remove-material-btn" data-material-id="${m.id}">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            `;
+            list.appendChild(item);
+        });
+        
+        listContainer.appendChild(list);
+        
+        // Добавляем обработчики удаления
+        listContainer.querySelectorAll('.remove-material-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                removeStageMaterial(stage.id, this.dataset.materialId);
+            });
+        });
+    }
+
+    // Обработчик добавления материала
+    const addMaterialBtn = document.getElementById('addMaterialBtn');
+    if (addMaterialBtn) {
+        addMaterialBtn.addEventListener('click', function() {
+            const stageId = document.getElementById('stageSelect').value;
+            const materialId = document.getElementById('newMaterialSelect').value;
+            const quantity = document.getElementById('newMaterialQuantity').value;
+            
+            if (!stageId) {
+                showStatus('Выберите этап', 'error');
+                return;
+            }
+            if (!materialId) {
+                showStatus('Выберите материал', 'error');
+                return;
+            }
+            
+            const form = document.querySelector('form');
+            const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+            
+            const formData = new FormData();
+            formData.append('material_id', materialId);
+            formData.append('quantity', quantity);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
+            const apiUrl = `/superuser/templates/${templateId}/add-stage-material/${stageId}/`;
+            
+            showStatus('Добавление материала...', 'info');
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': csrfToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Материал добавлен', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showStatus('Ошибка: ' + data.error, 'error');
+                }
+            })
+            .catch(e => showStatus('Ошибка: ' + e.message, 'error'));
+        });
+    }
+
+    // Функция удаления материала
+    function removeStageMaterial(stageId, materialId) {
+        if (!confirm('Удалить материал из этапа?')) return;
+        
+        const form = document.querySelector('form');
+        const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+        
+        const formData = new FormData();
+        formData.append('material_id', materialId);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        
+        const apiUrl = `/superuser/templates/${templateId}/remove-stage-material/${stageId}/`;
+        
+        showStatus('Удаление материала...', 'info');
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showStatus('Материал удален', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showStatus('Ошибка: ' + data.error, 'error');
+            }
+        })
+        .catch(e => showStatus('Ошибка: ' + e.message, 'error'));
+    }
     
     // Функция отмены рисования
     function cancelDrawing() {
@@ -797,6 +1286,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const positionId = document.getElementById('positionSelect').value;
             const durationMin = document.getElementById('durationMin').value;
             const durationMax = document.getElementById('durationMax').value;
+            const durationUnit = document.getElementById('durationUnit').value;
             
             if (!stageId) {
                 showStatus('Пожалуйста, выберите этап', 'error');
@@ -805,32 +1295,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
             
-            // Сначала сохраняем время этапа если оно изменилось
-            if (durationMin || durationMax) {
-                const durationFormData = new FormData();
-                if (durationMin) durationFormData.append('duration_min', durationMin);
-                if (durationMax) durationFormData.append('duration_max', durationMax);
-                durationFormData.append('csrfmiddlewaretoken', csrfToken);
-                
-                const durationUrl = '/superuser/templates/' + templateId + '/update-duration/' + stageId + '/';
-                
-                fetch(durationUrl, {
-                    method: 'POST',
-                    body: durationFormData,
-                    headers: {
-                        'X-CSRFToken': csrfToken
-                    },
-                    credentials: 'same-origin'
-                })
-                .then(response => response.json())
-                .catch(error => console.error('Duration update error:', error));
-            }
-            
             // Используем fetch API для отправки на endpoint
             const formData = new FormData();
             formData.append('stage_id', stageId);
             formData.append('parent_stage_id', parentId || '');
             formData.append('position_id', positionId || '');
+            
+            // Добавляем данные о времени
+            if (durationMin) formData.append('duration_min', durationMin);
+            if (durationMax) formData.append('duration_max', durationMax);
+            if (durationUnit) formData.append('duration_unit_id', durationUnit);
+            
             formData.append('csrfmiddlewaretoken', csrfToken);
             
             const apiUrl = '/superuser/templates/' + templateId + '/save-stage/';
@@ -1189,6 +1664,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Отправляем SVG на сервер
             const formData = new FormData();
             formData.append('svg_data', svgString);
+            
+            // Собираем позиции узлов
+            const positions = {};
+            cy.nodes().forEach(node => {
+                positions[node.id()] = node.position();
+            });
+            formData.append('layout_data', JSON.stringify(positions));
+            
             formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
             
             const templateId = parseInt('{{ template.id }}');
@@ -1216,6 +1699,129 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Экспорт в n8n с SVG
+    window.exportN8nWithSvg = function() {
+        try {
+            showStatus('Подготовка экспорта...', 'info');
+            
+            // Генерируем SVG
+            let svgContent;
+            if (typeof cy.svg === 'function') {
+                 svgContent = cy.svg({full: true, scale: 1.5, bg: 'white'});
+            } else {
+                 // Fallback
+                 const pngData = cy.png({full: true, scale: 2});
+                 const bbox = cy.elements().boundingBox();
+                 const width = bbox.w || 1000;
+                 const height = bbox.h || 800;
+                 svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><image href="${pngData}" width="${width}" height="${height}" /></svg>`;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'superuser_template_export_n8n' template.id %}";
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = '{{ csrf_token }}';
+            form.appendChild(csrfInput);
+            
+            const svgInput = document.createElement('input');
+            svgInput.type = 'hidden';
+            svgInput.name = 'svg_data';
+            svgInput.value = svgContent;
+            form.appendChild(svgInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+            
+            showStatus('Началась загрузка архива...', 'success');
+        } catch (e) {
+            console.error('Export error:', e);
+            showStatus('Ошибка экспорта: ' + e.message, 'error');
+        }
+    };
+
+    // Обработчик кнопки "Добавить новую должность"
+    const addNewPositionBtn = document.getElementById('addNewPositionBtn');
+    if (addNewPositionBtn) {
+        addNewPositionBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addPositionModal'));
+            modal.show();
+        });
+    }
+
+    // Обработчик сохранения новой должности
+    const saveNewPositionBtn = document.getElementById('saveNewPositionBtn');
+    if (saveNewPositionBtn) {
+        saveNewPositionBtn.addEventListener('click', function() {
+            const nameInput = document.getElementById('newPositionName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('Введите название должности');
+                return;
+            }
+            
+            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
+            // Используем fetch для отправки данных
+            fetch('/superuser/positions/create-api/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Закрываем модальное окно
+                    const modalElement = document.getElementById('addPositionModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    modal.hide();
+                    
+                    // Очищаем поле ввода
+                    nameInput.value = '';
+                    
+                    // Добавляем новую должность в выпадающий список
+                    const select = document.getElementById('positionSelect');
+                    
+                    // Проверяем, есть ли уже такая опция
+                    let optionExists = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value == data.position.id) {
+                            select.selectedIndex = i;
+                            optionExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!optionExists) {
+                        const option = document.createElement('option');
+                        option.value = data.position.id;
+                        option.text = data.position.name;
+                        select.add(option);
+                        select.value = data.position.id;
+                    }
+                    
+                    showStatus('Должность успешно добавлена/выбрана', 'success');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при создании должности');
+            });
+        });
+    }
+
     // Функция для показа сообщений
     function showStatus(message, type) {
         const statusDiv = document.getElementById('statusMessage');
@@ -1233,6 +1839,194 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 5000);
     }
+    
+    // --- Логика создания новых материалов и единиц измерения ---
+    
+    // Открытие модального окна добавления материала
+    const openAddMaterialModalBtn = document.getElementById('openAddMaterialModalBtn');
+    if (openAddMaterialModalBtn) {
+        openAddMaterialModalBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
+            modal.show();
+            
+            // Загрузка единиц измерения
+            loadUnitsOfMeasure();
+        });
+    }
+    
+    // Открытие модального окна добавления единицы измерения
+    const openAddUnitModalBtn = document.getElementById('openAddUnitModalBtn');
+    if (openAddUnitModalBtn) {
+        openAddUnitModalBtn.addEventListener('click', function() {
+            // Скрываем модальное окно материала (чтобы не перекрывало)
+            // const materialModal = bootstrap.Modal.getInstance(document.getElementById('addMaterialModal'));
+            // if (materialModal) materialModal.hide();
+            
+            const modal = new bootstrap.Modal(document.getElementById('addUnitModal'));
+            modal.show();
+        });
+    }
+    
+    function loadUnitsOfMeasure() {
+        fetch('/api/customers/units-of-measure/')
+            .then(response => response.json())
+            .catch(error => {
+                // Если API не отвечает, используем API суперпользователя
+                return fetch('/superuser/units/create-api/').then(() => {
+                     // Это просто заглушка, нам нужно получить список. 
+                     // Используем существующий api_duration_units как пример или просто не загружаем если API нет
+                     // В данном проекте список единиц загружается в updateMaterialsList
+                });
+            });
+            
+        // В данном шаблоне список единиц уже может быть в materialsData или загружен отдельно
+        // Но для простоты, мы будем обновлять select при успешном создании
+    }
+    
+    // Сохранение новой единицы измерения
+    const saveNewUnitBtn = document.getElementById('saveNewUnitBtn');
+    if (saveNewUnitBtn) {
+        saveNewUnitBtn.addEventListener('click', function() {
+            const name = document.getElementById('newUnitName').value;
+            const abbreviation = document.getElementById('newUnitAbbreviation').value;
+            
+            if (!name || !abbreviation) {
+                alert('Заполните все поля');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('abbreviation', abbreviation);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('/superuser/units/create-api/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addUnitModal'));
+                    modal.hide();
+                    
+                    // Очищаем форму
+                    document.getElementById('addUnitForm').reset();
+                    
+                    // Добавляем в select единиц (в модальном окне материалов)
+                    const select = document.getElementById('newMaterialUnitSelect');
+                    const option = document.createElement('option');
+                    option.value = data.id;
+                    option.text = data.abbreviation; // или data.name + ' (' + data.abbreviation + ')'
+                    option.selected = true;
+                    select.add(option);
+                    
+                    // Если окно материалов было открыто, оно остается открытым (так как оно под окном единиц)
+                    // Иначе можно его переоткрыть
+                    
+                    alert('Единица измерения успешно создана');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при создании единицы измерения');
+            });
+        });
+    }
+    
+    // Сохранение нового материала
+    const saveNewMaterialBtn = document.getElementById('saveNewMaterialBtn');
+    if (saveNewMaterialBtn) {
+        saveNewMaterialBtn.addEventListener('click', function() {
+            const name = document.getElementById('newMaterialName').value;
+            const code = document.getElementById('newMaterialCode').value;
+            const unitId = document.getElementById('newMaterialUnitSelect').value;
+            
+            if (!name || !code || !unitId) {
+                alert('Заполните все поля');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('code', code);
+            formData.append('unit_id', unitId);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('/superuser/materials/create-api/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addMaterialModal'));
+                    modal.hide();
+                    
+                    // Очищаем форму
+                    document.getElementById('addMaterialForm').reset();
+                    
+                    // Добавляем в select материалов (в панели управления этапом)
+                    const select = document.getElementById('newMaterialSelect');
+                    const option = document.createElement('option');
+                    option.value = data.id;
+                    option.text = data.name + ' (' + data.code + ')';
+                    option.dataset.unitId = data.unit_id;
+                    option.dataset.unitAbbreviation = data.unit;
+                    option.selected = true;
+                    select.add(option);
+                    
+                    // Обновляем глобальный список материалов
+                    if (typeof allMaterials !== 'undefined') {
+                        allMaterials.push({
+                            id: data.id,
+                            name: data.name,
+                            code: data.code,
+                            unit_id: data.unit_id,
+                            unit_abbreviation: data.unit
+                        });
+                    }
+                    
+                    // Обновляем единицу измерения в панели
+                    document.getElementById('newMaterialUnit').textContent = data.unit;
+                    
+                    alert('Материал успешно создан');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при создании материала');
+            });
+        });
+    }
+    
+    // Загрузка списка единиц измерения при открытии страницы (для модального окна)
+    fetch('/api/customers/units-of-measure/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('newMaterialUnitSelect');
+            if (select && Array.isArray(data)) {
+                data.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.text = unit.abbreviation; // Используем сокращение
+                    select.add(option);
+                });
+            }
+        })
+        .catch(err => console.error('Failed to load units', err));
 });
 </script>
 {% endblock %}

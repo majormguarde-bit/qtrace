@@ -389,6 +389,100 @@ class TemplateService:
                 }
             )
 
+    @staticmethod
+    def convert_to_n8n(template):
+        """
+        Конвертировать шаблон задачи в формат n8n workflow JSON
+        
+        Args:
+            template: Объект TaskTemplate
+            
+        Returns:
+            dict: Структура workflow n8n
+        """
+        nodes = []
+        connections = {}
+        
+        # 1. Начальный узел (Manual Trigger)
+        trigger_node_name = "Start Process"
+        nodes.append({
+            "parameters": {},
+            "name": trigger_node_name,
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [250, 300],
+            "id": "trigger-node-id"
+        })
+        
+        # 2. Узлы для этапов
+        previous_node_name = trigger_node_name
+        x_pos = 500
+        y_pos = 300
+        
+        stages = template.stages.all().order_by('sequence_number')
+        
+        for i, stage in enumerate(stages):
+            node_name = f"Stage: {stage.name}"
+            
+            # Construct duration string
+            duration_str = f"{stage.duration_from}"
+            if stage.duration_to and stage.duration_to != stage.duration_from:
+                duration_str += f"-{stage.duration_to}"
+            
+            if stage.duration_unit:
+                duration_str += f" {stage.duration_unit.name}"
+            
+            # Формируем данные этапа в Set ноде
+            nodes.append({
+                "parameters": {
+                    "values": {
+                        "string": [
+                            {"name": "stage_name", "value": stage.name},
+                            {"name": "duration", "value": duration_str}
+                        ]
+                    },
+                    "options": {}
+                },
+                "name": node_name,
+                "type": "n8n-nodes-base.set",
+                "typeVersion": 1,
+                "position": [x_pos, y_pos],
+                "id": f"stage-node-{stage.id}"
+            })
+            
+            # Создаем связь с предыдущим узлом
+            if previous_node_name not in connections:
+                connections[previous_node_name] = {"main": []}
+            
+            # Ensure the list of outputs exists (usually index 0 for main output)
+            if not connections[previous_node_name]["main"]:
+                connections[previous_node_name]["main"].append([])
+                
+            connections[previous_node_name]["main"][0].append({
+                "node": node_name,
+                "type": "main",
+                "index": 0
+            })
+            
+            previous_node_name = node_name
+            x_pos += 250
+            
+        # Формируем итоговую структуру
+        workflow = {
+            "name": f"Template: {template.name}",
+            "nodes": nodes,
+            "connections": connections,
+            "active": False,
+            "settings": {},
+            "meta": {
+                "templateId": template.id,
+                "generatedBy": "Q-TRACE",
+                "generatedAt": str(timezone.now())
+            }
+        }
+        
+        return workflow
+
 
 class LocalTemplateService:
     """Сервис для управления локальными шаблонами"""

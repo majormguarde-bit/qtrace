@@ -65,6 +65,7 @@
             </div>
             
             <!-- Этапы шаблона -->
+            {% if is_create %}
             <div class="card card-table mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">Этапы задачи</h5>
@@ -163,12 +164,28 @@
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="alert alert-info mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3 fs-3 me-3"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">Управление этапами</h5>
+                        <p class="mb-0">
+                            Для редактирования этапов, связей и материалов используйте 
+                            <a href="{% url 'superuser_template_diagram' template.id %}" class="fw-bold">Графический редактор диаграммы</a>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             
             <!-- Кнопки действия -->
             <div class="d-flex gap-2 justify-content-end mb-4">
+                {% if is_create %}
                 <button type="button" class="btn btn-success" id="addStageBtn">
                     <i class="bi bi-plus-circle me-1"></i> Добавить этап
                 </button>
+                {% endif %}
                 <a href="{% url 'superuser_templates' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle me-1"></i> Отмена
                 </a>
@@ -180,6 +197,7 @@
     </div>
 </div>
 
+{% if is_create %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const addStageBtn = document.getElementById('addStageBtn');
@@ -540,4 +558,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% endif %}
 {% endblock %}

@@ -170,6 +170,12 @@ class TaskTemplate(models.Model):
     # SVG диаграмма (сохраняется при редактировании диаграммы)
     diagram_svg = models.TextField(blank=True, null=True, verbose_name='SVG диаграмма')
     
+    # JSON с позициями элементов диаграммы (для восстановления layout)
+    diagram_layout = models.JSONField(default=dict, blank=True, verbose_name='Layout диаграммы')
+    
+    # Данные для интеграции с n8n (JSON представление бизнес-процесса)
+    n8n_data = models.JSONField(default=dict, blank=True, verbose_name='Данные процесса (n8n)')
+    
     # Аудит - используем User вместо TenantUser для public schema
     created_by_id = models.IntegerField(null=True, blank=True, verbose_name='Создан (ID)')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
