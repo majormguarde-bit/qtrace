@@ -34,7 +34,12 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.activity_category.id_for_label }}" class="form-label">{{ form.activity_category.label }}</label>
-                        {{ form.activity_category }}
+                        <div class="input-group">
+                            {{ form.activity_category }}
+                            <button type="button" class="btn btn-outline-secondary" id="addCategoryBtn" title="Добавить категорию">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
                         {% if form.activity_category.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.activity_category.errors %}{{ error }}{% endfor %}
@@ -196,6 +201,107 @@
         </form>
     </div>
 </div>
+
+<!-- Modal for adding new category -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить новую категорию</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm">
+                    <div class="mb-3">
+                        <label for="newCategoryName" class="form-label">Название <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="newCategoryName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newCategoryDescription" class="form-label">Описание</label>
+                        <textarea class="form-control" id="newCategoryDescription" rows="3"></textarea>
+                    </div>
+                    <div class="alert alert-danger d-none" id="addCategoryError"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+    const categorySelect = document.getElementById('{{ form.activity_category.id_for_label }}'); // Usually id_activity_category
+    
+    if (addCategoryBtn) {
+        const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+        
+        addCategoryBtn.addEventListener('click', function() {
+            document.getElementById('addCategoryForm').reset();
+            document.getElementById('addCategoryError').classList.add('d-none');
+            modal.show();
+        });
+        
+        saveCategoryBtn.addEventListener('click', function() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            const description = document.getElementById('newCategoryDescription').value.trim();
+            const errorDiv = document.getElementById('addCategoryError');
+            
+            if (!name) {
+                errorDiv.textContent = 'Название обязательно для заполнения';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            
+            // Disable button
+            saveCategoryBtn.disabled = true;
+            
+            fetch('{% url "api_activity_categories" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                saveCategoryBtn.disabled = false;
+                
+                if (data.error) {
+                    errorDiv.textContent = data.error;
+                    errorDiv.classList.remove('d-none');
+                } else {
+                    // Success
+                    const option = document.createElement('option');
+                    option.value = data.id;
+                    option.textContent = data.name;
+                    option.selected = true;
+                    categorySelect.appendChild(option);
+                    
+                    // Trigger change event if needed
+                    categorySelect.dispatchEvent(new Event('change'));
+                    
+                    modal.hide();
+                }
+            })
+            .catch(error => {
+                saveCategoryBtn.disabled = false;
+                console.error('Error:', error);
+                errorDiv.textContent = 'Произошла ошибка при сохранении';
+                errorDiv.classList.remove('d-none');
+            });
+        });
+    }
+});
+</script>
 
 {% if is_create %}
 <script>

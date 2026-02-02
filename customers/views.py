@@ -2259,6 +2259,52 @@ def api_positions(request):
         positions = Position.objects.filter(is_active=True).values('id', 'name')
         return JsonResponse(list(positions), safe=False)
 
+def api_activity_categories(request):
+    """API endpoint для получения и создания категорий деятельности"""
+    from task_templates.models import ActivityCategory
+    from django.utils.text import slugify
+    import uuid
+    
+    if request.method == 'POST':
+        # Создание новой категории
+        try:
+            import json
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            
+            if not name:
+                return JsonResponse({'error': 'Название категории не может быть пустым'}, status=400)
+            
+            # Проверяем, не существует ли уже такая категория
+            if ActivityCategory.objects.filter(name=name).exists():
+                return JsonResponse({'error': 'Категория с таким названием уже существует'}, status=400)
+                
+            # Создаем slug
+            slug = slugify(name, allow_unicode=True)
+            if not slug or ActivityCategory.objects.filter(slug=slug).exists():
+                slug = f"cat-{uuid.uuid4().hex[:8]}"
+            
+            category = ActivityCategory.objects.create(
+                name=name,
+                description=data.get('description', ''),
+                slug=slug,
+                is_active=data.get('is_active', True)
+            )
+            
+            return JsonResponse({
+                'id': category.id,
+                'name': category.name,
+                'description': category.description,
+                'is_active': category.is_active
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    else:
+        # Получение списка категорий
+        categories = ActivityCategory.objects.filter(is_active=True).values('id', 'name')
+        return JsonResponse(list(categories), safe=False)
+
+
 
 # Views для управления справочниками (Materials и Units of Measure)
 

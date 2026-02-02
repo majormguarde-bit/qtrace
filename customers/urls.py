@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
     TenantRegistrationViewSet, api_duration_units, api_materials, api_positions, api_units_of_measure,
+    api_activity_categories,
     FeedbackListView, FeedbackDetailView, FeedbackUpdateView, create_feedback
 )
 
@@ -10,6 +11,7 @@ router.register(r'registration', TenantRegistrationViewSet, basename='tenant-reg
 
 urlpatterns = [
     *router.urls,
+    path('activity-categories/', api_activity_categories, name='api_activity_categories'),
     path('duration-units/', api_duration_units, name='api_duration_units'),
     path('units-of-measure/', api_units_of_measure, name='api_units_of_measure'),
     path('materials/', api_materials, name='api_materials'),
