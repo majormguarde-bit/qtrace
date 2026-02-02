@@ -2159,6 +2159,7 @@ def superuser_template_diagram(request, template_id):
         stages_data.append({
             'id': stage.id,
             'name': stage.name,
+            'description': stage.description or '',
             'duration_from': float(stage.duration_from),
             'duration_to': float(stage.duration_to),
             'duration_unit_id': stage.duration_unit.id if stage.duration_unit else None,

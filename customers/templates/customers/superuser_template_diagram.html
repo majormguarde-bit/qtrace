@@ -149,6 +149,10 @@
                         </div>
                     </div>
                     <div class="col-12">
+                        <label class="form-label">Описание этапа:</label>
+                        <textarea class="form-control form-control-sm" id="stageDescription" rows="3" maxlength="500"></textarea>
+                    </div>
+                    <div class="col-12">
                         <label class="form-label">Время:</label>
                         <div class="row g-2">
                             <div class="col-4">
@@ -1031,6 +1035,9 @@ const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
             } else {
                 document.getElementById('positionSelect').value = '';
             }
+
+            // Заполняем описание
+            document.getElementById('stageDescription').value = stage.description || '';
             
             // Заполняем поля времени
             document.getElementById('durationMin').value = stage.duration_from || 1;
@@ -1284,6 +1291,7 @@ const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
             const stageId = document.getElementById('stageSelect').value;
             const parentId = document.getElementById('parentSelect').value;
             const positionId = document.getElementById('positionSelect').value;
+            const description = document.getElementById('stageDescription').value;
             const durationMin = document.getElementById('durationMin').value;
             const durationMax = document.getElementById('durationMax').value;
             const durationUnit = document.getElementById('durationUnit').value;
@@ -1300,6 +1308,7 @@ const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
             formData.append('stage_id', stageId);
             formData.append('parent_stage_id', parentId || '');
             formData.append('position_id', positionId || '');
+            formData.append('description', description || '');
             
             // Добавляем данные о времени
             if (durationMin) formData.append('duration_min', durationMin);
@@ -1390,6 +1399,7 @@ const stagesData = stagesDataJson ? JSON.parse(stagesDataJson) : [];
                     console.log('Duration from:', stage.duration_from, 'Duration to:', stage.duration_to);
                     document.getElementById('durationMin').value = stage.duration_from || 1;
                     document.getElementById('durationMax').value = stage.duration_to || 1;
+                    document.getElementById('stageDescription').value = stage.description || '';
                     console.log('Fields updated:', document.getElementById('durationMin').value, document.getElementById('durationMax').value);
                 }
             }
