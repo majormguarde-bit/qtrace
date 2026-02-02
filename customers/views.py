@@ -2984,7 +2984,7 @@ def superuser_import_template(request):
 def superuser_template_export_n8n(request, template_id):
     """Экспорт шаблона в формат n8n"""
     from task_templates.models import TaskTemplate
-    from task_templates.services import convert_to_n8n
+    from task_templates.services import TemplateService
     from django.http import HttpResponse
     from django.utils.text import slugify
     import json
@@ -2995,7 +2995,7 @@ def superuser_template_export_n8n(request, template_id):
     
     # Генерируем данные для n8n
     try:
-        n8n_data = convert_to_n8n(template)
+        n8n_data = TemplateService.convert_to_n8n(template)
     except Exception as e:
         return JsonResponse({'error': f'Ошибка конвертации: {str(e)}'}, status=500)
     
