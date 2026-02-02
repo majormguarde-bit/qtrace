@@ -34,7 +34,9 @@ from .models import Client, Domain, Payment, SubscriptionPlan, MailSettings, Con
 from users_app.models import TenantUser
 from .serializers import TenantRegistrationSerializer
 from django.db.models import Sum, Max, F
-from task_templates.models import DurationUnit, Material, UnitOfMeasure
+from task_templates.models import DurationUnit, Material, UnitOfMeasure, TaskTemplate, TaskTemplateStage, StageMaterial, ActivityCategory, Position
+from django.utils.text import slugify
+import uuid
 from task_templates.services import TemplateService
 
 
@@ -2722,7 +2724,162 @@ def superuser_export_template(request, template_id):
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_import_template(request):
-    return JsonResponse({'error': 'Function restored from backup, implementation missing'}, status=501)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        # Handle both direct template object or wrapper {"template": {...}}
+        template_data = data.get('template', data)
+        
+        # 1. Handle Activity Category
+        category_name = template_data.get('activity_category')
+        if not category_name:
+             return JsonResponse({'error': 'Activity category is required'}, status=400)
+             
+        # If it's a string, find or create
+        if isinstance(category_name, str):
+            category, _ = ActivityCategory.objects.get_or_create(
+                name=category_name,
+                defaults={
+                    'slug': slugify(category_name, allow_unicode=True) or f"cat-{uuid.uuid4().hex[:8]}",
+                    'description': f"Auto-created category for {category_name}"
+                }
+            )
+        else:
+            # Assume it's an ID
+            category = get_object_or_404(ActivityCategory, id=category_name)
+            
+        # 2. Create Template
+        with transaction.atomic():
+            template = TaskTemplate.objects.create(
+                name=template_data.get('name', 'Imported Template'),
+                description=template_data.get('description', ''),
+                activity_category=category,
+                template_type='global', # Default to global for superuser import
+                created_by_id=None, # Avoid FK constraint to TenantUser for superuser
+                version=1,
+                is_active=True,
+                diagram_layout=template_data.get('diagram_layout', {})
+            )
+            
+            # 3. Process Stages
+            stages = template_data.get('stages', [])
+            stage_map = {} 
+            
+            for index, stage_data in enumerate(stages):
+                # Handle Position
+                position_name = stage_data.get('position')
+                position = None
+                if position_name:
+                    position, _ = Position.objects.get_or_create(name=position_name)
+                
+                # Handle Duration Unit
+                duration_unit_val = stage_data.get('duration_unit')
+                duration_unit = None
+                if duration_unit_val:
+                    # Try exact match
+                    duration_unit = DurationUnit.objects.filter(name__iexact=duration_unit_val).first()
+                    if not duration_unit:
+                        # Try mapping common Russian names to unit types
+                        unit_map = {
+                            'секунда': 'second', 'секунды': 'second', 'сек': 'second',
+                            'минута': 'minute', 'минуты': 'minute', 'мин': 'minute',
+                            'час': 'hour', 'часа': 'hour', 'часов': 'hour',
+                            'день': 'day', 'дня': 'day', 'дней': 'day',
+                            'год': 'year',
+                        }
+                        unit_type = unit_map.get(str(duration_unit_val).lower())
+                        if unit_type:
+                            duration_unit = DurationUnit.objects.filter(unit_type=unit_type).first()
+                
+                # Create Stage
+                # Handle duration parsing (could be string "10" or int 10)
+                try:
+                    duration = int(float(stage_data.get('duration', 1)))
+                except (ValueError, TypeError):
+                    duration = 1
+
+                stage = TaskTemplateStage.objects.create(
+                    template=template,
+                    name=stage_data.get('name', 'Unnamed Stage'),
+                    duration_from=duration,
+                    duration_to=duration, 
+                    duration_unit=duration_unit,
+                    position=position,
+                    sequence_number=stage_data.get('sequence_number', index + 1),
+                    leads_to_stop=stage_data.get('leads_to_stop', False)
+                )
+                if stage_data.get('id'):
+                    stage_map[stage_data.get('id')] = stage 
+                
+                # 4. Process Materials
+                materials = stage_data.get('materials', [])
+                for mat_data in materials:
+                    mat_name = mat_data.get('name')
+                    if not mat_name:
+                        continue
+                        
+                    # Handle Unit of Measure
+                    unit_name = mat_data.get('unit', 'шт')
+                    uom = UnitOfMeasure.objects.filter(
+                        Q(name__iexact=unit_name) | Q(abbreviation__iexact=unit_name)
+                    ).first()
+                    
+                    if not uom:
+                        try:
+                            uom = UnitOfMeasure.objects.create(
+                                name=unit_name,
+                                abbreviation=unit_name[:10]
+                            )
+                        except:
+                            # Fallback if creation fails (e.g. abbreviation collision)
+                            uom = UnitOfMeasure.objects.filter(name=unit_name).first()
+                            if not uom:
+                                # Create with unique abbreviation
+                                uom = UnitOfMeasure.objects.create(
+                                    name=unit_name,
+                                    abbreviation=f"{unit_name[:5]}-{uuid.uuid4().hex[:4]}"
+                                )
+                    
+                    # Find or Create Material
+                    material = None
+                    mat_code = mat_data.get('code')
+                    if mat_code:
+                        material = Material.objects.filter(code=mat_code).first()
+                    
+                    if not material:
+                        # Try finding by name and unit
+                        material = Material.objects.filter(name=mat_name, unit=uom).first()
+                        
+                    if not material:
+                        # Create new material
+                        new_code = mat_code or slugify(mat_name, allow_unicode=True)
+                        # Ensure code uniqueness
+                        if not new_code or Material.objects.filter(code=new_code).exists():
+                             new_code = f"mat-{uuid.uuid4().hex[:8]}"
+                             
+                        material = Material.objects.create(
+                            name=mat_name,
+                            code=new_code,
+                            unit=uom,
+                            unit_cost=mat_data.get('unit_cost', 0),
+                            description=mat_data.get('description', '')
+                        )
+                    
+                    # Link Material to Stage
+                    StageMaterial.objects.create(
+                        stage=stage,
+                        material=material,
+                        quantity=mat_data.get('quantity', 1)
+                    )
+                    
+        return JsonResponse({'success': True, 'template_id': template.id})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_export_n8n(request, template_id):
