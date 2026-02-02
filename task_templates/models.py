@@ -207,6 +207,7 @@ class TaskTemplateStage(models.Model):
         verbose_name='Шаблон'
     )
     name = models.CharField(max_length=255, verbose_name='Название')
+    description = models.TextField(max_length=500, blank=True, verbose_name='Описание')
     
     # Родительский этап (для иерархии)
     parent_stage = models.ForeignKey(

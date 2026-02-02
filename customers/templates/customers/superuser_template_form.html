@@ -90,6 +90,10 @@
                                             <label class="form-label">Название этапа</label>
                                             <input type="text" class="form-control stage-name" value="{{ stage.name }}" placeholder="Название">
                                         </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Описание</label>
+                                            <textarea class="form-control stage-description" rows="2" maxlength="500" placeholder="Описание этапа (до 500 символов)">{{ stage.description|default:'' }}</textarea>
+                                        </div>
                                         <div class="col-md-2">
                                             <label class="form-label">Длительность от</label>
                                             <input type="number" class="form-control stage-duration-from" value="{{ stage.duration_from|default:1 }}" step="0.01" min="0.01">
@@ -465,6 +469,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <label class="form-label">Название этапа</label>
                             <input type="text" class="form-control stage-name" placeholder="Название">
                         </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Описание</label>
+                            <textarea class="form-control stage-description" rows="2" maxlength="500" placeholder="Описание этапа (до 500 символов)"></textarea>
+                        </div>
                         <div class="col-md-2">
                             <label class="form-label">Длительность от</label>
                             <input type="number" class="form-control stage-duration-from" value="1" step="0.01" min="0.01">
@@ -643,6 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
             stages.push({
                 sequence_number: item.querySelector('.stage-sequence').value,
                 name: item.querySelector('.stage-name').value,
+                description: item.querySelector('.stage-description').value,
                 duration_from: item.querySelector('.stage-duration-from').value,
                 duration_to: item.querySelector('.stage-duration-to').value,
                 duration_unit_id: item.querySelector('.stage-duration-unit').value,

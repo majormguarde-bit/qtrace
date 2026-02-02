@@ -1392,6 +1392,7 @@ def superuser_template_create(request):
                         stage = TaskTemplateStage.objects.create(
                             template=template,
                             name=stage_data.get('name', ''),
+                            description=stage_data.get('description', ''),
                             duration_from=float(stage_data.get('duration_from', 1)),
                             duration_to=float(stage_data.get('duration_to', 1)),
                             duration_unit=duration_unit,
@@ -2849,6 +2850,7 @@ def superuser_import_template(request):
                 stage = TaskTemplateStage.objects.create(
                     template=template,
                     name=stage_data.get('name', 'Unnamed Stage'),
+                    description=stage_data.get('description', ''),
                     duration_from=duration,
                     duration_to=duration, 
                     duration_unit=duration_unit,
