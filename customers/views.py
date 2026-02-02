@@ -3027,6 +3027,58 @@ def superuser_template_export_n8n(request, template_id):
                 
             if svg_content:
                 zf.writestr(f"{filename_base}.svg", svg_content)
+            
+            # 3. Генерация README.md с описанием структуры
+            readme_lines = []
+            readme_lines.append(f"# {template.name}")
+            category_name = template.activity_category.name if template.activity_category else 'Без категории'
+            readme_lines.append(f"**Категория:** {category_name}")
+            readme_lines.append(f"**Версия:** {template.version}")
+            readme_lines.append(f"**Тип:** {template.get_template_type_display()}")
+            readme_lines.append("")
+            
+            if template.description:
+                readme_lines.append("## Описание")
+                readme_lines.append(template.description)
+                readme_lines.append("")
+            
+            readme_lines.append("## Структура процесса (Этапы)")
+            readme_lines.append("")
+            
+            stages = template.stages.select_related('position', 'duration_unit', 'parent_stage').prefetch_related('materials__material__unit').all().order_by('sequence_number')
+            
+            if not stages.exists():
+                readme_lines.append("_Этапы отсутствуют_")
+            
+            for stage in stages:
+                readme_lines.append(f"### {stage.sequence_number}. {stage.name}")
+                if stage.description:
+                    readme_lines.append(f"- **Описание:** {stage.description}")
+                
+                position_name = stage.position.name if stage.position else "Не указана"
+                readme_lines.append(f"- **Исполнитель:** {position_name}")
+                
+                duration_str = f"{stage.duration_from}-{stage.duration_to}"
+                if stage.duration_unit:
+                    duration_str += f" {stage.duration_unit.name}"
+                readme_lines.append(f"- **Длительность:** {duration_str}")
+                
+                if stage.parent_stage:
+                    readme_lines.append(f"- **Родительский этап:** {stage.parent_stage.name} (ID: {stage.parent_stage.sequence_number})")
+                
+                # Материалы этапа
+                stage_materials = stage.materials.all()
+                if stage_materials.exists():
+                    readme_lines.append("- **Материалы:**")
+                    for sm in stage_materials:
+                        mat = sm.material
+                        unit_abbr = mat.unit.abbreviation if mat.unit else ""
+                        readme_lines.append(f"  - {mat.name} ({mat.code}): {sm.quantity} {unit_abbr}")
+                
+                readme_lines.append("")
+            
+            readme_content = "\n".join(readme_lines)
+            zf.writestr("README.md", readme_content)
                 
         mem_file.seek(0)
         
