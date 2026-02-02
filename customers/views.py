@@ -3000,7 +3000,14 @@ def superuser_template_export_n8n(request, template_id):
         return JsonResponse({'error': f'Ошибка конвертации: {str(e)}'}, status=500)
     
     export_format = request.GET.get('format')
-    filename_base = slugify(template.name) or f"template_{template.id}"
+    
+    # Формируем имя файла: Категория_Название
+    category_part = slugify(template.activity_category.name, allow_unicode=True) if template.activity_category else 'uncategorized'
+    name_part = slugify(template.name, allow_unicode=True)
+    filename_base = f"{category_part}_{name_part}"
+    
+    if not filename_base or filename_base == '_':
+        filename_base = f"template_{template.id}"
     
     # Если запрос на ZIP архив
     if export_format == 'zip':
