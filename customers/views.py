@@ -1442,6 +1442,7 @@ def superuser_template_save_stage(request, template_id):
     stage_id = request.POST.get('stage_id')
     parent_stage_id = request.POST.get('parent_stage_id') or None
     position_id = request.POST.get('position_id') or None
+    description = request.POST.get('description')
     
     # Получаем данные о времени
     duration_min = request.POST.get('duration_min')
@@ -1467,6 +1468,10 @@ def superuser_template_save_stage(request, template_id):
                 stage.position = None
         else:
             stage.position = None
+            
+        # Обновляем описание
+        if description is not None:
+            stage.description = description
             
         # Обновляем время
         if duration_min:
