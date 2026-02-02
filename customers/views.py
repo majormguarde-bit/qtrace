@@ -2982,7 +2982,54 @@ def superuser_import_template(request):
 
 @user_passes_test(superuser_required, login_url='/admin/login/')
 def superuser_template_export_n8n(request, template_id):
-    return JsonResponse({'error': 'Function restored from backup, implementation missing'}, status=501)
+    """Экспорт шаблона в формат n8n"""
+    from task_templates.models import TaskTemplate
+    from task_templates.services import convert_to_n8n
+    from django.http import HttpResponse
+    from django.utils.text import slugify
+    import json
+    import zipfile
+    import io
+
+    template = get_object_or_404(TaskTemplate, id=template_id)
+    
+    # Генерируем данные для n8n
+    try:
+        n8n_data = convert_to_n8n(template)
+    except Exception as e:
+        return JsonResponse({'error': f'Ошибка конвертации: {str(e)}'}, status=500)
+    
+    export_format = request.GET.get('format')
+    filename_base = slugify(template.name) or f"template_{template.id}"
+    
+    # Если запрос на ZIP архив
+    if export_format == 'zip':
+        # Создаем ZIP в памяти
+        mem_file = io.BytesIO()
+        with zipfile.ZipFile(mem_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # 1. Добавляем n8n JSON
+            json_str = json.dumps(n8n_data, ensure_ascii=False, indent=2)
+            zf.writestr(f"{filename_base}.json", json_str)
+            
+            # 2. Добавляем SVG (если есть)
+            # Приоритет: SVG из POST запроса (актуальный из редактора), затем из БД
+            svg_content = request.POST.get('svg_data')
+            if not svg_content and template.diagram_svg:
+                svg_content = template.diagram_svg
+                
+            if svg_content:
+                zf.writestr(f"{filename_base}.svg", svg_content)
+                
+        mem_file.seek(0)
+        
+        response = HttpResponse(mem_file, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{filename_base}.zip"'
+        return response
+        
+    # По умолчанию возвращаем JSON файл
+    response = JsonResponse(n8n_data, json_dumps_params={'ensure_ascii': False, 'indent': 2})
+    response['Content-Disposition'] = f'attachment; filename="{filename_base}.json"'
+    return response
 
 
 # Restored Feedback Views
