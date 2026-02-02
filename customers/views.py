@@ -1438,6 +1438,8 @@ def superuser_template_save_stage(request, template_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
+    print(f"DEBUG: request.POST = {request.POST}")
+    
     template = get_object_or_404(TaskTemplate, id=template_id, template_type='global')
     
     stage_id = request.POST.get('stage_id')
@@ -1445,6 +1447,7 @@ def superuser_template_save_stage(request, template_id):
     position_id = request.POST.get('position_id') or None
     description = request.POST.get('description')
     sequence_number = request.POST.get('sequence_number')
+    print(f"DEBUG: stage_id={stage_id}, sequence_number={sequence_number}")
     
     # Получаем данные о времени
     duration_min = request.POST.get('duration_min')
@@ -1457,6 +1460,7 @@ def superuser_template_save_stage(request, template_id):
         # Обновляем порядковый номер (с пересчетом остальных)
         if sequence_number:
             new_sequence_number = int(sequence_number)
+            print(f"DEBUG: Changing sequence from {stage.sequence_number} to {new_sequence_number}")
             if new_sequence_number != stage.sequence_number:
                 with transaction.atomic():
                     # Получаем все этапы, упорядоченные по номеру
