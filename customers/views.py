@@ -1433,6 +1433,7 @@ def superuser_template_create(request):
 def superuser_template_save_stage(request, template_id):
     """API endpoint для сохранения изменений этапа"""
     from task_templates.models import TaskTemplate, TaskTemplateStage, Position, DurationUnit
+    from django.db import transaction
     
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1443,6 +1444,7 @@ def superuser_template_save_stage(request, template_id):
     parent_stage_id = request.POST.get('parent_stage_id') or None
     position_id = request.POST.get('position_id') or None
     description = request.POST.get('description')
+    sequence_number = request.POST.get('sequence_number')
     
     # Получаем данные о времени
     duration_min = request.POST.get('duration_min')
@@ -1452,9 +1454,48 @@ def superuser_template_save_stage(request, template_id):
     try:
         stage = TaskTemplateStage.objects.get(id=stage_id, template=template)
         
+        # Обновляем порядковый номер (с пересчетом остальных)
+        if sequence_number:
+            new_sequence_number = int(sequence_number)
+            if new_sequence_number != stage.sequence_number:
+                with transaction.atomic():
+                    # Получаем все этапы, упорядоченные по номеру
+                    stages = list(TaskTemplateStage.objects.filter(template=template).order_by('sequence_number'))
+                    
+                    # Удаляем текущий этап из списка
+                    stages = [s for s in stages if s.id != stage.id]
+                    
+                    # Вставляем на новую позицию (корректируем индекс)
+                    target_index = max(0, new_sequence_number - 1)
+                    if target_index > len(stages):
+                        target_index = len(stages)
+                    stages.insert(target_index, stage)
+                    
+                    # Временно ставим отрицательные номера, чтобы избежать конфликтов уникальности
+                    for s in stages:
+                        TaskTemplateStage.objects.filter(id=s.id).update(sequence_number=-s.id)
+                        
+                    # Проставляем правильные номера
+                    for i, s in enumerate(stages):
+                        TaskTemplateStage.objects.filter(id=s.id).update(sequence_number=i + 1)
+                        
+                    # Обновляем sequence_number у текущего объекта stage, чтобы save() не перетер его
+                    stage.sequence_number = target_index + 1
+
         # Обновляем родительский этап
         if parent_stage_id:
+            if int(parent_stage_id) == stage.id:
+                return JsonResponse({'success': False, 'error': 'Этап не может быть родительским для самого себя'}, status=400)
+                
             parent_stage = TaskTemplateStage.objects.get(id=parent_stage_id, template=template)
+            
+            # Проверка на циклы: поднимаемся вверх от родителя
+            current_parent = parent_stage
+            while current_parent:
+                if current_parent.id == stage.id:
+                    return JsonResponse({'success': False, 'error': 'Обнаружен цикл в зависимостях этапов'}, status=400)
+                current_parent = current_parent.parent_stage
+            
             stage.parent_stage = parent_stage
         else:
             stage.parent_stage = None
