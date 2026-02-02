@@ -2987,6 +2987,7 @@ def superuser_template_export_n8n(request, template_id):
     from task_templates.services import TemplateService
     from django.http import HttpResponse
     from django.utils.text import slugify
+    from urllib.parse import quote
     import json
     import zipfile
     import io
@@ -3030,12 +3031,15 @@ def superuser_template_export_n8n(request, template_id):
         mem_file.seek(0)
         
         response = HttpResponse(mem_file, content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="{filename_base}.zip"'
+        # Использование filename* для поддержки Unicode (RFC 5987)
+        encoded_filename = quote(f"{filename_base}.zip")
+        response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
         return response
         
     # По умолчанию возвращаем JSON файл
     response = JsonResponse(n8n_data, json_dumps_params={'ensure_ascii': False, 'indent': 2})
-    response['Content-Disposition'] = f'attachment; filename="{filename_base}.json"'
+    encoded_filename = quote(f"{filename_base}.json")
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
     return response
 
 
